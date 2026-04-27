@@ -1,0 +1,158 @@
+import { teams, type Team } from "../teams/teams-data";
+
+export type MatchRecord = {
+  id: string;
+  season: 1 | 2;
+  competition: string;
+  gameWeek: string;
+  date: string;
+  homeTeam: string;
+  homeSlug: string | null;
+  homeScore: number;
+  awayTeam: string;
+  awaySlug: string | null;
+  awayScore: number;
+  stage: string;
+  fft: "No" | "Yes" | "Partial" | "Mercy";
+  referee: string;
+  notes: string;
+};
+
+const TEAM_NAME_TO_SLUG: Record<string, string | null> = {
+  Newport: "newport-wanderers-fc",
+  Nottingham: "nottingham-rangers",
+  Milton: "milton-town-fc",
+  Newham: "newham-united",
+  Andover: "andover-fc",
+  Eltham: "eltham-united",
+  Viola: "viola-fc",
+  Cartiginia: "cartigiana-fc",
+  Venezia: "venezia-ac",
+  Casole: "ac-casole",
+  Canterbury: "canterbury-fc",
+  Stanford: "stanford-fc",
+  Milano: "ambasciatori-milano",
+  DDG: "deportivo-di-gnoa",
+  Tretorre: "tre-torre-libertas-fc",
+  Sassari: "sassari-calcio",
+  Stafford: null,
+};
+
+function slugFor(name: string): string | null {
+  return TEAM_NAME_TO_SLUG[name] ?? null;
+}
+
+export function getMatchTeam(slug: string | null, fallbackName: string): Team {
+  if (slug) {
+    const found = teams.find((team) => team.slug === slug);
+    if (found) return found;
+  }
+  return {
+    name: fallbackName,
+    short: fallbackName.slice(0, 3).toUpperCase(),
+    slug: "",
+    logo: null,
+    form: "",
+    seasons: [],
+  };
+}
+
+type RawMatch = [
+  id: string,
+  season: 1 | 2,
+  competition: string,
+  gw: string,
+  date: string,
+  home: string,
+  away: string,
+  hs: number,
+  as: number,
+  stage: string,
+  fft: MatchRecord["fft"],
+  ref: string,
+  notes?: string,
+];
+
+const RAW: RawMatch[] = [
+  ["EL1-GW1-01", 1, "EuroLeague", "GW1", "2023-07-23", "Newport", "Nottingham", 3, 5, "Group", "No", "YJGD"],
+  ["EL1-GW1-02", 1, "EuroLeague", "GW1", "2023-07-23", "Milton", "Newham", 1, 6, "Group", "No", "YJGD"],
+  ["EL1-GW1-03", 1, "EuroLeague", "GW1", "2023-07-23", "Stafford", "Viola", 3, 2, "Group", "No", "YJGD"],
+  ["EL1-GW1-04", 1, "EuroLeague", "GW1", "2023-07-23", "Andover", "Eltham", 9, 1, "Group", "No", "YJGD"],
+  ["EL1-GW2-01", 1, "EuroLeague", "GW2", "2023-07-25", "Newport", "Newham", 1, 3, "Group", "No", "Koolicxcte"],
+  ["EL1-GW2-02", 1, "EuroLeague", "GW2", "2023-07-27", "Eltham", "Milton", 2, 3, "Group", "No", "YJGD"],
+  ["EL1-GW2-03", 1, "EuroLeague", "GW2", "2023-07-28", "Andover", "Stafford", 10, 0, "Group", "No", "Koolicxcte"],
+  ["EL1-GW2-04", 1, "EuroLeague", "GW2", "2023-07-31", "Viola", "Nottingham", 2, 8, "Group", "No", "ahmed", "Score dispute noted"],
+  ["EL1-GW3-01", 1, "EuroLeague", "GW3", "2023-07-30", "Viola", "Newport", 2, 4, "Group", "No", "ahmed"],
+  ["EL1-GW3-02", 1, "EuroLeague", "GW3", "2023-07-30", "Newham", "Eltham", 4, 4, "Group", "No", "Koolicxcte", "OG by kuya scout (Newham)"],
+  ["EL1-GW3-03", 1, "EuroLeague", "GW3", "2023-07-31", "Nottingham", "Andover", 1, 3, "Group", "No", "sam"],
+  ["EL1-GW3-04", 1, "EuroLeague", "GW3", "2023-07-31", "Milton", "Stafford", 6, 1, "Group", "No", "YJGD / Deleted User", "Ref changed at 45'"],
+  ["EL1-GW4-01", 1, "EuroLeague", "GW4", "2023-08-02", "Eltham", "Newport", 2, 2, "Group", "No", "Koolicxcte"],
+  ["EL1-GW4-02", 1, "EuroLeague", "GW4", "2023-08-02", "Nottingham", "Milton", 3, 0, "Group", "No", "ahmed"],
+  ["EL1-GW4-03", 1, "EuroLeague", "GW4", "2023-08-03", "Andover", "Viola", 8, 0, "Group", "No", "Koolicxcte"],
+  ["EL1-GW4-04", 1, "EuroLeague", "GW4", "2023-08-03", "Stafford", "Newham", 0, 3, "Group", "Yes", "—", "FFT"],
+  ["EL1-GW5-01", 1, "EuroLeague", "GW5", "2023-08-05", "Newport", "Andover", 0, 5, "Group", "No", "Koolicxcte"],
+  ["EL1-GW5-02", 1, "EuroLeague", "GW5", "2023-08-07", "Viola", "Milton", 2, 4, "Group", "No", "wiz"],
+  ["EL1-GW5-03", 1, "EuroLeague", "GW5", "2023-08-07", "Eltham", "Stafford", 4, 0, "Group", "No", "Koolicxcte", "Includes 1 OG by zhanedem"],
+  ["EL1-GW5-04", 1, "EuroLeague", "GW5", "2023-08-09", "Newham", "Nottingham", 0, 2, "Group", "No", "Koolicxcte"],
+  ["EL1-GW6-01", 1, "EuroLeague", "GW6", "2023-08-09", "Milton", "Andover", 2, 8, "Group", "No", "Deleted User"],
+  ["EL1-GW6-02", 1, "EuroLeague", "GW6", "2023-08-09", "Nottingham", "Eltham", 3, 0, "Group", "No", "sam"],
+  ["EL1-GW6-03", 1, "EuroLeague", "GW6", "2023-08-10", "Viola", "Newham", 6, 1, "Group", "No", "ahmed"],
+  ["EL1-GW7-01", 1, "EuroLeague", "GW7", "2023-08-14", "Andover", "Newham", 9, 0, "Group", "Partial", "wiz", "+3 FFT goals added to score"],
+  ["EL1-GW7-02", 1, "EuroLeague", "GW7", "2023-08-17", "Newport", "Milton", 0, 3, "Group", "Yes", "YJGD", "FFT"],
+  ["EL1-GW7-03", 1, "EuroLeague", "GW7", "2023-08-17", "Viola", "Eltham", 1, 3, "Group", "No", "sam"],
+  ["EP1-QF-01", 1, "EuroBlox Playoffs", "QF", "2023-08-17", "Andover", "Viola", 7, 1, "Quarter-Final", "No", "Koolicxcte"],
+
+  ["EL2-GW1-01", 2, "EuroLeague", "GW1", "2024-11-09", "Cartiginia", "Venezia", 3, 2, "Group", "No", "Deleted User"],
+  ["EL2-GW1-02", 2, "EuroLeague", "GW1", "2024-11-09", "Nottingham", "Newham", 3, 4, "Group", "No", "Koolicxcte"],
+  ["EL2-GW1-03", 2, "EuroLeague", "GW1", "2024-11-09", "Casole", "Viola", 4, 0, "Group", "Yes", "LogisticsEnthusiast", "FFT"],
+  ["EL2-GW1-04", 2, "EuroLeague", "GW1", "2024-11-10", "Andover", "Canterbury", 3, 7, "Group", "No", "Koolicxcte"],
+  ["BP2-GW1-01", 2, "British Premier", "GW1", "2024-11-10", "Milton", "Eltham", 2, 3, "Group", "No", "Deleted User"],
+  ["SI2-GW1-01", 2, "Serie Italia", "GW1", "2024-11-10", "Milano", "DDG", 6, 0, "Group", "Yes", "LogisticsEnthusiast", "FFT"],
+  ["EL2-GW1-05", 2, "EuroLeague", "GW1", "2024-11-12", "Newport", "Stanford", 7, 1, "Group", "Yes", "voidski", "FFT after mercy"],
+  ["SI2-GW1-02", 2, "Serie Italia", "GW1", "2024-11-13", "Tretorre", "Sassari", 0, 3, "Group", "Yes", "wiz", "FFT"],
+  ["EL2-GW2-01", 2, "EuroLeague", "GW2", "2024-11-18", "Newham", "Andover", 4, 0, "Group", "No", "Koolicxcte"],
+  ["EL2-GW2-02", 2, "EuroLeague", "GW2", "2024-11-19", "Nottingham", "Canterbury", 6, 4, "Group", "No", "Deleted User"],
+  ["EL2-GW2-03", 2, "EuroLeague", "GW2", "2024-11-19", "Milton", "Stanford", 7, 4, "Group", "No", "semihgnys"],
+  ["EL2-GW2-04", 2, "EuroLeague", "GW2", "2024-11-19", "Cartiginia", "DDG", 6, 0, "Group", "Mercy", "Deleted User", "Mercy rule"],
+  ["EL2-GW2-05", 2, "EuroLeague", "GW2", "2024-11-19", "Newport", "Eltham", 2, 5, "Group", "No", "wiz"],
+  ["SI2-GW1-03", 2, "Serie Italia", "GW1", "2024-11-21", "Sassari", "Venezia", 0, 3, "Group", "Yes", "wiz", "FFT"],
+  ["SI2-GW2-01", 2, "Serie Italia", "GW2", "2024-11-21", "Milano", "Casole", 4, 2, "Group", "No", "Koolicxcte"],
+  ["SI2-GW2-02", 2, "Serie Italia", "GW2", "2024-11-23", "Viola", "Tretorre", 0, 0, "Group", "Yes", "wiz", "FFT - 0-0"],
+  ["SI2-GW3-01", 2, "Serie Italia", "GW3", "2024-11-23", "Casole", "Cartiginia", 6, 0, "Group", "Mercy", "LogisticsEnthusiast", "FFT after mercy"],
+  ["EL2-GW3-01", 2, "EuroLeague", "GW3", "2024-11-23", "Newham", "Stanford", 9, 3, "Group", "No", "Koolicxcte", "Includes 1 OG by EdinDzeko1983"],
+  ["SI2-GW2-03", 2, "Serie Italia", "GW2", "2024-11-24", "Sassari", "Viola", 3, 0, "Group", "Yes", "wiz", "FFT"],
+  ["EL2-GW3-02", 2, "EuroLeague", "GW3", "2024-11-24", "Newport", "Canterbury", 6, 0, "Group", "Mercy", "TheMightyLion132", "Mercy rule"],
+  ["EL2-GW3-03", 2, "EuroLeague", "GW3", "2024-11-24", "Andover", "Eltham", 0, 6, "Group", "Mercy", "Koolicxcte", "Mercy rule"],
+  ["EL2-GW3-04", 2, "EuroLeague", "GW3", "2024-11-24", "Milton", "Nottingham", 4, 3, "Group", "No", "ahmed"],
+  ["SI2-GW3-02", 2, "Serie Italia", "GW3", "2024-11-30", "Milano", "Venezia", 4, 5, "Group", "No", "Koolicxcte", "Started from 1-0 (carried over)"],
+  ["BP2-GW4-01", 2, "British Premier", "GW4", "2024-12-01", "Nottingham", "Andover", 0, 6, "Group", "No", "BloxBurgPOS"],
+  ["SI2-GW4-01", 2, "Serie Italia", "GW4", "2024-12-01", "Casole", "Venezia", 5, 1, "Group", "No", "BloxBurgPOS"],
+  ["SI2-GW4-02", 2, "Serie Italia", "GW4", "2024-12-01", "Tretorre", "Cartiginia", 2, 5, "Group", "No", "Koolicxcte"],
+  ["SI2-GW4-03", 2, "Serie Italia", "GW4", "2024-12-01", "Sassari", "Milano", 3, 0, "Group", "Yes", "wiz", "FFT"],
+  ["BP2-GW4-02", 2, "British Premier", "GW4", "2024-12-04", "Newport", "Newham", 0, 0, "Group", "No", "—", "No detailed stats provided"],
+  ["BP2-GW5-01", 2, "British Premier", "GW5", "2024-12-07", "Canterbury", "Newham", 0, 3, "Group", "Yes", "—", "FFT"],
+  ["SI2-GW5-01", 2, "Serie Italia", "GW5", "2024-12-07", "Tretorre", "Casole", 2, 6, "Group", "No", "BloxBurgPOS"],
+  ["GW5-NPA", 2, "—", "GW5", "2024-12-14", "Newport", "Andover", 3, 0, "Group", "Yes", "—", "FFT"],
+];
+
+export const matches: MatchRecord[] = RAW.map(
+  ([id, season, competition, gw, date, home, away, hs, as_, stage, fft, ref, notes]) => ({
+    id,
+    season,
+    competition,
+    gameWeek: gw,
+    date,
+    homeTeam: home,
+    homeSlug: slugFor(home),
+    homeScore: hs,
+    awayTeam: away,
+    awaySlug: slugFor(away),
+    awayScore: as_,
+    stage,
+    fft,
+    referee: ref,
+    notes: notes ?? "",
+  }),
+).sort((a, b) =>
+  a.date === b.date ? a.id.localeCompare(b.id) : a.date.localeCompare(b.date),
+);

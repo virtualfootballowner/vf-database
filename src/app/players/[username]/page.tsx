@@ -1,14 +1,4 @@
-import {
-  ArrowLeft,
-  Award,
-  CalendarDays,
-  Medal,
-  Send,
-  Star,
-  Target,
-  Trophy,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { ArrowLeft, Award, Medal, Star, Trophy } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -203,18 +193,8 @@ export default async function PlayerDetailPage({
             </h2>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <StatTile
-              label="Goals"
-              value={stats.goals}
-              icon={Target}
-              accent="emerald"
-            />
-            <StatTile
-              label="Assists"
-              value={stats.assists}
-              icon={Send}
-              accent="sky"
-            />
+            <StatTile label="Goals" value={stats.goals} />
+            <StatTile label="Assists" value={stats.assists} />
             <StatTile
               label="Avg Rating"
               value={
@@ -222,27 +202,10 @@ export default async function PlayerDetailPage({
                   ? stats.avgRating.toFixed(1)
                   : "—"
               }
-              icon={Star}
-              accent="amber"
             />
-            <StatTile
-              label="Appearances"
-              value={stats.appearances}
-              icon={CalendarDays}
-              accent="violet"
-            />
-            <StatTile
-              label="Trophies"
-              value={stats.trophies.length}
-              icon={Trophy}
-              accent="yellow"
-            />
-            <StatTile
-              label="Accolades"
-              value={stats.accolades.length}
-              icon={Medal}
-              accent="rose"
-            />
+            <StatTile label="Appearances" value={stats.appearances} />
+            <StatTile label="Trophies" value={stats.trophies.length} />
+            <StatTile label="Accolades" value={stats.accolades.length} />
           </div>
         </section>
 
@@ -413,104 +376,16 @@ export default async function PlayerDetailPage({
   );
 }
 
-type StatAccent =
-  | "emerald"
-  | "sky"
-  | "amber"
-  | "violet"
-  | "yellow"
-  | "rose";
-
-const STAT_ACCENTS: Record<
-  StatAccent,
-  {
-    glow: string;
-    iconBg: string;
-    iconRing: string;
-    iconText: string;
-    border: string;
-  }
-> = {
-  emerald: {
-    glow: "bg-emerald-400/25",
-    iconBg: "bg-emerald-400/15",
-    iconRing: "ring-emerald-300/30",
-    iconText: "text-emerald-200",
-    border: "hover:border-emerald-300/30",
-  },
-  sky: {
-    glow: "bg-sky-400/25",
-    iconBg: "bg-sky-400/15",
-    iconRing: "ring-sky-300/30",
-    iconText: "text-sky-200",
-    border: "hover:border-sky-300/30",
-  },
-  amber: {
-    glow: "bg-amber-400/25",
-    iconBg: "bg-amber-400/15",
-    iconRing: "ring-amber-300/30",
-    iconText: "text-amber-200",
-    border: "hover:border-amber-300/30",
-  },
-  violet: {
-    glow: "bg-violet-400/25",
-    iconBg: "bg-violet-400/15",
-    iconRing: "ring-violet-300/30",
-    iconText: "text-violet-200",
-    border: "hover:border-violet-300/30",
-  },
-  yellow: {
-    glow: "bg-yellow-300/25",
-    iconBg: "bg-yellow-300/15",
-    iconRing: "ring-yellow-200/30",
-    iconText: "text-yellow-100",
-    border: "hover:border-yellow-200/30",
-  },
-  rose: {
-    glow: "bg-rose-400/25",
-    iconBg: "bg-rose-400/15",
-    iconRing: "ring-rose-300/30",
-    iconText: "text-rose-200",
-    border: "hover:border-rose-300/30",
-  },
-};
-
-function StatTile({
-  label,
-  value,
-  icon: Icon,
-  accent,
-}: {
-  label: string;
-  value: string | number;
-  icon: LucideIcon;
-  accent: StatAccent;
-}) {
-  const c = STAT_ACCENTS[accent];
+function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
-    <div
-      className={`group relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-[#02103f]/40 p-4 transition ${c.border}`}
-    >
-      <div
-        aria-hidden
-        className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full blur-2xl transition group-hover:scale-110 ${c.glow}`}
-      />
-      <div className="relative flex flex-col gap-3">
-        <span
-          className={`inline-flex size-9 items-center justify-center rounded-lg ring-1 ${c.iconBg} ${c.iconRing} ${c.iconText}`}
-        >
-          <Icon className="size-4" />
-        </span>
-        <div className="flex flex-col gap-0.5">
-          <p className="text-3xl font-bold tracking-tight text-white">
-            {value}
-          </p>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
-            {label}
-          </p>
-        </div>
-      </div>
-    </div>
+    <Card className="gap-1 py-4">
+      <CardContent>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
+          {label}
+        </p>
+        <p className="mt-1.5 text-2xl font-semibold text-white">{value}</p>
+      </CardContent>
+    </Card>
   );
 }
 

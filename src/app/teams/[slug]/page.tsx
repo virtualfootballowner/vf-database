@@ -27,15 +27,22 @@ type TeamPlayerRow = {
   status: string;
 };
 
-async function getTeamPlayers(slug: string): Promise<TeamPlayerRow[]> {
+async function getTeamPlayers(
+  slug: string,
+  season: number | null,
+): Promise<TeamPlayerRow[]> {
   try {
     const supabase = createSupabaseServerClient();
-    const result = await supabase
+    let query = supabase
       .from("players")
       .select("id, roblox_username, roblox_user_id, position, status")
-      .eq("team_slug", slug)
-      .order("roblox_username", { ascending: true });
+      .eq("team_slug", slug);
 
+    if (season !== null) {
+      query = query.eq("season", season);
+    }
+
+    const result = await query.order("roblox_username", { ascending: true });
     if (result.error) return [];
     return (result.data ?? []) as TeamPlayerRow[];
   } catch {
@@ -48,6 +55,7 @@ export async function generateStaticParams() {
 }
 
 type TeamPageParams = { slug: string };
+type TeamPageSearchParams = { season?: string };
 
 export async function generateMetadata({
   params,
@@ -65,14 +73,23 @@ export async function generateMetadata({
 
 export default async function TeamDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<TeamPageParams>;
+  searchParams: Promise<TeamPageSearchParams>;
 }) {
   const { slug } = await params;
+  const { season: seasonParam } = await searchParams;
   const team = getTeamBySlug(slug);
   if (!team) notFound();
 
-  const players = await getTeamPlayers(slug);
+  const parsedSeason = Number.parseInt(seasonParam ?? "", 10);
+  const selectedSeason =
+    Number.isFinite(parsedSeason) && team.seasons.includes(parsedSeason)
+      ? parsedSeason
+      : null;
+
+  const players = await getTeamPlayers(slug, selectedSeason);
   const headshotsMap = await getRobloxHeadshots(
     players.map((player) => player.roblox_user_id),
   );
@@ -102,14 +119,20 @@ export default async function TeamDetailPage({
             </h1>
             <p className="mt-2 text-sm text-white/65">{team.form}</p>
             <div className="mt-3 flex flex-wrap justify-center gap-1.5 sm:justify-start">
+              <SeasonPill
+                slug={team.slug}
+                value="all"
+                label="All Seasons"
+                active={selectedSeason === null}
+              />
               {team.seasons.map((s) => (
-                <Badge
+                <SeasonPill
                   key={s}
-                  variant="outline"
-                  className="border-white/15 text-white/70"
-                >
-                  Season {s}
-                </Badge>
+                  slug={team.slug}
+                  value={String(s)}
+                  label={`Season ${s}`}
+                  active={selectedSeason === s}
+                />
               ))}
             </div>
           </div>
@@ -141,7 +164,9 @@ export default async function TeamDetailPage({
                 Squad
               </p>
               <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
-                Players
+                {selectedSeason
+                  ? `Season ${selectedSeason} squad`
+                  : "All players"}
               </h2>
             </div>
             <Badge
@@ -157,7 +182,9 @@ export default async function TeamDetailPage({
             <Card className="py-10">
               <CardContent className="flex flex-col items-center gap-2 text-center">
                 <p className="text-sm font-semibold text-white">
-                  No squad assigned yet.
+                  {selectedSeason
+                    ? `No squad logged for Season ${selectedSeason}.`
+                    : "No squad assigned yet."}
                 </p>
                 <p className="max-w-md text-xs text-white/55">
                   Players will appear here once team rosters are wired up in
@@ -165,7 +192,12 @@ export default async function TeamDetailPage({
                   <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">
                     team_slug
                   </code>{" "}
-                  column to the players table and tag rows with{" "}
+                  column (and a{" "}
+                  <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">
+                    season
+                  </code>{" "}
+                  column for season filtering) to the players table and tag
+                  rows with{" "}
                   <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">
                     {team.slug}
                   </code>{" "}
@@ -239,6 +271,34 @@ export default async function TeamDetailPage({
         </Card>
       </div>
     </main>
+  );
+}
+
+function SeasonPill({
+  slug,
+  value,
+  label,
+  active,
+}: {
+  slug: string;
+  value: "all" | string;
+  label: string;
+  active: boolean;
+}) {
+  const href = value === "all" ? `/teams/${slug}` : `/teams/${slug}?season=${value}`;
+  return (
+    <Link
+      href={href}
+      scroll={false}
+      aria-pressed={active}
+      className={`inline-flex h-6 items-center rounded-full border px-2.5 text-[11px] font-semibold transition ${
+        active
+          ? "border-white bg-white text-[#02103f] shadow-[0_4px_16px_-4px_rgba(255,255,255,0.4)]"
+          : "border-white/15 text-white/70 hover:border-white/35 hover:text-white"
+      }`}
+    >
+      {label}
+    </Link>
   );
 }
 
