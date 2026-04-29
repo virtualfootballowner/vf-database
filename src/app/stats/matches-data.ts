@@ -76,6 +76,7 @@ type RawMatch = [
 const RAW: RawMatch[] = [
   ["EL1-GW1-01", 1, "EuroLeague", "GW1", "2023-07-23", "Newport", "Nottingham", 3, 5, "Group", "No", "YJGD"],
   ["EL1-NS-01", 1, "EuroLeague", "GW?", "2023-07-29", "Newport", "Stafford", 4, 0, "Group", "No", "—", "Date approximate"],
+  ["EL1-NTS-01", 1, "EuroLeague", "GW?", "2023-08-12", "Nottingham", "Stafford", 3, 0, "Group", "Yes", "—", "FFT - Date approximate"],
   ["EL1-GW1-02", 1, "EuroLeague", "GW1", "2023-07-23", "Milton", "Newham", 1, 6, "Group", "No", "YJGD"],
   ["EL1-GW1-03", 1, "EuroLeague", "GW1", "2023-07-23", "Stafford", "Viola", 3, 2, "Group", "No", "YJGD"],
   ["EL1-GW1-04", 1, "EuroLeague", "GW1", "2023-07-23", "Andover", "Eltham", 9, 1, "Group", "No", "YJGD"],
@@ -154,6 +155,20 @@ const RAW: RawMatch[] = [
   ["BP2-ES-01", 2, "British Premier", "GW?", "2024-12-10", "Eltham", "Stanford", 3, 0, "Group", "Yes", "—", "FFT - Date approximate"],
   ["BP2-AS-01", 2, "British Premier", "GW?", "2024-12-10", "Andover", "Stanford", 0, 0, "Group", "No", "—", "Date approximate"],
   ["BP2-CS-01", 2, "British Premier", "GW?", "2024-12-10", "Canterbury", "Stanford", 5, 0, "Group", "No", "—", "Date approximate"],
+
+  ["SI2-MT-01", 2, "Serie Italia", "GW?", "2024-12-12", "Milano", "Tretorre", 4, 0, "Group", "No", "—", "Date approximate"],
+  ["SI2-MV-01", 2, "Serie Italia", "GW?", "2024-12-12", "Milano", "Viola", 3, 0, "Group", "Yes", "—", "FFT - Date approximate"],
+  ["SI2-MCA-01", 2, "Serie Italia", "GW?", "2024-12-12", "Milano", "Cartiginia", 1, 3, "Group", "No", "—", "Date approximate"],
+  ["SI2-DT-01", 2, "Serie Italia", "GW?", "2024-12-12", "DDG", "Tretorre", 0, 3, "Group", "Yes", "—", "FFT - DDG forfeited - Date approximate"],
+  ["SI2-DS-01", 2, "Serie Italia", "GW?", "2024-12-12", "DDG", "Sassari", 0, 0, "Group", "No", "—", "Date approximate"],
+  ["SI2-DC-01", 2, "Serie Italia", "GW?", "2024-12-12", "DDG", "Casole", 0, 3, "Group", "Yes", "—", "FFT - DDG forfeited - Date approximate"],
+  ["SI2-DV-01", 2, "Serie Italia", "GW?", "2024-12-12", "DDG", "Viola", 0, 3, "Group", "Yes", "—", "FFT - DDG forfeited - Date approximate"],
+  ["SI2-DVE-01", 2, "Serie Italia", "GW?", "2024-12-12", "DDG", "Venezia", 0, 3, "Group", "Yes", "—", "FFT - DDG forfeited - Date approximate"],
+  ["SI2-TVE-01", 2, "Serie Italia", "GW?", "2024-12-12", "Tretorre", "Venezia", 1, 5, "Group", "No", "—", "Date approximate"],
+  ["SI2-SC-01", 2, "Serie Italia", "GW?", "2024-12-12", "Sassari", "Casole", 0, 3, "Group", "Yes", "—", "FFT - Date approximate"],
+  ["SI2-SCA-01", 2, "Serie Italia", "GW?", "2024-12-12", "Sassari", "Cartiginia", 0, 3, "Group", "Yes", "—", "FFT - Date approximate"],
+  ["SI2-VCA-01", 2, "Serie Italia", "GW?", "2024-12-12", "Viola", "Cartiginia", 0, 3, "Group", "No", "—", "Date approximate"],
+  ["SI2-VVE-01", 2, "Serie Italia", "GW?", "2024-12-12", "Viola", "Venezia", 0, 6, "Group", "No", "—", "Date approximate"],
 ];
 
 export const matches: MatchRecord[] = RAW.map(
