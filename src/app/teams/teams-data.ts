@@ -38,7 +38,7 @@ export const teams: Team[] = [
     slug: "canterbury-fc",
     logo: "/canterbury FC.png",
     form: "League squad",
-    seasons: [1, 2],
+    seasons: [2],
   },
   {
     name: "Andover FC",
@@ -70,7 +70,7 @@ export const teams: Team[] = [
     slug: "stanford-fc",
     logo: "/Stanford FC.png",
     form: "League squad",
-    seasons: [1, 2],
+    seasons: [2],
   },
   {
     name: "Deportivo Di Gnoa",
@@ -118,7 +118,7 @@ export const teams: Team[] = [
     slug: "viola-fc",
     logo: "/Viola FC.png",
     form: "League squad",
-    seasons: [2],
+    seasons: [1, 2],
   },
   {
     name: "Sassari Calcio",
@@ -135,6 +135,14 @@ export const teams: Team[] = [
     logo: "/Ambasciatori Milano.png",
     form: "League squad",
     seasons: [2],
+  },
+  {
+    name: "Stafford Wanderers",
+    short: "STW",
+    slug: "stafford-wanderers",
+    logo: "/Stafford Wanderers.png",
+    form: "League squad",
+    seasons: [1],
   },
 ];
 

@@ -35,7 +35,7 @@ const TEAM_NAME_TO_SLUG: Record<string, string | null> = {
   DDG: "deportivo-di-gnoa",
   Tretorre: "tre-torre-libertas-fc",
   Sassari: "sassari-calcio",
-  Stafford: null,
+  Stafford: "stafford-wanderers",
 };
 
 function slugFor(name: string): string | null {
@@ -75,6 +75,7 @@ type RawMatch = [
 
 const RAW: RawMatch[] = [
   ["EL1-GW1-01", 1, "EuroLeague", "GW1", "2023-07-23", "Newport", "Nottingham", 3, 5, "Group", "No", "YJGD"],
+  ["EL1-NS-01", 1, "EuroLeague", "GW?", "2023-07-29", "Newport", "Stafford", 4, 0, "Group", "No", "—", "Date approximate"],
   ["EL1-GW1-02", 1, "EuroLeague", "GW1", "2023-07-23", "Milton", "Newham", 1, 6, "Group", "No", "YJGD"],
   ["EL1-GW1-03", 1, "EuroLeague", "GW1", "2023-07-23", "Stafford", "Viola", 3, 2, "Group", "No", "YJGD"],
   ["EL1-GW1-04", 1, "EuroLeague", "GW1", "2023-07-23", "Andover", "Eltham", 9, 1, "Group", "No", "YJGD"],
@@ -101,6 +102,12 @@ const RAW: RawMatch[] = [
   ["EL1-GW7-02", 1, "EuroLeague", "GW7", "2023-08-17", "Newport", "Milton", 0, 3, "Group", "Yes", "YJGD", "FFT"],
   ["EL1-GW7-03", 1, "EuroLeague", "GW7", "2023-08-17", "Viola", "Eltham", 1, 3, "Group", "No", "sam"],
   ["EP1-QF-01", 1, "EuroBlox Playoffs", "QF", "2023-08-17", "Andover", "Viola", 7, 1, "Quarter-Final", "No", "Koolicxcte"],
+  ["EP1-QF-02", 1, "EuroBlox Playoffs", "QF", "2023-08-17", "Eltham", "Newham", 4, 0, "Quarter-Final", "No", "—", "Date approximate"],
+  ["EP1-QF-03", 1, "EuroBlox Playoffs", "QF", "2023-08-17", "Milton", "Stafford", 5, 1, "Quarter-Final", "No", "—", "Date approximate"],
+  ["EP1-QF-04", 1, "EuroBlox Playoffs", "QF", "2023-08-17", "Nottingham", "Newport", 3, 0, "Quarter-Final", "Yes", "—", "FFT - Date approximate"],
+  ["EP1-SF-01", 1, "EuroBlox Playoffs", "SF", "2023-08-24", "Andover", "Milton", 0, 7, "Semi-Final", "No", "—", "Date approximate"],
+  ["EP1-SF-02", 1, "EuroBlox Playoffs", "SF", "2023-08-24", "Eltham", "Nottingham", 0, 4, "Semi-Final", "No", "—", "Date approximate"],
+  ["EP1-F-01", 1, "EuroBlox Playoffs", "F", "2023-08-31", "Milton", "Nottingham", 3, 2, "Final", "No", "—", "S1 Champions: Milton · Date approximate"],
 
   ["EL2-GW1-01", 2, "EuroLeague", "GW1", "2024-11-09", "Cartiginia", "Venezia", 3, 2, "Group", "No", "Deleted User"],
   ["EL2-GW1-02", 2, "EuroLeague", "GW1", "2024-11-09", "Nottingham", "Newham", 3, 4, "Group", "No", "Koolicxcte"],
