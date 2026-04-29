@@ -6,6 +6,7 @@ import {
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
   type GuildBasedChannel,
+  type GuildMember,
   type GuildTextBasedChannel,
 } from "discord.js";
 
@@ -23,6 +24,50 @@ export const slashCommandDefinitions = [
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
     .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("kick")
+    .setDescription("Kick a user from the server")
+    .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
+    .addUserOption((opt) =>
+      opt
+        .setName("user")
+        .setDescription("User to kick")
+        .setRequired(true),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("reason")
+        .setDescription("Reason for the kick")
+        .setRequired(false),
+    )
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("ban")
+    .setDescription("Ban a user from the server")
+    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+    .addUserOption((opt) =>
+      opt
+        .setName("user")
+        .setDescription("User to ban")
+        .setRequired(true),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("reason")
+        .setDescription("Reason for the ban")
+        .setRequired(false),
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("delete_days")
+        .setDescription("Days of message history to delete (0-7)")
+        .setMinValue(0)
+        .setMaxValue(7)
+        .setRequired(false),
+    )
+    .toJSON(),
 ];
 
 export async function handleSlashCommand(
@@ -31,6 +76,12 @@ export async function handleSlashCommand(
   switch (interaction.commandName) {
     case "backlog":
       await handleBacklog(interaction);
+      return;
+    case "kick":
+      await handleKick(interaction);
+      return;
+    case "ban":
+      await handleBan(interaction);
       return;
     default:
       await interaction.reply({
@@ -110,6 +161,219 @@ async function handleBacklog(
     .setTimestamp(new Date());
 
   await interaction.editReply({ embeds: [embed] });
+}
+
+async function handleKick(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  if (!interaction.guild) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Run this command inside the server.",
+    });
+    return;
+  }
+  if (!interaction.memberPermissions?.has(PermissionFlagsBits.KickMembers)) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "You need the Kick Members permission to use /kick.",
+    });
+    return;
+  }
+
+  const user = interaction.options.getUser("user", true);
+  const reason =
+    interaction.options.getString("reason") ?? "No reason provided";
+
+  if (user.id === interaction.user.id) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "You can't kick yourself.",
+    });
+    return;
+  }
+  if (interaction.client.user && user.id === interaction.client.user.id) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "I can't kick myself, no.",
+    });
+    return;
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  let target: GuildMember | null = null;
+  try {
+    target = await interaction.guild.members.fetch(user.id);
+  } catch {
+    target = null;
+  }
+  if (!target) {
+    await interaction.editReply({
+      content: `**${user.tag}** isn't in the server.`,
+    });
+    return;
+  }
+  if (!target.kickable) {
+    await interaction.editReply({
+      content: `Can't kick **${user.tag}** — they're above the bot in the role hierarchy or are the server owner.`,
+    });
+    return;
+  }
+
+  let dmDelivered = true;
+  try {
+    const dm = new EmbedBuilder()
+      .setColor(0xef4444)
+      .setTitle("👢 You were kicked from VFL")
+      .setDescription(`**Reason**\n${reason}`)
+      .setFooter({ text: "VFL Bot" })
+      .setTimestamp(new Date());
+    await target.send({ embeds: [dm] });
+  } catch {
+    dmDelivered = false;
+  }
+
+  try {
+    await target.kick(`Kicked by ${interaction.user.tag}: ${reason}`);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "unknown error";
+    await interaction.editReply({
+      content: `Failed to kick **${user.tag}**: ${msg}`,
+    });
+    return;
+  }
+
+  const result = new EmbedBuilder()
+    .setColor(0xef4444)
+    .setTitle("👢 Kicked")
+    .setDescription(`**${user.tag}** has been kicked from the server.`)
+    .addFields(
+      { name: "Reason", value: reason, inline: false },
+      {
+        name: "DM",
+        value: dmDelivered ? "Delivered" : "Not delivered (user blocks DMs)",
+        inline: false,
+      },
+    )
+    .setFooter({ text: `Kicked by ${interaction.user.tag}` })
+    .setTimestamp(new Date());
+
+  await interaction.editReply({ embeds: [result] });
+}
+
+async function handleBan(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  if (!interaction.guild) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Run this command inside the server.",
+    });
+    return;
+  }
+  if (!interaction.memberPermissions?.has(PermissionFlagsBits.BanMembers)) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "You need the Ban Members permission to use /ban.",
+    });
+    return;
+  }
+
+  const user = interaction.options.getUser("user", true);
+  const reason =
+    interaction.options.getString("reason") ?? "No reason provided";
+  const deleteDays = interaction.options.getInteger("delete_days") ?? 0;
+
+  if (user.id === interaction.user.id) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "You can't ban yourself.",
+    });
+    return;
+  }
+  if (interaction.client.user && user.id === interaction.client.user.id) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "I can't ban myself.",
+    });
+    return;
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  let target: GuildMember | null = null;
+  try {
+    target = await interaction.guild.members.fetch(user.id);
+  } catch {
+    target = null;
+  }
+
+  if (target && !target.bannable) {
+    await interaction.editReply({
+      content: `Can't ban **${user.tag}** — they're above the bot in the role hierarchy or are the server owner.`,
+    });
+    return;
+  }
+
+  let dmDelivered = true;
+  if (target) {
+    try {
+      const dm = new EmbedBuilder()
+        .setColor(0x991b1b)
+        .setTitle("🔨 You were banned from VFL")
+        .setDescription(`**Reason**\n${reason}`)
+        .setFooter({ text: "VFL Bot" })
+        .setTimestamp(new Date());
+      await target.send({ embeds: [dm] });
+    } catch {
+      dmDelivered = false;
+    }
+  } else {
+    dmDelivered = false;
+  }
+
+  try {
+    await interaction.guild.members.ban(user.id, {
+      deleteMessageSeconds: deleteDays * 86400,
+      reason: `Banned by ${interaction.user.tag}: ${reason}`,
+    });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "unknown error";
+    await interaction.editReply({
+      content: `Failed to ban **${user.tag}**: ${msg}`,
+    });
+    return;
+  }
+
+  const result = new EmbedBuilder()
+    .setColor(0x991b1b)
+    .setTitle("🔨 Banned")
+    .setDescription(`**${user.tag}** has been banned from the server.`)
+    .addFields(
+      { name: "Reason", value: reason, inline: false },
+      {
+        name: "Messages deleted",
+        value:
+          deleteDays > 0
+            ? `${deleteDays} day${deleteDays === 1 ? "" : "s"} of history`
+            : "None",
+        inline: true,
+      },
+      {
+        name: "DM",
+        value: target
+          ? dmDelivered
+            ? "Delivered"
+            : "Not delivered (user blocks DMs)"
+          : "Skipped (user not in server)",
+        inline: true,
+      },
+    )
+    .setFooter({ text: `Banned by ${interaction.user.tag}` })
+    .setTimestamp(new Date());
+
+  await interaction.editReply({ embeds: [result] });
 }
 
 async function collectReviewCardLinks(

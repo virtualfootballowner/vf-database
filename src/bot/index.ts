@@ -2,13 +2,17 @@ import "dotenv/config";
 
 import {
   Client,
+  ComponentType,
   EmbedBuilder,
   Events,
   GatewayIntentBits,
   MessageFlags,
   PermissionFlagsBits,
   type ButtonInteraction,
+  type Guild,
+  type GuildBasedChannel,
   type GuildMember,
+  type GuildTextBasedChannel,
   type Interaction,
 } from "discord.js";
 
@@ -24,6 +28,7 @@ import {
   handleApprovedRoleAdded,
   handleRoverVerified,
 } from "@/bot/sync";
+
 
 const client = new Client({
   intents: [
@@ -101,6 +106,15 @@ client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
     }
   } catch (error) {
     console.error("Member update handling failed:", error);
+  }
+});
+
+client.on(Events.GuildMemberRemove, async (member) => {
+  try {
+    if (!member.id || !member.guild) return;
+    await closeReviewCardsFor(member.guild, member.id);
+  } catch (error) {
+    console.error("Failed to close cards for departing member:", error);
   }
 });
 
@@ -288,6 +302,67 @@ async function markCard(
     });
   } catch (error) {
     console.error("Failed to update review card:", error);
+  }
+}
+
+async function closeReviewCardsFor(
+  guild: Guild,
+  discordId: string,
+): Promise<void> {
+  let channel: GuildBasedChannel | null;
+  try {
+    channel = await guild.channels.fetch(env.DISCORD_STAFF_REVIEW_CHANNEL_ID);
+  } catch {
+    return;
+  }
+  if (!channel || !channel.isTextBased()) return;
+
+  let messages;
+  try {
+    messages = await (channel as GuildTextBasedChannel).messages.fetch({
+      limit: 100,
+    });
+  } catch {
+    return;
+  }
+
+  const approveId = `${APPROVE_BUTTON_ID_PREFIX}${discordId}`;
+  const denyId = `${DENY_BUTTON_ID_PREFIX}${discordId}`;
+
+  for (const message of messages.values()) {
+    const cardOwnedByMember = (message.components ?? []).some((row) => {
+      if (row.type !== ComponentType.ActionRow) return false;
+      return row.components.some((component) => {
+        if (component.type !== ComponentType.Button) return false;
+        const id = component.customId;
+        return id === approveId || id === denyId;
+      });
+    });
+
+    if (!cardOwnedByMember) continue;
+
+    const original = message.embeds[0];
+    const builder = original
+      ? EmbedBuilder.from(original)
+      : new EmbedBuilder().setTitle("Review");
+
+    builder
+      .setColor(0x6b7280)
+      .addFields({
+        name: "🚪 Member left",
+        value: "Player is no longer in the server. Card auto-closed.",
+        inline: false,
+      })
+      .setFooter({ text: `Auto-closed at ${new Date().toUTCString()}` });
+
+    try {
+      await message.edit({
+        embeds: [builder],
+        components: [],
+      });
+    } catch (error) {
+      console.error("Failed to edit card for left member:", error);
+    }
   }
 }
 
