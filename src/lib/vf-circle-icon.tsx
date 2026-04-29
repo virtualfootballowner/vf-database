@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
 const VF_BLUE = "#083696";
-const LOGO_FILE = join(process.cwd(), "public", "vf log.png");
+const LOGO_FILE = join(process.cwd(), "public", "vf logo.png");
 
 async function logoDataUrl(): Promise<string> {
   const buf = await readFile(LOGO_FILE);
