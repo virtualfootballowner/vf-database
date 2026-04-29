@@ -15,6 +15,10 @@ const envSchema = z.object({
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   ROBLOX_API_BASE_URL: z.string().url().default("https://users.roblox.com"),
+  VFL_SITE_URL: z
+    .string()
+    .url()
+    .default("https://myvirtualfootball.com"),
 });
 
 export const env = envSchema.parse({
@@ -27,4 +31,5 @@ export const env = envSchema.parse({
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   ROBLOX_API_BASE_URL: process.env.ROBLOX_API_BASE_URL,
+  VFL_SITE_URL: process.env.VFL_SITE_URL,
 });

@@ -156,17 +156,26 @@ export async function handleApprovedRoleAdded(
 
   if (options.sendDm) {
     try {
+      const profileUrl = `${env.VFL_SITE_URL.replace(/\/$/, "")}/players/${encodeURIComponent(identity.username)}`;
+
       const approvedEmbed = new EmbedBuilder()
         .setColor(0x10b981)
         .setTitle("🎉 You're approved!")
         .setDescription(
-          "You now have full access to the VFL Discord and your profile is live on the league website.",
+          `You now have full access to the VFL Discord and your profile is live at **[${env.VFL_SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "")}/players](${profileUrl})**.`,
         )
-        .addFields({
-          name: "🎮 Roblox",
-          value: `[${identity.username}](https://www.roblox.com/users/${identity.userId}/profile)`,
-          inline: true,
-        })
+        .addFields(
+          {
+            name: "🎮 Roblox",
+            value: `[${identity.username}](https://www.roblox.com/users/${identity.userId}/profile)`,
+            inline: true,
+          },
+          {
+            name: "🌐 VFL Profile",
+            value: `[View on website](${profileUrl})`,
+            inline: true,
+          },
+        )
         .setFooter({ text: "Good luck out there ⚽" })
         .setTimestamp(new Date());
 
