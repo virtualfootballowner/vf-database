@@ -99,6 +99,7 @@ const RAW: RawMatch[] = [
   ["EL1-GW6-01", 1, "EuroLeague", "GW6", "2023-08-09", "Milton", "Andover", 2, 8, "Group", "No", "Deleted User"],
   ["EL1-GW6-02", 1, "EuroLeague", "GW6", "2023-08-09", "Nottingham", "Eltham", 3, 0, "Group", "No", "sam"],
   ["EL1-GW6-03", 1, "EuroLeague", "GW6", "2023-08-10", "Viola", "Newham", 6, 1, "Group", "No", "ahmed"],
+  ["EL1-GW6-04", 1, "EuroLeague", "GW6", "2023-08-10", "Stafford", "Newport", 5, 2, "Group", "No", "—", "Euro League sheet: Stafford 5-2 Newport"],
   ["EL1-GW7-01", 1, "EuroLeague", "GW7", "2023-08-14", "Andover", "Newham", 9, 0, "Group", "Partial", "wiz", "+3 FFT goals added to score"],
   ["EL1-GW7-02", 1, "EuroLeague", "GW7", "2023-08-17", "Newport", "Milton", 0, 3, "Group", "Yes", "YJGD", "FFT"],
   ["EL1-GW7-03", 1, "EuroLeague", "GW7", "2023-08-17", "Viola", "Eltham", 1, 3, "Group", "No", "sam"],
