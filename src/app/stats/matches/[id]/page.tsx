@@ -13,6 +13,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { getRobloxHeadshots } from "@/lib/roblox";
 
 import { getEventsForMatch, type MatchEvent } from "../../match-events-data";
 import {
@@ -20,6 +22,11 @@ import {
   matches,
   type MatchRecord,
 } from "../../matches-data";
+
+const matchSurfaceClass =
+  "border-0 bg-white/[0.035] shadow-none ring-1 ring-white/[0.08] backdrop-blur-md";
+const insetRowClass =
+  "rounded-lg bg-white/[0.03] px-3 py-2 ring-1 ring-white/[0.06]";
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
   weekday: "long",
@@ -64,6 +71,15 @@ export default async function MatchDetailPage({
   if (!match) notFound();
 
   const events = getEventsForMatch(match.id);
+  const robloxIds = [
+    ...new Set(
+      events
+        .map((e) => e.robloxId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const headshots = await getRobloxHeadshots(robloxIds);
+
   const home = getMatchTeam(match.homeSlug, match.homeTeam);
   const away = getMatchTeam(match.awaySlug, match.awayTeam);
   const homeWon = match.homeScore > match.awayScore;
@@ -143,17 +159,29 @@ export default async function MatchDetailPage({
           ) : null}
         </section>
 
+        <MotmDualRow match={match} events={events} headshots={headshots} />
+
         <section className="grid gap-4 lg:grid-cols-2">
-          <TeamPanel match={match} events={events} side="home" />
-          <TeamPanel match={match} events={events} side="away" />
+          <TeamPanel
+            match={match}
+            events={events}
+            side="home"
+            headshots={headshots}
+          />
+          <TeamPanel
+            match={match}
+            events={events}
+            side="away"
+            headshots={headshots}
+          />
         </section>
 
-        <Card className="gap-3 py-5">
+        <Card className={cn("gap-3 py-5", matchSurfaceClass)}>
           <CardHeader>
-            <CardTitle className="text-base font-semibold">
+            <CardTitle className="text-base font-semibold text-white/90">
               Match Info
             </CardTitle>
-            <CardDescription className="text-white/55">
+            <CardDescription className="text-white/50">
               Source data from VFL historical archive.
             </CardDescription>
           </CardHeader>
@@ -172,6 +200,170 @@ export default async function MatchDetailPage({
         </Card>
       </div>
     </main>
+  );
+}
+
+function MotmDualRow({
+  match,
+  events,
+  headshots,
+}: {
+  match: MatchRecord;
+  events: MatchEvent[];
+  headshots: Map<string, string>;
+}) {
+  const homeMotm =
+    events.find(
+      (e) => e.type === "MOTM" && e.team === match.homeTeam,
+    ) ?? null;
+  const awayMotm =
+    events.find(
+      (e) => e.type === "MOTM" && e.team === match.awayTeam,
+    ) ?? null;
+
+  return (
+    <section className="grid gap-3 sm:grid-cols-2" aria-label="Man of the match">
+      <MotmCard
+        side="home"
+        teamName={match.homeTeam}
+        slug={match.homeSlug}
+        team={getMatchTeam(match.homeSlug, match.homeTeam)}
+        motm={homeMotm}
+        headshots={headshots}
+      />
+      <MotmCard
+        side="away"
+        teamName={match.awayTeam}
+        slug={match.awaySlug}
+        team={getMatchTeam(match.awaySlug, match.awayTeam)}
+        motm={awayMotm}
+        headshots={headshots}
+      />
+    </section>
+  );
+}
+
+function MotmCard({
+  side,
+  teamName,
+  slug,
+  team,
+  motm,
+  headshots,
+}: {
+  side: "home" | "away";
+  teamName: string;
+  slug: string | null;
+  team: ReturnType<typeof getMatchTeam>;
+  motm: MatchEvent | null;
+  headshots: Map<string, string>;
+}) {
+  const crest = (
+    <div
+      className={cn(
+        "flex shrink-0",
+        side === "home" ? "justify-end" : "justify-start",
+      )}
+    >
+      <TeamCrest team={team} size="sm" />
+    </div>
+  );
+
+  const body = (
+    <div
+      className={cn(
+        "flex min-w-0 flex-1 items-center gap-3",
+        side === "home" ? "flex-row-reverse sm:text-right" : "text-left",
+      )}
+    >
+      <EventHeadshot
+        robloxId={motm?.robloxId ?? null}
+        name={motm?.player ?? teamName}
+        headshots={headshots}
+        size="md"
+      />
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">
+          ⭐ Man of the match
+        </p>
+        <p className="truncate text-xs text-white/55">{teamName}</p>
+        <p className="truncate text-sm font-medium text-white/90">
+          {motm?.player ?? "Not recorded"}
+        </p>
+      </div>
+    </div>
+  );
+
+  const inner = (
+    <div
+      className={cn(
+        "flex flex-col gap-2 rounded-xl px-4 py-3 sm:flex-row sm:items-center",
+        matchSurfaceClass,
+        side === "home" ? "sm:flex-row-reverse" : "",
+      )}
+    >
+      {crest}
+      {body}
+    </div>
+  );
+
+  if (slug) {
+    return (
+      <Link
+        href={`/teams/${slug}`}
+        className="block rounded-xl outline-none transition hover:opacity-[0.92] focus-visible:ring-2 focus-visible:ring-white/25"
+      >
+        {inner}
+      </Link>
+    );
+  }
+  return inner;
+}
+
+function EventHeadshot({
+  robloxId,
+  name,
+  headshots,
+  size = "sm",
+}: {
+  robloxId: string | null;
+  name: string;
+  headshots: Map<string, string>;
+  size?: "sm" | "md";
+}) {
+  const url = robloxId ? headshots.get(robloxId) : undefined;
+  const initials = name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  const safeInitials = initials || "?";
+  const dim = size === "md" ? "size-12" : "size-9";
+
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt=""
+        className={cn(
+          dim,
+          "shrink-0 rounded-full object-cover ring-1 ring-white/15",
+        )}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        dim,
+        "flex shrink-0 items-center justify-center rounded-full bg-white/[0.07] text-[10px] font-semibold text-white/60 ring-1 ring-white/10 sm:text-xs",
+      )}
+      aria-hidden
+    >
+      {safeInitials}
+    </div>
   );
 }
 
@@ -215,10 +407,12 @@ function TeamPanel({
   match,
   events,
   side,
+  headshots,
 }: {
   match: MatchRecord;
   events: MatchEvent[];
   side: "home" | "away";
+  headshots: Map<string, string>;
 }) {
   const teamName = side === "home" ? match.homeTeam : match.awayTeam;
   const slug = side === "home" ? match.homeSlug : match.awaySlug;
@@ -228,21 +422,20 @@ function TeamPanel({
   const goals = teamEvents.filter((e) => e.type === "Goal");
   const ownGoals = teamEvents.filter((e) => e.type === "OG");
   const assists = teamEvents.filter((e) => e.type === "Assist");
-  const motm = teamEvents.filter((e) => e.type === "MOTM");
   const yellows = teamEvents.filter((e) => e.type === "Yellow Card");
   const reds = teamEvents.filter((e) => e.type === "Red Card");
 
   const totalGoalEntries = goals.length + ownGoals.length;
 
   return (
-    <Card className="gap-3 py-5">
+    <Card className={cn("gap-3 py-5", matchSurfaceClass)}>
       <CardHeader className="flex flex-row items-center gap-3">
         <TeamCrest team={teamMeta} size="sm" />
         <div className="min-w-0">
-          <CardTitle className="truncate text-lg font-semibold tracking-tight">
+          <CardTitle className="truncate text-lg font-semibold tracking-tight text-white/90">
             {teamName}
           </CardTitle>
-          <CardDescription className="text-white/55">
+          <CardDescription className="text-white/50">
             {totalGoalEntries === 0
               ? "No detailed events"
               : `${goals.reduce((acc, e) => acc + e.count, 0) + ownGoals.reduce((acc, e) => acc + e.count, 0)} scored`}
@@ -250,24 +443,38 @@ function TeamPanel({
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <Section title="Goals" empty={goals.length === 0 && ownGoals.length === 0}>
+        <Section
+          title="⚽ Goals"
+          empty={goals.length === 0 && ownGoals.length === 0}
+        >
           {goals.map((event, idx) => (
-            <PlayerLine key={`goal-${idx}`} event={event} />
+            <PlayerLine
+              key={`goal-${idx}`}
+              event={event}
+              headshots={headshots}
+              rowEmoji="⚽"
+            />
           ))}
           {ownGoals.map((event, idx) => (
-            <PlayerLine key={`og-${idx}`} event={event} suffix="OG" tone="warning" />
+            <PlayerLine
+              key={`og-${idx}`}
+              event={event}
+              headshots={headshots}
+              rowEmoji="⚽"
+              suffix="OG"
+              tone="warning"
+            />
           ))}
         </Section>
 
-        <Section title="Assists" empty={assists.length === 0}>
+        <Section title="🅰️ Assists" empty={assists.length === 0}>
           {assists.map((event, idx) => (
-            <PlayerLine key={`assist-${idx}`} event={event} />
-          ))}
-        </Section>
-
-        <Section title="MOTM" empty={motm.length === 0}>
-          {motm.map((event, idx) => (
-            <PlayerLine key={`motm-${idx}`} event={event} />
+            <PlayerLine
+              key={`assist-${idx}`}
+              event={event}
+              headshots={headshots}
+              rowEmoji="🅰️"
+            />
           ))}
         </Section>
 
@@ -276,10 +483,22 @@ function TeamPanel({
           empty={yellows.length === 0 && reds.length === 0}
         >
           {yellows.map((event, idx) => (
-            <PlayerLine key={`yc-${idx}`} event={event} suffix="YC" tone="warning" />
+            <PlayerLine
+              key={`yc-${idx}`}
+              event={event}
+              headshots={headshots}
+              suffix="YC"
+              tone="warning"
+            />
           ))}
           {reds.map((event, idx) => (
-            <PlayerLine key={`rc-${idx}`} event={event} suffix="RC" tone="danger" />
+            <PlayerLine
+              key={`rc-${idx}`}
+              event={event}
+              headshots={headshots}
+              suffix="RC"
+              tone="danger"
+            />
           ))}
         </Section>
       </CardContent>
@@ -298,13 +517,13 @@ function Section({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
         {title}
       </p>
       {empty ? (
         <p className="text-xs text-white/35">—</p>
       ) : (
-        <div className="flex flex-col gap-1">{children}</div>
+        <div className="flex flex-col gap-1.5">{children}</div>
       )}
     </div>
   );
@@ -312,32 +531,56 @@ function Section({
 
 function PlayerLine({
   event,
+  headshots,
+  rowEmoji,
   suffix,
   tone = "default",
 }: {
   event: MatchEvent;
+  headshots: Map<string, string>;
+  rowEmoji?: string;
   suffix?: string;
   tone?: "default" | "warning" | "danger";
 }) {
   const toneClass =
     tone === "warning"
-      ? "border-amber-300/30 bg-amber-400/10 text-amber-200"
+      ? "border-amber-400/20 bg-amber-400/[0.08] text-amber-100/90"
       : tone === "danger"
-        ? "border-rose-300/30 bg-rose-400/10 text-rose-200"
-        : "border-white/15 bg-white/5 text-white/80";
+        ? "border-rose-400/20 bg-rose-400/[0.08] text-rose-100/90"
+        : "border-white/10 bg-white/[0.04] text-white/75";
 
   return (
-    <div className="flex items-center gap-2 rounded-md border border-white/10 bg-[#02103f]/65 px-3 py-2">
-      <p className="min-w-0 flex-1 truncate text-sm font-medium text-white">
+    <div
+      className={cn(
+        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 ring-1 ring-white/[0.06]",
+        tone === "default"
+          ? "bg-white/[0.03]"
+          : tone === "warning"
+            ? "bg-amber-400/[0.04]"
+            : "bg-rose-400/[0.04]",
+      )}
+    >
+      {rowEmoji ? (
+        <span className="shrink-0 text-sm leading-none opacity-85" aria-hidden>
+          {rowEmoji}
+        </span>
+      ) : null}
+      <EventHeadshot
+        robloxId={event.robloxId}
+        name={event.player}
+        headshots={headshots}
+        size="sm"
+      />
+      <p className="min-w-0 flex-1 truncate text-sm font-medium text-white/88">
         {event.player}
         {event.count > 1 ? (
-          <span className="ml-1.5 text-xs font-semibold text-white/55">
+          <span className="ml-1.5 text-xs font-semibold text-white/45">
             ×{event.count}
           </span>
         ) : null}
       </p>
       {event.reason ? (
-        <span className="hidden truncate text-[10px] text-white/45 sm:inline">
+        <span className="hidden max-w-[40%] truncate text-[10px] text-white/40 sm:inline">
           {event.reason}
         </span>
       ) : null}
@@ -354,11 +597,16 @@ function PlayerLine({
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between rounded-md border border-white/10 bg-[#02103f]/65 px-3 py-2">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
+    <div
+      className={cn(
+        "flex items-center justify-between gap-3",
+        insetRowClass,
+      )}
+    >
+      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
         {label}
       </span>
-      <span className="truncate pl-3 text-right text-sm font-medium text-white">
+      <span className="truncate text-right text-sm font-medium text-white/85">
         {value}
       </span>
     </div>
