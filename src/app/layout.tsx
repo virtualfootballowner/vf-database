@@ -23,6 +23,11 @@ const bebasNeue = Bebas_Neue({
 export const metadata: Metadata = {
   title: "VF League Database",
   description: "League database display layer for VF players and teams.",
+  icons: {
+    icon: [{ url: "/vf%20log.png", type: "image/png" }],
+    apple: "/vf%20log.png",
+    shortcut: "/vf%20log.png",
+  },
 };
 
 export default function RootLayout({
