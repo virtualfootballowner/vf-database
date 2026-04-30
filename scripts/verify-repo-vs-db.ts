@@ -8,6 +8,7 @@ import path from "node:path";
 
 import { matches, resolveTeamForWebsiteName } from "../src/app/stats/matches-data";
 import { readAllMatchEventRecords, type MatchEventRecord } from "../src/lib/match-event-records";
+import { teams as catalogTeams, type Team } from "../src/app/teams/teams-data";
 
 config({ path: path.resolve(process.cwd(), ".env.local"), override: true });
 
@@ -101,21 +102,53 @@ function sortKeys(keys: string[]): string[] {
   return [...keys].sort((a, b) => a.localeCompare(b));
 }
 
+function sameSeasons(
+  db: number[] | null | undefined,
+  expected: number[],
+): boolean {
+  const a = [...(db ?? [])].sort((x, y) => x - y).join(",");
+  const b = [...expected].sort((x, y) => x - y).join(",");
+  return a === b;
+}
+
 async function main() {
   let failed = false;
   const matchIds = new Set(matches.map((m) => m.id));
 
-  const { data: teamRows, error: teamErr } = await supabase.from("teams").select("id, name");
+  const { data: teamRows, error: teamErr } = await supabase
+    .from("teams")
+    .select("id, name, slug, logo_url, form_label, seasons, abbreviation");
   if (teamErr) throw teamErr;
   const teamNameById = new Map<string, string>();
+  const dbTeamByName = new Map<
+    string,
+    {
+      id: string;
+      name: string;
+      slug: string | null;
+      logo_url: string | null;
+      form_label: string | null;
+      seasons: number[] | null;
+      abbreviation: string | null;
+    }
+  >();
   for (const t of teamRows ?? []) {
     teamNameById.set(t.id, t.name);
+    dbTeamByName.set(t.name, t);
   }
+
+  const { data: tournamentRows, error: tourErr } = await supabase
+    .from("tournaments")
+    .select("id, season, competition");
+  if (tourErr) throw tourErr;
+  const tourneyById = new Map(
+    (tournamentRows ?? []).map((r) => [r.id, r] as const),
+  );
 
   const { data: dbMatchRows, error: mErr } = await supabase
     .from("matches")
     .select(
-      "id, roblox_match_id, home_team_id, away_team_id, home_score, away_score, stage, match_week, scheduled_at, referee",
+      "id, tournament_id, roblox_match_id, home_team_id, away_team_id, home_score, away_score, stage, match_week, scheduled_at, referee, season, competition, game_week_label, fft, match_notes",
     );
   if (mErr) throw mErr;
 
@@ -161,6 +194,30 @@ async function main() {
     const wantRef = m.referee.trim();
     const gotRef = normDetail(row.referee);
     if (gotRef !== wantRef) problems.push(`referee DB=${gotRef || "∅"} repo=${wantRef || "∅"}`);
+    if (row.season !== m.season) problems.push(`season DB=${row.season} repo=${m.season}`);
+    if ((row.competition ?? "") !== (m.competition ?? "")) {
+      problems.push(`competition DB=${row.competition ?? "∅"} repo=${m.competition ?? "∅"}`);
+    }
+    if ((row.game_week_label ?? "") !== (m.gameWeek ?? "")) {
+      problems.push(`game_week_label DB=${row.game_week_label ?? "∅"} repo=${m.gameWeek ?? "∅"}`);
+    }
+    if ((row.fft ?? "") !== m.fft) problems.push(`fft DB=${row.fft ?? "∅"} repo=${m.fft}`);
+    if (normDetail(row.match_notes) !== normDetail(m.notes)) {
+      problems.push(`match_notes mismatch`);
+    }
+    const tr = row.tournament_id ? tourneyById.get(row.tournament_id) : undefined;
+    if (tr) {
+      if (tr.season !== m.season) {
+        problems.push(`tournament.season DB=${tr.season} repo=${m.season}`);
+      }
+      const wantTComp = m.competition === "—" ? null : m.competition;
+      const gotTComp = tr.competition ?? null;
+      if (wantTComp !== gotTComp) {
+        problems.push(
+          `tournament.competition DB=${gotTComp ?? "∅"} repo=${wantTComp ?? "∅"}`,
+        );
+      }
+    }
     if (problems.length) {
       failed = true;
       console.error(`FAIL match ${m.id}: ${problems.join("; ")}`);
@@ -244,7 +301,58 @@ async function main() {
   }
 
   if (!failed) {
-    console.log("OK: repo and database match (matches + event multiset).");
+    const teamNames = new Set<string>();
+    for (const m of matches) {
+      teamNames.add(m.homeTeam);
+      teamNames.add(m.awayTeam);
+    }
+    for (const e of readAllMatchEventRecords()) {
+      if (e.team && e.team !== "—") teamNames.add(e.team);
+    }
+    const expectedTeams = new Map<string, Team>();
+    for (const t of catalogTeams) expectedTeams.set(t.name, t);
+    for (const raw of teamNames) {
+      const t = resolveTeamForWebsiteName(raw);
+      expectedTeams.set(t.name, t);
+    }
+    for (const [name, exp] of expectedTeams) {
+      const dbRow = dbTeamByName.get(name);
+      if (!dbRow) {
+        failed = true;
+        console.error(`FAIL: team row missing in DB: ${name}`);
+        continue;
+      }
+      const expSlug = exp.slug?.trim() ?? "";
+      const gotSlug = (dbRow.slug ?? "").trim();
+      if (gotSlug !== expSlug) {
+        failed = true;
+        console.error(`FAIL team ${name}: slug DB=${gotSlug || "∅"} repo=${expSlug || "∅"}`);
+      }
+      const expLogo = exp.logo?.trim() ?? "";
+      const gotLogo = (dbRow.logo_url ?? "").trim();
+      if (gotLogo !== expLogo) {
+        failed = true;
+        console.error(`FAIL team ${name}: logo_url DB=${gotLogo || "∅"} repo=${expLogo || "∅"}`);
+      }
+      const expForm = exp.form?.trim() ?? "";
+      const gotForm = (dbRow.form_label ?? "").trim();
+      if (gotForm !== expForm) {
+        failed = true;
+        console.error(`FAIL team ${name}: form_label DB=${gotForm || "∅"} repo=${expForm || "∅"}`);
+      }
+      if (!sameSeasons(dbRow.seasons, exp.seasons)) {
+        failed = true;
+        console.error(
+          `FAIL team ${name}: seasons DB=${JSON.stringify(dbRow.seasons)} repo=${JSON.stringify(exp.seasons)}`,
+        );
+      }
+    }
+  }
+
+  if (!failed) {
+    console.log(
+      "OK: repo and database match (matches, tournaments, teams catalog, event multiset).",
+    );
   } else {
     console.error("\nFix: run `npm run db:import:website` after correcting CSV/repo, or align DB manually.");
     process.exit(1);

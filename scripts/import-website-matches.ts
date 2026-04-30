@@ -14,6 +14,7 @@ import {
   resolveTeamForWebsiteName,
   type MatchRecord,
 } from "../src/app/stats/matches-data";
+import { teams as catalogTeams, type Team } from "../src/app/teams/teams-data";
 import {
   readAllMatchEventRecords,
   type MatchEventRecord,
@@ -245,6 +246,10 @@ async function main() {
   const { error: delTeams } = await supabase.from("teams").delete().neq("id", ZERO);
   if (delTeams) throw delTeams;
 
+  const teamMetaByCanonical = new Map<string, Team>();
+  for (const t of catalogTeams) {
+    teamMetaByCanonical.set(t.name, t);
+  }
   const teamNames = new Set<string>();
   for (const m of matches) {
     teamNames.add(m.homeTeam);
@@ -253,15 +258,35 @@ async function main() {
   for (const e of readAllMatchEventRecords()) {
     if (e.team && e.team !== "—") teamNames.add(e.team);
   }
-
-  const teamRows: { name: string; abbreviation: string }[] = [];
-  const seenDbName = new Set<string>();
   for (const name of teamNames) {
     const t = resolveTeamForWebsiteName(name);
+    if (!teamMetaByCanonical.has(t.name)) {
+      teamMetaByCanonical.set(t.name, t);
+    }
+  }
+
+  const teamRows: {
+    name: string;
+    abbreviation: string;
+    slug: string | null;
+    logo_url: string | null;
+    form_label: string | null;
+    seasons: number[];
+  }[] = [];
+  const seenDbName = new Set<string>();
+  for (const t of teamMetaByCanonical.values()) {
     if (seenDbName.has(t.name)) continue;
     seenDbName.add(t.name);
     const abbrev = (t.short || t.name.slice(0, 6)).slice(0, 8).toUpperCase();
-    teamRows.push({ name: t.name, abbreviation: abbrev || "TM" });
+    const slug = t.slug?.trim() || null;
+    teamRows.push({
+      name: t.name,
+      abbreviation: abbrev || "TM",
+      slug,
+      logo_url: t.logo?.trim() || null,
+      form_label: t.form?.trim() || null,
+      seasons: [...t.seasons],
+    });
   }
 
   const { data: insertedTeams, error: teamErr } = await supabase
@@ -301,6 +326,8 @@ async function main() {
         status: "completed" as const,
         start_date: start,
         end_date: end,
+        season,
+        competition: competition === "—" ? null : competition,
       })
       .select("id")
       .single();
@@ -337,6 +364,11 @@ async function main() {
         ended_at: day.toISOString(),
         roblox_match_id: m.id,
         referee: m.referee.trim() || null,
+        season: m.season,
+        competition: m.competition,
+        game_week_label: m.gameWeek,
+        fft: m.fft,
+        match_notes: m.notes?.trim() || null,
       };
     });
 
