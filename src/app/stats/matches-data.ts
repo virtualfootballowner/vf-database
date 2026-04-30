@@ -75,7 +75,6 @@ type RawMatch = [
 
 const RAW: RawMatch[] = [
   ["EL1-GW1-01", 1, "EuroLeague", "GW1", "2023-07-22", "Newport", "Nottingham", 3, 5, "Group", "No", "YJGD"],
-  ["EL1-NS-01", 1, "EuroLeague", "GW2", "2023-07-29", "Newport", "Stafford", 4, 0, "Group", "No", "—", "Extra fixture — date not listed on Euro League sheet"],
   ["EL1-NTS-01", 1, "EuroLeague", "GW7", "2023-08-13", "Nottingham", "Stafford", 1, 1, "Group", "No", "YJGD", "Euro League sheet"],
   ["EL1-GW1-02", 1, "EuroLeague", "GW1", "2023-07-22", "Milton", "Newham", 1, 6, "Group", "No", "YJGD"],
   ["EL1-GW1-03", 1, "EuroLeague", "GW1", "2023-07-23", "Stafford", "Viola", 3, 2, "Group", "No", "YJGD"],
@@ -99,7 +98,7 @@ const RAW: RawMatch[] = [
   ["EL1-GW6-01", 1, "EuroLeague", "GW6", "2023-08-08", "Milton", "Andover", 2, 8, "Group", "No", "Deleted User"],
   ["EL1-GW6-02", 1, "EuroLeague", "GW6", "2023-08-09", "Nottingham", "Eltham", 3, 0, "Group", "No", "sam"],
   ["EL1-GW6-03", 1, "EuroLeague", "GW6", "2023-08-10", "Viola", "Newham", 6, 1, "Group", "No", "ahmed"],
-  ["EL1-GW6-04", 1, "EuroLeague", "GW6", "2023-08-10", "Stafford", "Newport", 5, 2, "Group", "No", "—", "Euro League sheet · no scorers listed"],
+  ["EL1-GW6-04", 1, "EuroLeague", "GW6", "2023-08-10", "Stafford", "Newport", 5, 2, "Group", "No", "—", "Euro League sheet · Newport lost 2-5 at Stafford"],
   ["EL1-GW7-01", 1, "EuroLeague", "GW7", "2023-08-13", "Andover", "Newham", 9, 0, "Group", "Partial", "wiz", "+3 FFT goals added to score"],
   ["EL1-GW7-02", 1, "EuroLeague", "GW7", "2023-08-13", "Newport", "Milton", 0, 3, "Group", "Yes", "YJGD", "FFT"],
   ["EL1-GW7-03", 1, "EuroLeague", "GW7", "2023-08-13", "Viola", "Eltham", 1, 3, "Group", "No", "sam"],
