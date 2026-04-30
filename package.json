@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "bot:dev": "tsx src/bot/index.ts",
-    "bot:start": "tsx src/bot/index.ts"
+    "bot:start": "tsx src/bot/index.ts",
+    "db:seed:s1": "tsx scripts/seed-s1-stats.ts",
+    "db:import:website": "tsx scripts/import-website-matches.ts",
+    "db:refresh:player-goals-assists": "tsx scripts/refresh-player-goal-assist-totals.ts",
+    "db:verify:repo": "tsx scripts/verify-repo-vs-db.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

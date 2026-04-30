@@ -29,6 +29,8 @@ import {
   handleRoverVerified,
 } from "@/bot/sync";
 
+/** When staff uses the Approve button, we sync here; skip duplicate work if GuildMemberUpdate fires too. */
+const approvalSyncOwnedByButton = new Set<string>();
 
 const client = new Client({
   intents: [
@@ -97,6 +99,9 @@ client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
       newRoles.has(env.DISCORD_APPROVED_ROLE_ID);
 
     if (approvedNowGranted) {
+      if (approvalSyncOwnedByButton.has(member.id)) {
+        return;
+      }
       await handleApprovedRoleAdded(member, { sendDm: true });
       return;
     }
@@ -171,6 +176,7 @@ async function handleApproveClick(
     return;
   }
 
+  approvalSyncOwnedByButton.add(member.id);
   try {
     if (!member.roles.cache.has(env.DISCORD_APPROVED_ROLE_ID)) {
       await member.roles.add(
@@ -179,6 +185,7 @@ async function handleApproveClick(
       );
     }
   } catch (error) {
+    approvalSyncOwnedByButton.delete(member.id);
     console.error("Failed to add Approved role:", error);
     await markCard(interaction, {
       verb: "Approve failed",
@@ -189,10 +196,24 @@ async function handleApproveClick(
     return;
   }
 
+  let syncOk = false;
+  try {
+    syncOk = await handleApprovedRoleAdded(member, { sendDm: true });
+  } catch (syncErr) {
+    console.error("Post-approve Supabase/DM sync failed:", syncErr);
+  } finally {
+    setTimeout(() => approvalSyncOwnedByButton.delete(member.id), 3000);
+  }
+
   await markCard(interaction, {
-    verb: "Approved",
-    detail: `by ${interaction.user}`,
-    color: 0x10b981,
+    verb: syncOk ? "Approved" : "Approved (sync failed)",
+    detail: syncOk
+      ? `by ${interaction.user}`
+      : [
+          `Role granted by ${interaction.user}.`,
+          "Database or DM step failed — check bot logs (nickname must map to a Roblox username, or run backfill after fixing).",
+        ].join(" "),
+    color: syncOk ? 0x10b981 : 0xb0734f,
   });
 }
 

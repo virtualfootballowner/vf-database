@@ -38,8 +38,13 @@ const TEAM_NAME_TO_SLUG: Record<string, string | null> = {
   Stafford: "stafford-wanderers",
 };
 
-function slugFor(name: string): string | null {
+export function slugFor(name: string): string | null {
   return TEAM_NAME_TO_SLUG[name] ?? null;
+}
+
+/** Short fixture name as on the site (e.g. `Milton`) → full `Team` record for DB import. */
+export function resolveTeamForWebsiteName(websiteName: string): Team {
+  return getMatchTeam(slugFor(websiteName), websiteName);
 }
 
 export function getMatchTeam(slug: string | null, fallbackName: string): Team {
@@ -93,12 +98,12 @@ const RAW: RawMatch[] = [
   ["EL1-GW4-04", 1, "EuroLeague", "GW4", "2023-08-02", "Stafford", "Newham", 0, 3, "Group", "Yes", "—", "FFT"],
   ["EL1-GW5-01", 1, "EuroLeague", "GW5", "2023-08-05", "Newport", "Andover", 0, 5, "Group", "No", "Koolicxcte"],
   ["EL1-GW5-02", 1, "EuroLeague", "GW5", "2023-08-06", "Viola", "Milton", 2, 4, "Group", "No", "wiz"],
-  ["EL1-GW5-03", 1, "EuroLeague", "GW5", "2023-08-05", "Eltham", "Stafford", 4, 0, "Group", "No", "Koolicxcte", "Includes 1 OG by zhanedem"],
+  ["EL1-GW5-03", 1, "EuroLeague", "GW5", "2023-08-05", "Eltham", "Stafford", 4, 0, "Group", "No", "Koolicxcte", "Stafford 0. OG zhanedem (credited to Eltham)."],
   ["EL1-GW5-04", 1, "EuroLeague", "GW5", "2023-08-06", "Newham", "Nottingham", 0, 2, "Group", "No", "Koolicxcte"],
   ["EL1-GW6-01", 1, "EuroLeague", "GW6", "2023-08-08", "Milton", "Andover", 2, 8, "Group", "No", "Deleted User"],
   ["EL1-GW6-02", 1, "EuroLeague", "GW6", "2023-08-09", "Nottingham", "Eltham", 3, 0, "Group", "No", "sam"],
   ["EL1-GW6-03", 1, "EuroLeague", "GW6", "2023-08-10", "Viola", "Newham", 6, 1, "Group", "No", "ahmed"],
-  ["EL1-GW6-04", 1, "EuroLeague", "GW6", "2023-08-10", "Stafford", "Newport", 5, 2, "Group", "No", "—", "Euro League sheet · Newport lost 2-5 at Stafford"],
+  ["EL1-GW6-04", 1, "EuroLeague", "GW6", "2023-08-10", "Stafford", "Newport", 3, 0, "Group", "Yes", "—", "FFT"],
   ["EL1-GW7-01", 1, "EuroLeague", "GW7", "2023-08-13", "Andover", "Newham", 9, 0, "Group", "Partial", "wiz", "+3 FFT goals added to score"],
   ["EL1-GW7-02", 1, "EuroLeague", "GW7", "2023-08-13", "Newport", "Milton", 0, 3, "Group", "Yes", "YJGD", "FFT"],
   ["EL1-GW7-03", 1, "EuroLeague", "GW7", "2023-08-13", "Viola", "Eltham", 1, 3, "Group", "No", "sam"],
@@ -117,7 +122,7 @@ const RAW: RawMatch[] = [
   ["BP2-GW1-01", 2, "British Premier", "GW1", "2024-11-10", "Milton", "Eltham", 2, 3, "Group", "No", "Deleted User"],
   ["BP2-MN-01", 2, "British Premier", "GW1", "2024-11-15", "Milton", "Newham", 2, 3, "Group", "No", "—", "Date approximate"],
   ["SI2-GW1-01", 2, "Serie Italia", "GW1", "2024-11-10", "Milano", "DDG", 6, 0, "Group", "Yes", "LogisticsEnthusiast", "FFT"],
-  ["EL2-GW1-05", 2, "British Premier", "GW1", "2024-11-12", "Newport", "Stanford", 7, 1, "Group", "Yes", "voidski", "FFT after mercy"],
+  ["EL2-GW1-05", 2, "British Premier", "GW1", "2024-11-12", "Newport", "Stanford", 7, 1, "Group", "Yes", "VoidLDN", "FFT after mercy"],
   ["SI2-GW1-02", 2, "Serie Italia", "GW1", "2024-11-13", "Tretorre", "Sassari", 0, 3, "Group", "Yes", "wiz", "FFT"],
   ["EL2-GW2-01", 2, "British Premier", "GW2", "2024-11-18", "Newham", "Andover", 4, 0, "Group", "No", "Koolicxcte"],
   ["EL2-GW2-02", 2, "British Premier", "GW2", "2024-11-19", "Nottingham", "Canterbury", 6, 4, "Group", "No", "Deleted User"],

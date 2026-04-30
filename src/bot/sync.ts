@@ -28,21 +28,40 @@ function getDisplayName(member: GuildMember): string | null {
   );
 }
 
+/**
+ * Resolve Roblox account from how the member appears in Discord.
+ * Tries several fields so Rover nicknames, global names, and plain Discord usernames
+ * (e.g. matches an existing site profile) still work when one field doesn't parse.
+ */
 async function resolveIdentityForMember(
   member: GuildMember,
 ): Promise<RobloxIdentity | null> {
-  const rawName = getDisplayName(member);
-  if (!rawName) return null;
-  const robloxUsername = extractRobloxUsername(rawName);
-  if (!robloxUsername) return null;
-  try {
-    return await resolveRobloxIdentity(
-      robloxUsername,
-      env.ROBLOX_API_BASE_URL,
-    );
-  } catch {
-    return null;
+  const rawCandidates = [
+    member.nickname,
+    member.user.globalName ?? undefined,
+    member.user.displayName,
+    member.user.username,
+    getDisplayName(member),
+  ].filter((s): s is string => Boolean(s?.trim()));
+
+  const tried = new Set<string>();
+  for (const raw of rawCandidates) {
+    const robloxUsername = extractRobloxUsername(raw);
+    if (!robloxUsername) continue;
+    const key = robloxUsername.toLowerCase();
+    if (tried.has(key)) continue;
+    tried.add(key);
+    try {
+      const resolved = await resolveRobloxIdentity(
+        robloxUsername,
+        env.ROBLOX_API_BASE_URL,
+      );
+      if (resolved) return resolved;
+    } catch {
+      continue;
+    }
   }
+  return null;
 }
 
 export async function handleRoverVerified(
@@ -138,13 +157,13 @@ export async function handleRoverVerified(
 export async function handleApprovedRoleAdded(
   member: GuildMember,
   options: { sendDm?: boolean } = {},
-): Promise<void> {
+): Promise<boolean> {
   const identity = await resolveIdentityForMember(member);
   if (!identity) {
     console.warn(
       `Approved role on ${member.user.username} but no Roblox identity could be resolved; skipping Supabase sync.`,
     );
-    return;
+    return false;
   }
 
   await upsertVerifiedPlayer({
@@ -184,6 +203,8 @@ export async function handleApprovedRoleAdded(
       // user has DMs disabled — sync still happened, that's the important part
     }
   }
+
+  return true;
 }
 
 export function buildReviewButtons(

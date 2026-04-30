@@ -14,7 +14,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { getRobloxHeadshots } from "@/lib/roblox";
+import {
+  effectiveRobloxPlayerId,
+  extractRobloxUsername,
+  getRobloxHeadshots,
+  resolveRobloxUserIdsByUsernames,
+} from "@/lib/roblox";
 
 import { getEventsForMatch, type MatchEvent } from "../../match-events-data";
 import {
@@ -71,12 +76,23 @@ export default async function MatchDetailPage({
   if (!match) notFound();
 
   const events = getEventsForMatch(match.id);
-  const robloxIds = [
+  const namesToResolve = [
     ...new Set(
       events
+        .filter((e) => !e.robloxId)
+        .map((e) => extractRobloxUsername(e.player))
+        .filter((n): n is string => Boolean(n)),
+    ),
+  ];
+  const resolvedByLowerUsername =
+    await resolveRobloxUserIdsByUsernames(namesToResolve);
+  const robloxIds = [
+    ...new Set([
+      ...events
         .map((e) => e.robloxId)
         .filter((id): id is string => Boolean(id)),
-    ),
+      ...resolvedByLowerUsername.values(),
+    ]),
   ];
   const headshots = await getRobloxHeadshots(robloxIds);
 
@@ -159,7 +175,12 @@ export default async function MatchDetailPage({
           ) : null}
         </section>
 
-        <MotmBanner match={match} events={events} headshots={headshots} />
+        <MotmBanner
+          match={match}
+          events={events}
+          headshots={headshots}
+          resolvedByLowerUsername={resolvedByLowerUsername}
+        />
 
         <section className="grid gap-4 lg:grid-cols-2">
           <TeamPanel
@@ -167,12 +188,14 @@ export default async function MatchDetailPage({
             events={events}
             side="home"
             headshots={headshots}
+            resolvedByLowerUsername={resolvedByLowerUsername}
           />
           <TeamPanel
             match={match}
             events={events}
             side="away"
             headshots={headshots}
+            resolvedByLowerUsername={resolvedByLowerUsername}
           />
         </section>
 
@@ -207,10 +230,12 @@ function MotmBanner({
   match,
   events,
   headshots,
+  resolvedByLowerUsername,
 }: {
   match: MatchRecord;
   events: MatchEvent[];
   headshots: Map<string, string>;
+  resolvedByLowerUsername: Map<string, string>;
 }) {
   const motm = events.find((e) => e.type === "MOTM") ?? null;
   if (!motm) return null;
@@ -232,7 +257,11 @@ function MotmBanner({
     >
       <TeamCrest team={teamMeta} size="sm" />
       <EventHeadshot
-        robloxId={motm.robloxId}
+        robloxId={effectiveRobloxPlayerId(
+          motm.robloxId,
+          motm.player,
+          resolvedByLowerUsername,
+        )}
         name={motm.player}
         headshots={headshots}
         size="md"
@@ -356,11 +385,13 @@ function TeamPanel({
   events,
   side,
   headshots,
+  resolvedByLowerUsername,
 }: {
   match: MatchRecord;
   events: MatchEvent[];
   side: "home" | "away";
   headshots: Map<string, string>;
+  resolvedByLowerUsername: Map<string, string>;
 }) {
   const teamName = side === "home" ? match.homeTeam : match.awayTeam;
   const slug = side === "home" ? match.homeSlug : match.awaySlug;
@@ -400,6 +431,7 @@ function TeamPanel({
               key={`goal-${idx}`}
               event={event}
               headshots={headshots}
+              resolvedByLowerUsername={resolvedByLowerUsername}
               rowEmoji="⚽"
             />
           ))}
@@ -408,6 +440,7 @@ function TeamPanel({
               key={`og-${idx}`}
               event={event}
               headshots={headshots}
+              resolvedByLowerUsername={resolvedByLowerUsername}
               rowEmoji="⚽"
               suffix="OG"
               tone="warning"
@@ -421,6 +454,7 @@ function TeamPanel({
               key={`assist-${idx}`}
               event={event}
               headshots={headshots}
+              resolvedByLowerUsername={resolvedByLowerUsername}
               rowEmoji="🅰️"
             />
           ))}
@@ -435,6 +469,7 @@ function TeamPanel({
               key={`yc-${idx}`}
               event={event}
               headshots={headshots}
+              resolvedByLowerUsername={resolvedByLowerUsername}
               suffix="YC"
               tone="warning"
             />
@@ -444,6 +479,7 @@ function TeamPanel({
               key={`rc-${idx}`}
               event={event}
               headshots={headshots}
+              resolvedByLowerUsername={resolvedByLowerUsername}
               suffix="RC"
               tone="danger"
             />
@@ -480,12 +516,14 @@ function Section({
 function PlayerLine({
   event,
   headshots,
+  resolvedByLowerUsername,
   rowEmoji,
   suffix,
   tone = "default",
 }: {
   event: MatchEvent;
   headshots: Map<string, string>;
+  resolvedByLowerUsername: Map<string, string>;
   rowEmoji?: string;
   suffix?: string;
   tone?: "default" | "warning" | "danger";
@@ -514,7 +552,11 @@ function PlayerLine({
         </span>
       ) : null}
       <EventHeadshot
-        robloxId={event.robloxId}
+        robloxId={effectiveRobloxPlayerId(
+          event.robloxId,
+          event.player,
+          resolvedByLowerUsername,
+        )}
         name={event.player}
         headshots={headshots}
         size="sm"

@@ -21,6 +21,56 @@ export function extractRobloxUsername(raw: string): string | null {
   return firstChunk;
 }
 
+/** Lowercase Roblox username → numeric user id (for events missing robloxId in CSV). */
+export async function resolveRobloxUserIdsByUsernames(
+  usernames: string[],
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  const unique = [
+    ...new Set(usernames.map((u) => u.trim()).filter(Boolean)),
+  ];
+  if (unique.length === 0) return result;
+
+  for (let i = 0; i < unique.length; i += 100) {
+    const chunk = unique.slice(i, i + 100);
+    try {
+      const response = await fetch("https://users.roblox.com/v1/usernames/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          usernames: chunk,
+          excludeBannedUsers: true,
+        }),
+        next: { revalidate: 86_400 },
+      });
+      if (!response.ok) continue;
+      const payload = (await response.json()) as UsernameLookupResponse;
+      for (const entry of payload.data ?? []) {
+        if (!entry?.id || !entry?.name) continue;
+        const id = String(entry.id);
+        const req = entry.requestedUsername;
+        if (req) result.set(req.toLowerCase(), id);
+        result.set(entry.name.toLowerCase(), id);
+      }
+    } catch {
+      // ignore – headshot falls back to initials
+    }
+  }
+
+  return result;
+}
+
+export function effectiveRobloxPlayerId(
+  robloxId: string | null,
+  playerName: string,
+  resolvedByLowerUsername: Map<string, string>,
+): string | null {
+  if (robloxId) return robloxId;
+  const u = extractRobloxUsername(playerName);
+  if (!u) return null;
+  return resolvedByLowerUsername.get(u.toLowerCase()) ?? null;
+}
+
 export async function resolveRobloxIdentity(
   username: string,
   apiBaseUrl: string,

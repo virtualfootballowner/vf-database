@@ -8,6 +8,34 @@ export type PlayerUpsertInput = {
 };
 
 export async function upsertVerifiedPlayer(input: PlayerUpsertInput) {
+  const statsOnly = await supabaseAdmin
+    .from("players")
+    .select("id")
+    .eq("roblox_user_id", input.robloxUserId)
+    .is("discord_id", null)
+    .maybeSingle();
+
+  if (statsOnly.error) {
+    throw new Error(statsOnly.error.message);
+  }
+
+  if (statsOnly.data?.id) {
+    const merged = await supabaseAdmin
+      .from("players")
+      .update({
+        discord_id: input.discordId,
+        discord_username: input.discordUsername,
+        roblox_username: input.robloxUsername,
+        status: "active",
+      })
+      .eq("id", statsOnly.data.id);
+
+    if (merged.error) {
+      throw new Error(merged.error.message);
+    }
+    return;
+  }
+
   const existingDiscordMapping = await supabaseAdmin
     .from("players")
     .select("roblox_user_id")
@@ -32,6 +60,7 @@ export async function upsertVerifiedPlayer(input: PlayerUpsertInput) {
     .from("players")
     .select("discord_id")
     .eq("roblox_user_id", input.robloxUserId)
+    .not("discord_id", "is", null)
     .neq("discord_id", input.discordId)
     .limit(1);
 
