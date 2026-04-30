@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 export type PlayerRow = {
   id: string;
   roblox_username: string;
-  roblox_user_id: string;
+  roblox_user_id: string | null;
   discord_username: string | null;
   status: string;
   position: string | null;
@@ -35,7 +35,7 @@ export function PlayersList({ players, headshots }: PlayersListProps) {
         player.roblox_username.toLowerCase().includes(q) ||
         (player.position?.toLowerCase().includes(q) ?? false) ||
         (player.discord_username?.toLowerCase().includes(q) ?? false) ||
-        player.roblox_user_id.includes(q)
+        (player.roblox_user_id?.toLowerCase().includes(q) ?? false)
       );
     });
   }, [deferredQuery, players]);
@@ -86,7 +86,9 @@ export function PlayersList({ players, headshots }: PlayersListProps) {
       ) : (
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((player) => {
-            const headshot = headshots[player.roblox_user_id];
+            const headshot = player.roblox_user_id
+              ? headshots[player.roblox_user_id]
+              : undefined;
             return (
               <Link
                 key={player.id}
