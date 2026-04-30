@@ -159,7 +159,7 @@ export default async function MatchDetailPage({
           ) : null}
         </section>
 
-        <MotmDualRow match={match} events={events} headshots={headshots} />
+        <MotmBanner match={match} events={events} headshots={headshots} />
 
         <section className="grid gap-4 lg:grid-cols-2">
           <TeamPanel
@@ -203,7 +203,7 @@ export default async function MatchDetailPage({
   );
 }
 
-function MotmDualRow({
+function MotmBanner({
   match,
   events,
   headshots,
@@ -212,98 +212,40 @@ function MotmDualRow({
   events: MatchEvent[];
   headshots: Map<string, string>;
 }) {
-  const homeMotm =
-    events.find(
-      (e) => e.type === "MOTM" && e.team === match.homeTeam,
-    ) ?? null;
-  const awayMotm =
-    events.find(
-      (e) => e.type === "MOTM" && e.team === match.awayTeam,
-    ) ?? null;
+  const motm = events.find((e) => e.type === "MOTM") ?? null;
+  if (!motm) return null;
 
-  return (
-    <section className="grid gap-3 sm:grid-cols-2" aria-label="Man of the match">
-      <MotmCard
-        side="home"
-        teamName={match.homeTeam}
-        slug={match.homeSlug}
-        team={getMatchTeam(match.homeSlug, match.homeTeam)}
-        motm={homeMotm}
-        headshots={headshots}
-      />
-      <MotmCard
-        side="away"
-        teamName={match.awayTeam}
-        slug={match.awaySlug}
-        team={getMatchTeam(match.awaySlug, match.awayTeam)}
-        motm={awayMotm}
-        headshots={headshots}
-      />
-    </section>
-  );
-}
-
-function MotmCard({
-  side,
-  teamName,
-  slug,
-  team,
-  motm,
-  headshots,
-}: {
-  side: "home" | "away";
-  teamName: string;
-  slug: string | null;
-  team: ReturnType<typeof getMatchTeam>;
-  motm: MatchEvent | null;
-  headshots: Map<string, string>;
-}) {
-  const crest = (
-    <div
-      className={cn(
-        "flex shrink-0",
-        side === "home" ? "justify-end" : "justify-start",
-      )}
-    >
-      <TeamCrest team={team} size="sm" />
-    </div>
-  );
-
-  const body = (
-    <div
-      className={cn(
-        "flex min-w-0 flex-1 items-center gap-3",
-        side === "home" ? "flex-row-reverse sm:text-right" : "text-left",
-      )}
-    >
-      <EventHeadshot
-        robloxId={motm?.robloxId ?? null}
-        name={motm?.player ?? teamName}
-        headshots={headshots}
-        size="md"
-      />
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">
-          ⭐ Man of the match
-        </p>
-        <p className="truncate text-xs text-white/55">{teamName}</p>
-        <p className="truncate text-sm font-medium text-white/90">
-          {motm?.player ?? "Not recorded"}
-        </p>
-      </div>
-    </div>
-  );
+  const slug =
+    motm.team === match.homeTeam
+      ? match.homeSlug
+      : motm.team === match.awayTeam
+        ? match.awaySlug
+        : null;
+  const teamMeta = getMatchTeam(slug, motm.team);
 
   const inner = (
     <div
       className={cn(
-        "flex flex-col gap-2 rounded-xl px-4 py-3 sm:flex-row sm:items-center",
+        "mx-auto flex max-w-lg items-center justify-center gap-4 rounded-xl px-5 py-4",
         matchSurfaceClass,
-        side === "home" ? "sm:flex-row-reverse" : "",
       )}
     >
-      {crest}
-      {body}
+      <TeamCrest team={teamMeta} size="sm" />
+      <EventHeadshot
+        robloxId={motm.robloxId}
+        name={motm.player}
+        headshots={headshots}
+        size="md"
+      />
+      <div className="min-w-0 flex-1 text-left">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">
+          ⭐ Man of the match
+        </p>
+        <p className="truncate text-base font-semibold text-white/90">
+          {motm.player}
+        </p>
+        <p className="truncate text-xs text-white/50">{motm.team}</p>
+      </div>
     </div>
   );
 
@@ -311,13 +253,19 @@ function MotmCard({
     return (
       <Link
         href={`/teams/${slug}`}
-        className="block rounded-xl outline-none transition hover:opacity-[0.92] focus-visible:ring-2 focus-visible:ring-white/25"
+        className="mx-auto block max-w-lg outline-none transition hover:opacity-[0.92] focus-visible:ring-2 focus-visible:ring-white/25"
+        aria-label={`${motm.team} squad`}
       >
         {inner}
       </Link>
     );
   }
-  return inner;
+
+  return (
+    <section aria-label="Man of the match" className="flex justify-center">
+      {inner}
+    </section>
+  );
 }
 
 function EventHeadshot({
