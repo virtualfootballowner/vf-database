@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_noStore as noStore } from "next/cache";
 import { cache } from "react";
 
 import { readAllMatchEventRecords } from "@/lib/match-event-records";
@@ -132,6 +133,7 @@ function loadFromEventFiles(): Leaderboards {
 }
 
 async function resolveLeaderboards(): Promise<Leaderboards> {
+  noStore();
   const db = await loadFromSupabase();
   if (db && (db.goals.length > 0 || db.assists.length > 0)) return db;
   return loadFromEventFiles();

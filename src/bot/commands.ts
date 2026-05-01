@@ -4,6 +4,7 @@ import {
   MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
+  type AutocompleteInteraction,
   type ChatInputCommandInteraction,
   type GuildBasedChannel,
   type GuildMember,
@@ -11,6 +12,20 @@ import {
 } from "discord.js";
 
 import { env } from "@/bot/config";
+import {
+  buildTeamNameBySlug,
+  createBotSupabase,
+  fetchPlayerCareer,
+  fetchSquadForSeason,
+  fetchTeamSeasonHonors,
+  fetchTeamSeasonRecord,
+  filterTeamsForAutocomplete,
+  findPlayerByDiscordId,
+  findPlayersByUsername,
+  formatHonorList,
+  loadTeams,
+  resolveTeamFromList,
+} from "@/bot/stats-queries";
 import {
   APPROVE_BUTTON_ID_PREFIX,
   DENY_BUTTON_ID_PREFIX,
@@ -68,6 +83,63 @@ export const slashCommandDefinitions = [
         .setRequired(false),
     )
     .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("player")
+    .setDescription("VF profile: goals, assists, career, trophies, and more")
+    .addUserOption((opt) =>
+      opt
+        .setName("member")
+        .setDescription("Discord member (must be linked in VF database)")
+        .setRequired(false),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("roblox_username")
+        .setDescription("Exact Roblox username as on the league site")
+        .setRequired(false),
+    )
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("team")
+    .setDescription("Club season record, honors, and link to the site")
+    .addStringOption((opt) =>
+      opt
+        .setName("team")
+        .setDescription("Club — pick from suggestions or type name/slug")
+        .setRequired(true)
+        .setAutocomplete(true),
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("season")
+        .setDescription("Season number (e.g. 1 or 2)")
+        .setRequired(true)
+        .setMinValue(1)
+        .setMaxValue(20),
+    )
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("squad")
+    .setDescription("Squad sheet: registered roster for a club and season")
+    .addStringOption((opt) =>
+      opt
+        .setName("team")
+        .setDescription("Club — pick from suggestions or type name/slug")
+        .setRequired(true)
+        .setAutocomplete(true),
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("season")
+        .setDescription("Season number (e.g. 1 or 2)")
+        .setRequired(true)
+        .setMinValue(1)
+        .setMaxValue(20),
+    )
+    .toJSON(),
 ];
 
 export async function handleSlashCommand(
@@ -83,11 +155,320 @@ export async function handleSlashCommand(
     case "ban":
       await handleBan(interaction);
       return;
+    case "player":
+      await handlePlayer(interaction);
+      return;
+    case "team":
+      await handleTeam(interaction);
+      return;
+    case "squad":
+      await handleSquad(interaction);
+      return;
     default:
       await interaction.reply({
         flags: MessageFlags.Ephemeral,
         content: "Unknown command.",
       });
+  }
+}
+
+export async function handleAutocomplete(
+  interaction: AutocompleteInteraction,
+): Promise<void> {
+  if (interaction.commandName !== "team" && interaction.commandName !== "squad")
+    return;
+
+  const focused = interaction.options.getFocused(true);
+  if (focused.name !== "team") return;
+
+  try {
+    const supabase = createBotSupabase();
+    const teamRows = await loadTeams(supabase);
+    const matches = filterTeamsForAutocomplete(teamRows, String(focused.value));
+    await interaction.respond(
+      matches.map((t) => ({
+        name: t.name.length > 100 ? `${t.name.slice(0, 97)}…` : t.name,
+        value:
+          t.slug.length > 100 ? `${t.slug.slice(0, 97)}…` : t.slug,
+      })),
+    );
+  } catch {
+    await interaction.respond([]);
+  }
+}
+
+async function handlePlayer(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  const member = interaction.options.getUser("member");
+  const usernameOpt = interaction.options.getString("roblox_username");
+
+  if (!member && (!usernameOpt || !usernameOpt.trim())) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content:
+        "Provide either **member** (Discord user) or **roblox_username** (exact site name).",
+    });
+    return;
+  }
+
+  await interaction.deferReply();
+
+  try {
+    const supabase = createBotSupabase();
+    let profile = null as Awaited<
+      ReturnType<typeof findPlayerByDiscordId>
+    > | null;
+
+    if (member) {
+      profile = await findPlayerByDiscordId(supabase, member.id);
+    }
+
+    if (!profile && usernameOpt?.trim()) {
+      let candidates = await findPlayersByUsername(supabase, usernameOpt.trim());
+      if (candidates.length === 0) {
+        const { data, error } = await supabase
+          .from("players")
+          .select(
+            "id, roblox_username, roblox_user_id, discord_id, discord_username, position, goals_total, assists_total, avg_rating, appearances_total, trophies, accolades",
+          )
+          .ilike("roblox_username", `%${usernameOpt.trim()}%`)
+          .limit(5);
+        if (error) throw error;
+        candidates = (data ?? []) as typeof candidates;
+      }
+      if (candidates.length === 0) {
+        await interaction.editReply({
+          content: "No player found for that Discord link or Roblox username.",
+        });
+        return;
+      }
+      if (candidates.length > 1) {
+        const list = candidates.map((p) => `\`${p.roblox_username}\``).join(", ");
+        await interaction.editReply({
+          content: `Several matches — be more specific: ${list}`,
+        });
+        return;
+      }
+      profile = candidates[0]!;
+    }
+
+    if (!profile) {
+      await interaction.editReply({
+        content:
+          "No VF profile for that Discord user. Try **roblox_username** instead.",
+      });
+      return;
+    }
+
+    if (!profile.roblox_user_id?.trim()) {
+      await interaction.editReply({
+        content: `\`${profile.roblox_username}\` has no Roblox user id on file yet.`,
+      });
+      return;
+    }
+
+    const teamNames = await buildTeamNameBySlug(supabase);
+    const careerLines = await fetchPlayerCareer(supabase, profile.id, teamNames);
+    const careerText =
+      careerLines.length > 0
+        ? careerLines.slice(0, 12).join("\n") +
+          (careerLines.length > 12
+            ? `\n_…+${careerLines.length - 12} more rows_`
+            : "")
+        : "—";
+
+    const robloxProfile = `https://www.roblox.com/users/${profile.roblox_user_id}/profile`;
+    const siteProfile = `${env.VFL_SITE_URL.replace(/\/$/, "")}/players/${encodeURIComponent(profile.roblox_username)}`;
+
+    const ratingLine =
+      profile.avg_rating != null && Number.isFinite(Number(profile.avg_rating))
+        ? String(profile.avg_rating)
+        : "— *(not stored yet)*";
+    const appsLine =
+      profile.appearances_total != null && profile.appearances_total > 0
+        ? String(profile.appearances_total)
+        : "—";
+
+    const embed = new EmbedBuilder()
+      .setColor(0x083696)
+      .setTitle(profile.roblox_username)
+      .setURL(siteProfile)
+      .setDescription(
+        [
+          `**Roblox** · \`${profile.roblox_user_id}\``,
+          profile.discord_username
+            ? `**Discord** · ${profile.discord_username}`
+            : null,
+          `**Position** · ${profile.position?.trim() || "—"}`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      )
+      .addFields(
+        {
+          name: "Goals · Assists",
+          value: `${profile.goals_total ?? 0} · ${profile.assists_total ?? 0}`,
+          inline: true,
+        },
+        {
+          name: "Avg rating",
+          value: ratingLine,
+          inline: true,
+        },
+        {
+          name: "Appearances (profile)",
+          value: appsLine,
+          inline: true,
+        },
+        { name: "Career (club by season)", value: careerText, inline: false },
+        {
+          name: "Trophies",
+          value: formatHonorList(profile.trophies, 6).slice(0, 1024),
+          inline: false,
+        },
+        {
+          name: "Accolades",
+          value: formatHonorList(profile.accolades, 6).slice(0, 1024),
+          inline: false,
+        },
+        {
+          name: "Links",
+          value: `[Roblox profile](${robloxProfile}) · [VF site](${siteProfile})`,
+          inline: false,
+        },
+      )
+      .setFooter({ text: "VF League Database" })
+      .setTimestamp(new Date());
+
+    await interaction.editReply({ embeds: [embed] });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "unknown error";
+    await interaction.editReply({ content: `Could not load player: ${msg}` });
+  }
+}
+
+async function handleTeam(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  const teamRaw = interaction.options.getString("team", true);
+  const season = interaction.options.getInteger("season", true);
+
+  await interaction.deferReply();
+
+  try {
+    const supabase = createBotSupabase();
+    const teamRows = await loadTeams(supabase);
+    const resolved = resolveTeamFromList(teamRows, teamRaw);
+
+    if (!resolved) {
+      await interaction.editReply({
+        content:
+          "Could not resolve that club. Use the **team** autocomplete or type the exact slug (e.g. `andover-fc`).",
+      });
+      return;
+    }
+
+    const [record, honors] = await Promise.all([
+      fetchTeamSeasonRecord(supabase, resolved.slug, season),
+      fetchTeamSeasonHonors(supabase, resolved.slug, season),
+    ]);
+
+    const siteTeam = `${env.VFL_SITE_URL.replace(/\/$/, "")}/teams/${encodeURIComponent(resolved.slug)}`;
+
+    const recordLines = record
+      ? `Played **${record.matches_played}** · ${record.wins}W · ${record.draws}D · ${record.losses}L`
+      : `_No aggregated record in **team_season_records** for S${season} yet._`;
+
+    const honorsText =
+      honors.length > 0
+        ? honors.map((h) => `• ${h}`).join("\n")
+        : "—";
+
+    const embed = new EmbedBuilder()
+      .setColor(0x083696)
+      .setTitle(`${resolved.name} · Season ${season}`)
+      .setURL(siteTeam)
+      .addFields(
+        { name: "Record", value: recordLines, inline: false },
+        { name: "Honors", value: honorsText.slice(0, 1024), inline: false },
+        {
+          name: "Site",
+          value: `[Team page](${siteTeam})`,
+          inline: false,
+        },
+      )
+      .setFooter({ text: "VF League Database" })
+      .setTimestamp(new Date());
+
+    await interaction.editReply({ embeds: [embed] });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "unknown error";
+    await interaction.editReply({ content: `Could not load team: ${msg}` });
+  }
+}
+
+async function handleSquad(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  const teamRaw = interaction.options.getString("team", true);
+  const season = interaction.options.getInteger("season", true);
+
+  await interaction.deferReply();
+
+  try {
+    const supabase = createBotSupabase();
+    const teamRows = await loadTeams(supabase);
+    const resolved = resolveTeamFromList(teamRows, teamRaw);
+
+    if (!resolved) {
+      await interaction.editReply({
+        content:
+          "Could not resolve that club. Use **team** suggestions or the exact slug.",
+      });
+      return;
+    }
+
+    const squad = await fetchSquadForSeason(supabase, resolved.slug, season);
+
+    if (squad.length === 0) {
+      await interaction.editReply({
+        content: `No **player_team_seasons** roster for **${resolved.name}** in **S${season}**.`,
+      });
+      return;
+    }
+
+    const lines = squad.map((row) => {
+      const pos = row.position?.trim() || "—";
+      const g =
+        row.games != null && row.games > 0
+          ? ` · ${row.games} app${row.games === 1 ? "" : "s"}`
+          : "";
+      return `${row.roblox_username} · ${pos}${g}`;
+    });
+
+    let body = lines.join("\n");
+    if (body.length > 3500) {
+      const kept = Math.max(1, Math.floor(lines.length * 0.85));
+      body =
+        lines.slice(0, kept).join("\n") +
+        `\n_…${lines.length - kept} more — open site for full list._`;
+    }
+
+    const siteTeam = `${env.VFL_SITE_URL.replace(/\/$/, "")}/teams/${encodeURIComponent(resolved.slug)}`;
+
+    const embed = new EmbedBuilder()
+      .setColor(0x083696)
+      .setTitle(`Squad · ${resolved.name} · S${season}`)
+      .setURL(siteTeam)
+      .setDescription(`**${squad.length}** registered\n\`\`\`\n${body.slice(0, 3900)}\`\`\``)
+      .setFooter({ text: "From player_team_seasons · VF League Database" })
+      .setTimestamp(new Date());
+
+    await interaction.editReply({ embeds: [embed] });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "unknown error";
+    await interaction.editReply({ content: `Could not load squad: ${msg}` });
   }
 }
 

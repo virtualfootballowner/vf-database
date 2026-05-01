@@ -20,6 +20,7 @@ import {
 
 import { env } from "@/bot/config";
 import {
+  handleAutocomplete,
   handleSlashCommand,
   slashCommandDefinitions,
 } from "@/bot/commands";
@@ -183,6 +184,11 @@ client.on(Events.GuildMemberRemove, async (member) => {
 
 client.on(Events.InteractionCreate, async (interaction: Interaction) => {
   try {
+    if (interaction.isAutocomplete()) {
+      await handleAutocomplete(interaction);
+      return;
+    }
+
     if (interaction.isChatInputCommand()) {
       await handleSlashCommand(interaction);
       return;

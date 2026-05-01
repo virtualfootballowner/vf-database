@@ -20,6 +20,9 @@ import { cn } from "@/lib/utils";
 
 import { StatsSectionNav } from "./stats-section-nav";
 
+/** Leaderboards read Supabase at request time; avoid serving a stale build-time snapshot. */
+export const dynamic = "force-dynamic";
+
 function headshotUserId(
   r: LeaderEntry,
   resolved: Map<string, string>,
