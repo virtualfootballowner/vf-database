@@ -19,6 +19,11 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 import { TeamCrest } from "../team-crest";
 
+const HONOR_LABELS: Record<string, string> = {
+  euroleague_champion: "EuroLeague champions",
+  euroblox_cup_champion: "Euroblox Cup champions",
+};
+
 type TeamPlayerRow = {
   id: string;
   roblox_username: string;
@@ -59,10 +64,34 @@ async function getTeamSeasonRecord(
 
 function formatSeasonRecord(row: TeamSeasonRecordRow | null): string {
   if (!row || row.matches_played === 0) return "—";
-  return `${row.wins}–${row.losses}–${row.draws}`;
+  return `${row.wins}–${row.draws}–${row.losses}`;
 }
 
-/** Season to fetch W–L–D for: explicit filter, else S1 if club played it, else earliest listed season. */
+async function getTeamSeasonHonors(
+  slug: string,
+  season: number,
+): Promise<string[]> {
+  try {
+    const supabase = createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("team_season_honors")
+      .select("honor_kind")
+      .eq("team_slug", slug)
+      .eq("season", season)
+      .order("honor_kind", { ascending: true });
+    if (error || !data?.length) return [];
+    return data.map((r) => HONOR_LABELS[r.honor_kind] ?? r.honor_kind);
+  } catch {
+    return [];
+  }
+}
+
+function formatTitles(honors: string[]): string {
+  if (honors.length === 0) return "—";
+  return honors.join(" · ");
+}
+
+/** Season to fetch record for: explicit filter, else S1 if club played it, else earliest listed season. */
 function resolveRecordSeason(
   selectedSeason: number | null,
   seasons: number[],
@@ -98,7 +127,11 @@ async function getTeamPlayers(
       .in("id", ids)
       .order("roblox_username", { ascending: true });
     if (playersResult.error) return [];
-    return (playersResult.data ?? []) as TeamPlayerRow[];
+    return ((playersResult.data ?? []) as TeamPlayerRow[]).filter(
+      (p) =>
+        p.roblox_user_id != null &&
+        String(p.roblox_user_id).trim() !== "",
+    );
   } catch {
     return [];
   }
@@ -161,6 +194,14 @@ export default async function TeamDetailPage({
   const recordCardLabel =
     recordSeason !== null ? `Record · S${recordSeason}` : "Record";
 
+  const honorLines =
+    recordSeason !== null
+      ? await getTeamSeasonHonors(slug, recordSeason)
+      : [];
+  const titlesCardLabel =
+    recordSeason !== null ? `Titles · S${recordSeason}` : "Titles";
+  const titlesValue = formatTitles(honorLines);
+
   return (
     <main className="relative min-h-screen w-full overflow-hidden text-white">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 pb-16 pt-6 sm:px-8 sm:pt-10">
@@ -208,7 +249,7 @@ export default async function TeamDetailPage({
           {[
             { label: recordCardLabel, value: recordLabel },
             { label: "Squad Size", value: String(players.length) },
-            { label: "Cup", value: "Group Stage" },
+            { label: titlesCardLabel, value: titlesValue },
           ].map((stat) => (
             <Card key={stat.label} className="gap-2 py-5">
               <CardContent>
@@ -257,12 +298,15 @@ export default async function TeamDetailPage({
                   <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">
                     player_team_seasons
                   </code>{" "}
-                  for this club and season filter. Run{" "}
+                  for this club and season filter. After importing matches, run{" "}
                   <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">
                     npm run db:fill:s1-squads
                   </code>{" "}
-                  after importing matches to seed S1 squads from scorers and
-                  assisters.
+                  or{" "}
+                  <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">
+                    npm run db:fill:s2-squads
+                  </code>{" "}
+                  to seed squads from scorers and assisters (Roblox id only).
                 </p>
               </CardContent>
             </Card>

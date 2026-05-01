@@ -1,13 +1,12 @@
 /**
- * Builds Season 1 squad lists from match events: any player with a Goal or Assist
- * for a team in an S1 match gets a `player_team_seasons` row (team_slug, season=1).
+ * Builds squad lists from match events: players with Goal/Assist in matches for a season
+ * get `player_team_seasons` rows. Only players with a linked Roblox user id are included.
  *
- * Covers all clubs that appear in S1 results (EuroLeague + S1 playoffs, 8 EL sides + same playoff set).
+ * Usage: tsx scripts/fill-season-squads-from-events.ts <season>
+ * Example: tsx scripts/fill-season-squads-from-events.ts 2
  *
- * Prereq: `npm run db:import:website` (players + match_events in UUID schema)
+ * Prereq: matches imported; players with roblox_user_id for event participants.
  * Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
- *
- * Run: npm run db:fill:s1-squads
  */
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
@@ -32,11 +31,7 @@ const supabase = createClient(url, key, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const S1_MATCH_IDS = new Set(matches.filter((m) => m.season === 1).map((m) => m.id));
-
 const ROSTER_EVENT_TYPES = new Set<MatchEventRecord["type"]>(["Goal", "Assist"]);
-
-type MembershipKey = `${string}|${string}|1`;
 
 async function resolvePlayerId(
   robloxUserId: string | null | undefined,
@@ -57,6 +52,7 @@ async function resolvePlayerId(
     .from("players")
     .select("id")
     .ilike("roblox_username", u)
+    .not("roblox_user_id", "is", null)
     .maybeSingle();
   if (!y.error && y.data?.id) return y.data.id;
   return null;
@@ -77,16 +73,31 @@ async function resolvePlayerIdCached(
   return id;
 }
 
-function membershipKey(playerId: string, teamSlug: string): MembershipKey {
-  return `${playerId}|${teamSlug}|1`;
+function membershipKey(
+  playerId: string,
+  teamSlug: string,
+  season: number,
+): string {
+  return `${playerId}|${teamSlug}|${season}`;
 }
 
 async function main() {
+  const seasonArg = Number.parseInt(process.argv[2] ?? "", 10);
+  if (!Number.isFinite(seasonArg)) {
+    console.error("Usage: tsx scripts/fill-season-squads-from-events.ts <season>");
+    process.exit(1);
+  }
+
+  const season = seasonArg;
+  const matchIds = new Set(
+    matches.filter((m) => m.season === season).map((m) => m.id),
+  );
+
   const events = readAllMatchEventRecords();
-  const rosterPairs = new Map<MembershipKey, true>();
+  const rosterPairs = new Map<string, true>();
 
   for (const e of events) {
-    if (!S1_MATCH_IDS.has(e.matchId)) continue;
+    if (!matchIds.has(e.matchId)) continue;
     if (!ROSTER_EVENT_TYPES.has(e.type)) continue;
     const t = e.team?.trim();
     if (!t || t === "—") continue;
@@ -99,21 +110,27 @@ async function main() {
 
     const playerId = await resolvePlayerIdCached(e.robloxId, e.player);
     if (!playerId) {
-      console.warn(`Skip: no player row for “${e.player}” (${e.matchId})`);
+      console.warn(`Skip: no Roblox-linked player for “${e.player}” (${e.matchId})`);
       continue;
     }
 
-    rosterPairs.set(membershipKey(playerId, teamSlug), true);
+    rosterPairs.set(membershipKey(playerId, teamSlug, season), true);
   }
 
   const rows = [...rosterPairs.keys()].map((k) => {
     const parts = k.split("|");
     const playerId = parts[0]!;
     const teamSlug = parts[1]!;
-    return { player_id: playerId, team_slug: teamSlug, season: 1 as const };
+    return {
+      player_id: playerId,
+      team_slug: teamSlug,
+      season: season as number,
+    };
   });
 
-  console.log(`S1 squad memberships to upsert: ${rows.length} (from Goal/Assist only)`);
+  console.log(
+    `S${season} squad memberships to upsert: ${rows.length} (Goal/Assist, Roblox id only)`,
+  );
 
   const chunkSize = 80;
   for (let i = 0; i < rows.length; i += chunkSize) {
@@ -130,7 +147,7 @@ async function main() {
     bySlug.set(r.team_slug, (bySlug.get(r.team_slug) ?? 0) + 1);
   }
   const sorted = [...bySlug.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  console.log("Players per team_slug (S1):");
+  console.log(`Players per team_slug (S${season}):`);
   for (const [slug, n] of sorted) {
     console.log(`  ${slug}: ${n}`);
   }

@@ -1,11 +1,12 @@
 /**
- * Recomputes `team_season_records` for Season 1 from Supabase `matches` (home/away scores).
- * Counts W / L / D from final scorelines (includes FFT games as scored).
+ * Recomputes `team_season_records` from Supabase `matches` (home/away scores) per season.
+ * Site displays W–D–L; DB columns remain wins, losses, draws.
  *
- * Prereq: matches with season=1, home_team_id, away_team_id, home_score, away_score
+ * Usage:
+ *   tsx scripts/fill-team-season-records-from-matches.ts           # all seasons present in `matches`
+ *   tsx scripts/fill-team-season-records-from-matches.ts 1 2       # only these seasons
+ *
  * Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
- *
- * Run: npm run db:fill:s1-records
  */
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
@@ -24,15 +25,13 @@ const supabase = createClient(url, key, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const SEASON = 1 as const;
-
 type Tallies = { wins: number; losses: number; draws: number; played: number };
 
 function emptyTally(): Tallies {
   return { wins: 0, losses: 0, draws: 0, played: 0 };
 }
 
-async function main() {
+async function fillSeason(season: number): Promise<void> {
   const { data: teams, error: tErr } = await supabase
     .from("teams")
     .select("id, slug");
@@ -47,7 +46,7 @@ async function main() {
   const { data: rows, error: mErr } = await supabase
     .from("matches")
     .select("home_team_id, away_team_id, home_score, away_score")
-    .eq("season", SEASON);
+    .eq("season", season);
   if (mErr) throw mErr;
 
   const bySlug = new Map<string, Tallies>();
@@ -85,30 +84,61 @@ async function main() {
 
   const upserts = [...bySlug.entries()].map(([team_slug, t]) => ({
     team_slug,
-    season: SEASON,
+    season,
     wins: t.wins,
     losses: t.losses,
     draws: t.draws,
     matches_played: t.played,
   }));
 
-  console.log(`Season ${SEASON} records to upsert: ${upserts.length} teams`);
+  console.log(`Season ${season}: ${upserts.length} team records`);
   for (const r of upserts.sort((a, b) => a.team_slug.localeCompare(b.team_slug))) {
     console.log(
-      `  ${r.team_slug}: ${r.wins}-${r.losses}-${r.draws} (${r.matches_played} gp)`,
+      `  ${r.team_slug}: ${r.wins}-${r.draws}-${r.losses} (${r.matches_played} gp)`,
     );
   }
 
   if (upserts.length === 0) {
-    console.log("No rows; check matches.season and team slugs.");
+    console.log(`  (no matches for season ${season})`);
     return;
   }
 
-  const { error: uErr } = await supabase.from("team_season_records").upsert(
-    upserts,
-    { onConflict: "team_slug,season" },
-  );
+  const { error: uErr } = await supabase.from("team_season_records").upsert(upserts, {
+    onConflict: "team_slug,season",
+  });
   if (uErr) throw uErr;
+}
+
+async function main() {
+  const argv = process.argv
+    .slice(2)
+    .map((a) => Number.parseInt(a, 10))
+    .filter((n) => Number.isFinite(n));
+
+  let seasons: number[];
+  if (argv.length > 0) {
+    seasons = [...new Set(argv)].sort((a, b) => a - b);
+  } else {
+    const { data, error } = await supabase.from("matches").select("season");
+    if (error) throw error;
+    const set = new Set<number>();
+    for (const r of data ?? []) {
+      if (r.season != null && Number.isFinite(Number(r.season))) {
+        set.add(Number(r.season));
+      }
+    }
+    seasons = [...set].sort((a, b) => a - b);
+  }
+
+  if (seasons.length === 0) {
+    console.log("No seasons to process.");
+    return;
+  }
+
+  console.log(`Filling team_season_records for seasons: ${seasons.join(", ")}`);
+  for (const s of seasons) {
+    await fillSeason(s);
+  }
   console.log("Done.");
 }
 
