@@ -120,7 +120,7 @@ const RAW: RawMatch[] = [
   ["EL2-GW1-03", 2, "Serie Italia", "GW1", "2024-11-09", "Casole", "Viola", 4, 0, "Group", "Yes", "LogisticsEnthusiast", "FFT"],
   ["EL2-GW1-04", 2, "British Premier", "GW1", "2024-11-10", "Andover", "Canterbury", 3, 7, "Group", "No", "Koolicxcte"],
   ["BP2-GW1-01", 2, "British Premier", "GW1", "2024-11-10", "Milton", "Eltham", 2, 3, "Group", "No", "Deleted User"],
-  ["BP2-MN-01", 2, "British Premier", "GW1", "2024-11-15", "Milton", "Newham", 2, 3, "Group", "No", "—", "Date approximate"],
+  ["BP2-MN-01", 2, "British Premier", "GW1", "2024-11-15", "Milton", "Newham", 2, 3, "Group", "No", "—", "Milton–Newham; GW1 calendar was Milton–Eltham (BP2-GW1-01). Rescheduled / date approximate"],
   ["SI2-GW1-01", 2, "Serie Italia", "GW1", "2024-11-10", "Milano", "DDG", 6, 0, "Group", "Yes", "LogisticsEnthusiast", "FFT"],
   ["EL2-GW1-05", 2, "British Premier", "GW1", "2024-11-12", "Newport", "Stanford", 7, 1, "Group", "Yes", "VoidLDN", "FFT after mercy"],
   ["SI2-GW1-02", 2, "Serie Italia", "GW1", "2024-11-13", "Tretorre", "Sassari", 0, 3, "Group", "Yes", "wiz", "FFT"],
