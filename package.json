@@ -18,6 +18,7 @@
     "db:fill:s2-records": "tsx scripts/fill-team-season-records-from-matches.ts 2",
     "db:fill:s1-squads": "tsx scripts/fill-season-squads-from-events.ts 1",
     "db:fill:s2-squads": "tsx scripts/fill-season-squads-from-events.ts 2",
+    "db:award:s1-trophies": "tsx scripts/award-s1-champion-trophies.ts",
     "db:refresh:player-goals-assists": "tsx scripts/refresh-player-goal-assist-totals.ts",
     "db:verify:repo": "tsx scripts/verify-repo-vs-db.ts"
   },
