@@ -23,6 +23,10 @@ import {
   slashCommandDefinitions,
 } from "@/bot/commands";
 import {
+  cancelRoverVerifyDeadline,
+  handleMemberJoinVerifyGate,
+} from "@/bot/join-verify-gate";
+import {
   APPROVE_BUTTON_ID_PREFIX,
   DENY_BUTTON_ID_PREFIX,
   handleApprovedRoleAdded,
@@ -84,9 +88,24 @@ client.once(Events.ClientReady, async (readyClient) => {
   }
 });
 
+client.on(Events.GuildMemberAdd, async (member) => {
+  try {
+    await handleMemberJoinVerifyGate(client, member as GuildMember);
+  } catch (error) {
+    console.error("GuildMemberAdd verify gate failed:", error);
+  }
+});
+
 client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
   try {
     const member = newMember as GuildMember;
+    if (
+      member.roles.cache.has(env.DISCORD_ROVER_VERIFIED_ROLE_ID) ||
+      member.roles.cache.has(env.DISCORD_APPROVED_ROLE_ID)
+    ) {
+      cancelRoverVerifyDeadline(member.id);
+    }
+
     const oldRoles = oldMember.roles.cache;
     const newRoles = newMember.roles.cache;
 
@@ -116,6 +135,7 @@ client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
 
 client.on(Events.GuildMemberRemove, async (member) => {
   try {
+    if (member.id) cancelRoverVerifyDeadline(member.id);
     if (!member.id || !member.guild) return;
     await closeReviewCardsFor(member.guild, member.id);
   } catch (error) {
