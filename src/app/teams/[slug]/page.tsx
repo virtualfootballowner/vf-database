@@ -62,6 +62,17 @@ function formatSeasonRecord(row: TeamSeasonRecordRow | null): string {
   return `${row.wins}–${row.losses}–${row.draws}`;
 }
 
+/** Season to fetch W–L–D for: explicit filter, else S1 if club played it, else earliest listed season. */
+function resolveRecordSeason(
+  selectedSeason: number | null,
+  seasons: number[],
+): number | null {
+  if (selectedSeason !== null) return selectedSeason;
+  if (seasons.length === 0) return null;
+  if (seasons.includes(1)) return 1;
+  return Math.min(...seasons);
+}
+
 async function getTeamPlayers(
   slug: string,
   season: number | null,
@@ -141,13 +152,14 @@ export default async function TeamDetailPage({
   );
   const headshots = Object.fromEntries(headshotsMap);
 
-  const recordSeason =
-    selectedSeason ?? (team.seasons.length === 1 ? team.seasons[0]! : null);
+  const recordSeason = resolveRecordSeason(selectedSeason, team.seasons);
   const seasonRecord =
     recordSeason !== null
       ? await getTeamSeasonRecord(slug, recordSeason)
       : null;
   const recordLabel = formatSeasonRecord(seasonRecord);
+  const recordCardLabel =
+    recordSeason !== null ? `Record · S${recordSeason}` : "Record";
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden text-white">
@@ -194,7 +206,7 @@ export default async function TeamDetailPage({
 
         <section className="grid gap-3 sm:grid-cols-3">
           {[
-            { label: "Record", value: recordLabel },
+            { label: recordCardLabel, value: recordLabel },
             { label: "Squad Size", value: String(players.length) },
             { label: "Cup", value: "Group Stage" },
           ].map((stat) => (
