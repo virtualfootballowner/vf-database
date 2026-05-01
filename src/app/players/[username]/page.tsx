@@ -1,4 +1,11 @@
-import { ArrowLeft, Award, Medal, Star, Trophy } from "lucide-react";
+import {
+  ArrowLeft,
+  Award,
+  CalendarDays,
+  Medal,
+  Star,
+  Trophy,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -16,6 +23,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getRobloxHeadshots, isVerifiedRobloxUserId } from "@/lib/roblox";
+import {
+  getPlayerMatchAppearances,
+  summaryLine,
+  type PlayerMatchAppearance,
+} from "@/lib/player-match-history";
 import { getTeamsCatalog } from "@/lib/site-db";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
@@ -123,6 +135,11 @@ export default async function PlayerDetailPage({
   const headshotsMap = await getRobloxHeadshots([player.roblox_user_id]);
   const headshot = headshotsMap.get(player.roblox_user_id);
   const career = await getPlayerCareer(player.id);
+  const appearances = await getPlayerMatchAppearances({
+    playerId: player.id,
+    robloxUserId: player.roblox_user_id,
+    robloxUsername: player.roblox_username,
+  });
 
   const stats = {
     goals: player.goals_total ?? 0,
@@ -257,6 +274,49 @@ export default async function PlayerDetailPage({
           )}
         </section>
 
+        <section className="flex flex-col gap-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
+              Recorded matches
+            </p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
+              Match appearances
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm text-white/55">
+              Games where this player appears on the match sheet (goals,
+              assists, cards, MOTM, etc.).
+            </p>
+          </div>
+
+          {appearances.length === 0 ? (
+            <Card className="py-8">
+              <CardContent className="flex flex-col items-center gap-2 text-center">
+                <p className="text-sm font-semibold text-white">
+                  No match events found for this player.
+                </p>
+                <p className="max-w-md text-xs text-white/55">
+                  After stats are imported into{" "}
+                  <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">
+                    match_events
+                  </code>{" "}
+                  with a linked{" "}
+                  <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">
+                    player_id
+                  </code>
+                  , or when they appear in the archive CSV under this Roblox
+                  account or username, games will list here.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {appearances.map((row) => (
+                <MatchAppearanceRow key={row.robloxMatchId} row={row} />
+              ))}
+            </div>
+          )}
+        </section>
+
         <section className="grid gap-4 lg:grid-cols-2">
           <Card className="gap-3 py-5">
             <CardHeader className="flex flex-row items-center gap-3">
@@ -384,6 +444,72 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
         <p className="mt-1.5 text-2xl font-semibold text-white">{value}</p>
       </CardContent>
     </Card>
+  );
+}
+
+function MatchAppearanceRow({ row }: { row: PlayerMatchAppearance }) {
+  const summary = summaryLine(row);
+  const fftBadge =
+    row.fft !== "No" ? (
+      <Badge
+        variant="outline"
+        className="shrink-0 border-amber-400/35 text-[10px] font-semibold uppercase tracking-wider text-amber-100/90"
+      >
+        {row.fft}
+      </Badge>
+    ) : null;
+
+  const content = (
+    <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
+      <div className="flex shrink-0 items-center gap-2 text-white/55">
+        <CalendarDays className="size-4 shrink-0" />
+        <time
+          className="text-xs font-semibold tabular-nums text-white/80"
+          dateTime={row.date || undefined}
+        >
+          {row.date || "—"}
+        </time>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold text-white">
+            <span className="text-white/80">{row.homeTeam}</span>
+            <span className="mx-1.5 text-white/45">
+              {row.homeScore}–{row.awayScore}
+            </span>
+            <span className="text-white/80">{row.awayTeam}</span>
+          </p>
+          {fftBadge}
+        </div>
+        <p className="mt-0.5 text-[11px] text-white/50">
+          Season {row.season} · {row.competition} · {row.gameWeek}
+        </p>
+        {summary ? (
+          <p className="mt-1 text-xs font-medium text-cyan-100/90">{summary}</p>
+        ) : (
+          <p className="mt-1 text-xs text-white/45">Played (no goals / assists)</p>
+        )}
+      </div>
+      <div className="shrink-0 sm:text-right">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
+          Match
+        </span>
+        <p className="mt-0.5 font-mono text-[11px] font-medium text-white/70">
+          {row.robloxMatchId}
+        </p>
+      </div>
+    </div>
+  );
+
+  return (
+    <Link
+      href={`/stats/matches/${encodeURIComponent(row.robloxMatchId)}`}
+      className="block rounded-xl outline-none transition focus-visible:ring-2 focus-visible:ring-white/40"
+    >
+      <Card className="gap-0 py-0 transition hover:bg-white/[0.07] hover:ring-white/25">
+        {content}
+      </Card>
+    </Link>
   );
 }
 
