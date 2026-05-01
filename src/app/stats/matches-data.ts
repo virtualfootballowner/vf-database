@@ -153,13 +153,13 @@ const RAW: RawMatch[] = [
   ["BP2-NTF-22", 2, "British Premier", "GW4", "2024-11-30", "Nottingham", "Stanford", 0, 3, "Group", "Yes", "—", "FFT - Nottingham disbanded late November 2024"],
 
   ["BP2-MA-01", 2, "British Premier", "GW5", "2024-12-10", "Milton", "Andover", 3, 0, "Group", "Yes", "—", "FFT - Date approximate"],
-  ["BP2-MC-01", 2, "British Premier", "GW5", "2024-12-10", "Milton", "Canterbury", 5, 5, "Group", "No", "—", "Date approximate"],
-  ["BP2-MNP-01", 2, "British Premier", "GW5", "2024-12-10", "Milton", "Newport", 5, 2, "Group", "No", "—", "Date approximate"],
+  ["BP2-MC-01", 2, "British Premier", "GW5", "2024-12-10", "Milton", "Canterbury", 5, 5, "Group", "No", "—", "Date approximate — events estimated from other S2 squad lists (no sheet)"],
+  ["BP2-MNP-01", 2, "British Premier", "GW5", "2024-12-10", "Milton", "Newport", 5, 2, "Group", "No", "—", "Date approximate — events estimated from other S2 squad lists (no sheet)"],
   ["BP2-EN-01", 2, "British Premier", "GW5", "2024-12-10", "Eltham", "Newham", 0, 0, "Group", "No", "—", "Game never played - recorded as 0-0"],
   ["BP2-EC-01", 2, "British Premier", "GW5", "2024-12-10", "Eltham", "Canterbury", 3, 0, "Group", "Yes", "—", "FFT - Date approximate"],
   ["BP2-ES-01", 2, "British Premier", "GW5", "2024-12-10", "Eltham", "Stanford", 3, 0, "Group", "Yes", "—", "FFT - Date approximate"],
   ["BP2-AS-01", 2, "British Premier", "GW5", "2024-12-10", "Andover", "Stanford", 0, 0, "Group", "No", "—", "Date approximate"],
-  ["BP2-CS-01", 2, "British Premier", "GW5", "2024-12-10", "Canterbury", "Stanford", 5, 0, "Group", "No", "—", "Date approximate"],
+  ["BP2-CS-01", 2, "British Premier", "GW5", "2024-12-10", "Canterbury", "Stanford", 5, 0, "Group", "No", "—", "Date approximate — events estimated from other S2 squad lists (no sheet)"],
 
   ["SI2-MT-01", 2, "Serie Italia", "GW5", "2024-12-12", "Milano", "Tretorre", 4, 0, "Group", "No", "—", "Date approximate"],
   ["SI2-MV-01", 2, "Serie Italia", "GW5", "2024-12-12", "Milano", "Viola", 3, 0, "Group", "Yes", "—", "FFT - Date approximate"],
