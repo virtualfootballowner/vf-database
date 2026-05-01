@@ -1,14 +1,37 @@
 import {
+  AuditLogEvent,
   EmbedBuilder,
   type Guild,
+  type GuildAuditLogsEntry,
   type User,
 } from "discord.js";
-import { AuditLogEvent } from "discord-api-types/v10";
 
 import { env } from "@/bot/config";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export type MemberOutgoingReason = "banned" | "kicked" | "left_voluntarily";
+
+/** Call once on ClientReady so production logs show if leave/kick posts are actually enabled. */
+export function logMemberOutgoingStartup(): void {
+  const on = Boolean(env.DISCORD_MEMBER_OUTGOING_CHANNEL_ID?.trim());
+  if (on) {
+    console.log(
+      "[outgoing] Member leave / kick / ban log: ENABLED (channel id configured).",
+    );
+  } else {
+    console.warn(
+      "[outgoing] Member leave / kick / ban log: DISABLED — set DISCORD_MEMBER_OUTGOING_CHANNEL_ID in Railway (or .env). Blank .env.local on the host means only platform env vars apply.",
+    );
+  }
+}
+
+function userDisplayForEmbed(user: User): string {
+  const uname = user.username ?? "unknown";
+  const disc = user.discriminator;
+  const legacyTag =
+    disc && disc !== "0" ? `${uname}#${disc}` : `@${uname}`;
+  return `${user} (${legacyTag})`;
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -93,7 +116,7 @@ export async function postMemberOutgoing(
     .setTitle("Member left the server")
     .setDescription(
       [
-        `**Member:** ${user} (${user.tag})`,
+        `**Member:** ${userDisplayForEmbed(user)}`,
         `**Discord user ID:** \`${user.id}\``,
         `**Reason:** ${reasonLabel(reason)}`,
         "",
@@ -106,8 +129,15 @@ export async function postMemberOutgoing(
 
   try {
     const channel = await guild.channels.fetch(channelId);
-    if (!channel?.isTextBased()) return;
+    if (!channel?.isTextBased()) {
+      console.error(
+        "[outgoing] channel is not text-based or missing:",
+        channelId,
+      );
+      return;
+    }
     await channel.send({ embeds: [embed] });
+    console.log("[outgoing] posted", reason, user.id);
   } catch (err) {
     console.error("postMemberOutgoing: failed to send:", err);
   }
@@ -126,30 +156,36 @@ export async function isUserCurrentlyBanned(
   }
 }
 
+function auditEntryKickMatchesUser(
+  entry: GuildAuditLogsEntry,
+  uid: string,
+): boolean {
+  const actionNum = Number(entry.action);
+  if (
+    actionNum !== AuditLogEvent.MemberKick &&
+    actionNum !== 20
+  ) {
+    return false;
+  }
+  if (entry.targetId != null && String(entry.targetId) === uid) return true;
+  const t = entry.target;
+  if (t && typeof t === "object" && "id" in t && t.id != null) {
+    if (String(t.id) === uid) return true;
+  }
+  return false;
+}
+
 export async function inferKickOrVoluntaryLeave(
   guild: Guild,
   userId: string,
 ): Promise<"kicked" | "left_voluntarily"> {
   const uid = String(userId);
-  const isKickEntry = (
-    entry: { action: number; targetId: string | null; createdTimestamp: number },
-  ) => {
-    if (entry.action !== AuditLogEvent.MemberKick) return false;
-    const tid = entry.targetId != null ? String(entry.targetId) : null;
-    if (tid !== uid) return false;
-    return true;
-  };
-
   const now = Date.now();
-  const maxAgeMs = 45_000;
+  const maxAgeMs = 90_000;
 
-  const scan = (entries: Iterable<{
-    action: number;
-    targetId: string | null;
-    createdTimestamp: number;
-  }>) => {
+  const scan = (entries: Iterable<GuildAuditLogsEntry>) => {
     for (const entry of entries) {
-      if (!isKickEntry(entry)) continue;
+      if (!auditEntryKickMatchesUser(entry, uid)) continue;
       if (now - entry.createdTimestamp > maxAgeMs) continue;
       return "kicked" as const;
     }
@@ -158,14 +194,13 @@ export async function inferKickOrVoluntaryLeave(
 
   try {
     const typed = await guild.fetchAuditLogs({
-      limit: 20,
+      limit: 24,
       type: AuditLogEvent.MemberKick,
     });
     const hit = scan(typed.entries.values());
     if (hit) return hit;
 
-    // Fallback: untyped fetch (some API paths return fuller ordering)
-    const broad = await guild.fetchAuditLogs({ limit: 30 });
+    const broad = await guild.fetchAuditLogs({ limit: 48 });
     const hit2 = scan(broad.entries.values());
     if (hit2) return hit2;
   } catch (err) {
@@ -182,14 +217,29 @@ export async function handleMemberRemoveOutgoing(
   guild: Guild,
   user: User,
 ): Promise<void> {
-  if (!env.DISCORD_MEMBER_OUTGOING_CHANNEL_ID?.trim()) return;
-
-  await sleep(2500);
-
-  if (await isUserCurrentlyBanned(guild, user.id)) {
+  const ch = env.DISCORD_MEMBER_OUTGOING_CHANNEL_ID?.trim();
+  if (!ch) {
+    console.warn("[outgoing] skip leave log — no DISCORD_MEMBER_OUTGOING_CHANNEL_ID");
     return;
   }
 
-  const sub = await inferKickOrVoluntaryLeave(guild, user.id);
+  console.log("[outgoing] member remove → will classify after delay:", user.id);
+
+  // Ban list + audit entries can lag the gateway member-remove event.
+  await sleep(4000);
+
+  if (await isUserCurrentlyBanned(guild, user.id)) {
+    console.log("[outgoing] user appears banned — skipping leave duplicate (ban handler posts)");
+    return;
+  }
+
+  let sub: "kicked" | "left_voluntarily" = "left_voluntarily";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    sub = await inferKickOrVoluntaryLeave(guild, user.id);
+    if (sub === "kicked") break;
+    if (attempt < 2) await sleep(2000);
+  }
+  console.log("[outgoing] classified non-ban leave as:", sub, user.id);
+
   await postMemberOutgoing(guild, user, sub);
 }

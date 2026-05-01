@@ -5,15 +5,35 @@ import { z } from "zod";
 loadEnv({ path: ".env.local", override: true });
 loadEnv({ override: false });
 
+/** Optional channel: treat blank / whitespace as unset (common in Railway UI). */
+const optionalOutgoingChannel = z.preprocess(
+  (raw) => {
+    if (raw == null) return undefined;
+    if (typeof raw !== "string") return raw;
+    const t = raw.trim();
+    return t.length > 0 ? t : undefined;
+  },
+  z.string().min(1).optional(),
+);
+
 const envSchema = z.object({
   DISCORD_BOT_TOKEN: z.string().min(1),
-  DISCORD_GUILD_ID: z.string().min(1),
-  DISCORD_ROVER_VERIFIED_ROLE_ID: z.string().min(1),
-  DISCORD_APPROVED_ROLE_ID: z.string().min(1),
-  DISCORD_STAFF_REVIEW_CHANNEL_ID: z.string().min(1),
-  DISCORD_SYNC_LOG_CHANNEL_ID: z.string().min(1),
+  DISCORD_GUILD_ID: z.string().min(1).transform((s) => s.trim()),
+  DISCORD_ROVER_VERIFIED_ROLE_ID: z
+    .string()
+    .min(1)
+    .transform((s) => s.trim()),
+  DISCORD_APPROVED_ROLE_ID: z.string().min(1).transform((s) => s.trim()),
+  DISCORD_STAFF_REVIEW_CHANNEL_ID: z
+    .string()
+    .min(1)
+    .transform((s) => s.trim()),
+  DISCORD_SYNC_LOG_CHANNEL_ID: z
+    .string()
+    .min(1)
+    .transform((s) => s.trim()),
   /** Outgoing log: posts when members leave (ban / kick / voluntary). Optional — omit to disable. */
-  DISCORD_MEMBER_OUTGOING_CHANNEL_ID: z.string().min(1).optional(),
+  DISCORD_MEMBER_OUTGOING_CHANNEL_ID: optionalOutgoingChannel,
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   ROBLOX_API_BASE_URL: z.string().url().default("https://users.roblox.com"),

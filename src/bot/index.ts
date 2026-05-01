@@ -29,6 +29,7 @@ import {
 } from "@/bot/join-verify-gate";
 import {
   handleMemberRemoveOutgoing,
+  logMemberOutgoingStartup,
   postMemberOutgoing,
 } from "@/bot/member-outgoing";
 import {
@@ -74,6 +75,7 @@ async function runBackfill() {
 
 client.once(Events.ClientReady, async (readyClient) => {
   console.log(`Discord bot online as ${readyClient.user.tag}`);
+  logMemberOutgoingStartup();
 
   try {
     const guild = await client.guilds.fetch(env.DISCORD_GUILD_ID);
