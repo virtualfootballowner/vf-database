@@ -60,8 +60,8 @@ async function runBackfill() {
   for (const member of members.values()) {
     if (!member.roles.cache.has(env.DISCORD_APPROVED_ROLE_ID)) continue;
     try {
-      await handleApprovedRoleAdded(member as GuildMember);
-      synced++;
+      const ok = await handleApprovedRoleAdded(member as GuildMember);
+      if (ok) synced++;
     } catch (error) {
       console.error(
         `Backfill sync failed for ${member.user.username}:`,

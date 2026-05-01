@@ -8,7 +8,7 @@ import {
 } from "discord.js";
 
 import { env } from "@/bot/config";
-import { upsertVerifiedPlayer } from "@/lib/player-sync";
+import { upsertVerifiedPlayer, PlayerIdentityCollisionError } from "@/lib/player-sync";
 import {
   extractRobloxUsername,
   getRobloxHeadshots,
@@ -166,12 +166,22 @@ export async function handleApprovedRoleAdded(
     return false;
   }
 
-  await upsertVerifiedPlayer({
-    discordId: member.id,
-    discordUsername: member.user.username,
-    robloxUsername: identity.username,
-    robloxUserId: identity.userId,
-  });
+  try {
+    await upsertVerifiedPlayer({
+      discordId: member.id,
+      discordUsername: member.user.username,
+      robloxUsername: identity.username,
+      robloxUserId: identity.userId,
+    });
+  } catch (e) {
+    if (e instanceof PlayerIdentityCollisionError) {
+      console.warn(
+        `Supabase sync skipped for ${member.user.tag}: ${e.message}`,
+      );
+      return false;
+    }
+    throw e;
+  }
 
   if (options.sendDm) {
     try {

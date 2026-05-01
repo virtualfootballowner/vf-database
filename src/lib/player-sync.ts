@@ -1,5 +1,21 @@
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
+/** Discord ↔ Roblox mapping disagrees with what's stored (nickname drift, alt accounts, or stale DB). */
+export class PlayerIdentityCollisionError extends Error {
+  override readonly name = "PlayerIdentityCollisionError";
+  readonly code = "PLAYER_IDENTITY_COLLISION" as const;
+
+  constructor(
+    message: string,
+    public readonly kind:
+      | "discord_maps_other_roblox"
+      | "roblox_maps_other_discord",
+    public readonly details: Readonly<Record<string, string>>,
+  ) {
+    super(message);
+  }
+}
+
 export type PlayerUpsertInput = {
   discordId: string;
   discordUsername: string;
@@ -50,8 +66,19 @@ export async function upsertVerifiedPlayer(input: PlayerUpsertInput) {
     existingDiscordMapping.data?.roblox_user_id &&
     existingDiscordMapping.data.roblox_user_id !== input.robloxUserId
   ) {
-    throw new Error(
-      `Collision: discord_id ${input.discordId} is already linked to roblox_user_id ${existingDiscordMapping.data.roblox_user_id}.`,
+    throw new PlayerIdentityCollisionError(
+      [
+        `This Discord account is already linked to Roblox user id \`${existingDiscordMapping.data.roblox_user_id}\` in the database,`,
+        `but the member’s display name / nickname resolved to \`${input.robloxUsername}\` (id \`${input.robloxUserId}\`).`,
+        `Update their Discord nickname to match the linked Roblox name, or correct the player row in Supabase if they legitimately changed Roblox accounts (may need a DB migration; roblox_user_id is locked after link).`,
+      ].join(" "),
+      "discord_maps_other_roblox",
+      {
+        discord_id: input.discordId,
+        db_roblox_user_id: existingDiscordMapping.data.roblox_user_id,
+        resolved_roblox_user_id: input.robloxUserId,
+        resolved_roblox_username: input.robloxUsername,
+      },
     );
   }
 
@@ -68,8 +95,14 @@ export async function upsertVerifiedPlayer(input: PlayerUpsertInput) {
   }
 
   if ((existingIdentity.data ?? []).length > 0) {
-    throw new Error(
-      `Collision: roblox_user_id ${input.robloxUserId} is already linked to a different Discord account.`,
+    throw new PlayerIdentityCollisionError(
+      `Roblox user id \`${input.robloxUserId}\` is already linked to a different Discord account in the database.`,
+      "roblox_maps_other_discord",
+      {
+        discord_id: input.discordId,
+        resolved_roblox_user_id: input.robloxUserId,
+        resolved_roblox_username: input.robloxUsername,
+      },
     );
   }
 
