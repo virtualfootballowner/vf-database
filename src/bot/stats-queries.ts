@@ -1,11 +1,10 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { env } from "@/bot/config";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
+/** Service-role client (normalized Supabase URL — matches `player-sync`). */
 export function createBotSupabase(): SupabaseClient {
-  return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  return supabaseAdmin;
 }
 
 export type TeamRow = { name: string; slug: string | null };
@@ -101,9 +100,7 @@ export async function findPlayersByUsername(
 
   const { data, error } = await supabase
     .from("players")
-    .select(
-      "id, roblox_username, roblox_user_id, discord_id, discord_username, position, goals_total, assists_total, avg_rating, appearances_total, trophies, accolades",
-    )
+    .select("*")
     .ilike("roblox_username", term);
 
   if (error) throw error;
@@ -116,9 +113,7 @@ export async function findPlayerByDiscordId(
 ): Promise<PlayerProfileRow | null> {
   const { data, error } = await supabase
     .from("players")
-    .select(
-      "id, roblox_username, roblox_user_id, discord_id, discord_username, position, goals_total, assists_total, avg_rating, appearances_total, trophies, accolades",
-    )
+    .select("*")
     .eq("discord_id", discordId)
     .maybeSingle();
 

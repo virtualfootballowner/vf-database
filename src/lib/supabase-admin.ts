@@ -2,7 +2,8 @@ import { createClient } from "@supabase/supabase-js";
 
 import { env } from "@/bot/config";
 
-function normalizeSupabaseUrl(rawUrl: string): string {
+/** Strip `/rest/v1` so the JS client talks to the project root (same URL shape Vercel/Railway often paste). */
+export function normalizeSupabaseUrl(rawUrl: string): string {
   const url = new URL(rawUrl);
   url.pathname = url.pathname.replace(/\/rest\/v1\/?$/, "/");
   return url.toString().replace(/\/$/, "");

@@ -31,6 +31,21 @@ import {
   DENY_BUTTON_ID_PREFIX,
 } from "@/bot/sync";
 
+function formatCommandError(err: unknown): string {
+  if (err instanceof Error && err.message.trim()) return err.message.trim();
+  if (typeof err === "object" && err !== null) {
+    const o = err as Record<string, unknown>;
+    const m = o.message ?? o.error_description;
+    if (typeof m === "string" && m.trim()) return m.trim();
+    const parts = [o.code, o.details, o.hint]
+      .filter((x) => typeof x === "string" && String(x).trim())
+      .map(String);
+    if (parts.length) return parts.join(" · ");
+  }
+  if (typeof err === "string" && err.trim()) return err.trim();
+  return "unknown error";
+}
+
 export const slashCommandDefinitions = [
   new SlashCommandBuilder()
     .setName("backlog")
@@ -229,9 +244,7 @@ async function handlePlayer(
       if (candidates.length === 0) {
         const { data, error } = await supabase
           .from("players")
-          .select(
-            "id, roblox_username, roblox_user_id, discord_id, discord_username, position, goals_total, assists_total, avg_rating, appearances_total, trophies, accolades",
-          )
+          .select("*")
           .ilike("roblox_username", `%${usernameOpt.trim()}%`)
           .limit(5);
         if (error) throw error;
@@ -343,7 +356,8 @@ async function handlePlayer(
 
     await interaction.editReply({ embeds: [embed] });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "unknown error";
+    const msg = formatCommandError(err);
+    console.error("/player failed:", err);
     await interaction.editReply({ content: `Could not load player: ${msg}` });
   }
 }
@@ -403,7 +417,8 @@ async function handleTeam(
 
     await interaction.editReply({ embeds: [embed] });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "unknown error";
+    const msg = formatCommandError(err);
+    console.error("/team failed:", err);
     await interaction.editReply({ content: `Could not load team: ${msg}` });
   }
 }
@@ -467,7 +482,8 @@ async function handleSquad(
 
     await interaction.editReply({ embeds: [embed] });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "unknown error";
+    const msg = formatCommandError(err);
+    console.error("/squad failed:", err);
     await interaction.editReply({ content: `Could not load squad: ${msg}` });
   }
 }
