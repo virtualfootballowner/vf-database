@@ -2,10 +2,31 @@ import { Client, EmbedBuilder, type GuildMember } from "discord.js";
 
 import { env } from "@/bot/config";
 
-const ROVER_VERIFY_DEADLINE_MS = 10 * 60 * 1000;
-const ROVER_VERIFY_REMINDER_BEFORE_END_MS = 2 * 60 * 1000;
-const ROVER_VERIFY_REMINDER_AT_MS =
-  ROVER_VERIFY_DEADLINE_MS - ROVER_VERIFY_REMINDER_BEFORE_END_MS;
+/**
+ * Testing: short window. For production, use e.g. 10 and 2 (minutes before kick for reminder).
+ */
+const ROVER_VERIFY_DEADLINE_MINUTES = 1;
+const ROVER_VERIFY_REMINDER_MINUTES_BEFORE_KICK = 0.5;
+
+const ROVER_VERIFY_DEADLINE_MS = ROVER_VERIFY_DEADLINE_MINUTES * 60 * 1000;
+const ROVER_VERIFY_REMINDER_AT_MS = Math.max(
+  0,
+  ROVER_VERIFY_DEADLINE_MS -
+    ROVER_VERIFY_REMINDER_MINUTES_BEFORE_KICK * 60 * 1000,
+);
+
+function deadlineLabel(): string {
+  return ROVER_VERIFY_DEADLINE_MINUTES === 1
+    ? "1 minute"
+    : `${ROVER_VERIFY_DEADLINE_MINUTES} minutes`;
+}
+
+function reminderLabel(): string {
+  const seconds = ROVER_VERIFY_REMINDER_MINUTES_BEFORE_KICK * 60;
+  if (seconds < 60) return `${Math.round(seconds)} seconds`;
+  if (seconds === 120) return "2 minutes";
+  return `${ROVER_VERIFY_REMINDER_MINUTES_BEFORE_KICK} minutes`;
+}
 
 const kickTimers = new Map<string, NodeJS.Timeout>();
 const reminderTimers = new Map<string, NodeJS.Timeout>();
@@ -32,7 +53,7 @@ function needsRoverGate(member: GuildMember): boolean {
 }
 
 /**
- * Instant DM + 8m reminder + 10m deadline to obtain Rover verified role, else kick.
+ * Instant DM + reminder before deadline + kick if Rover not verified in time.
  */
 export async function handleMemberJoinVerifyGate(
   client: Client,
@@ -42,17 +63,19 @@ export async function handleMemberJoinVerifyGate(
 
   cancelRoverVerifyDeadline(member.id);
 
+  const dl = deadlineLabel();
+  const rem = reminderLabel();
+
   try {
     const embed = new EmbedBuilder()
       .setColor(0xf59e0b)
-      .setTitle("⏱️ You have 10 minutes to verify")
+      .setTitle(`⏱️ You have ${dl} to verify`)
       .setDescription(
-        "Welcome to **VFL**. Complete **Rover** Roblox verification in this server within **10 minutes** or you will be **removed** automatically.",
+        `Welcome to **VFL**. Complete **Rover** Roblox verification in this server within **${dl}** or you will be **removed** automatically.`,
       )
       .addFields({
         name: "What to do",
-        value:
-          "Use the server’s verification / Rover flow now so your Roblox account is linked. You’ll get another DM with **2 minutes left** if you’re not verified yet. If you’re stuck, open a ticket or ask staff — the timer does not pause.",
+        value: `Use the server’s verification / Rover flow now so your Roblox account is linked. You’ll get another DM with **${rem} left** if you’re not verified yet. If you’re stuck, open a ticket or ask staff — the timer does not pause.`,
       })
       .setFooter({ text: "VFL Bot" })
       .setTimestamp();
@@ -77,9 +100,9 @@ export async function handleMemberJoinVerifyGate(
         if (m.roles.cache.has(env.DISCORD_APPROVED_ROLE_ID)) return;
         const remindEmbed = new EmbedBuilder()
           .setColor(0xea580c)
-          .setTitle("⏱️ 2 minutes left to verify")
+          .setTitle(`⏱️ ${rem} left to verify`)
           .setDescription(
-            "You still need to complete **Rover** verification in **VFL**. About **2 minutes** remain before you are removed from the server.",
+            `You still need to complete **Rover** verification in **VFL**. About **${rem}** remain before you are removed from the server.`,
           )
           .addFields({
             name: "Verify now",
@@ -91,7 +114,7 @@ export async function handleMemberJoinVerifyGate(
         await m.send({ embeds: [remindEmbed] });
       } catch {
         console.warn(
-          `[join-gate] Could not send 2m reminder DM to ${userId} (DMs closed or fetch failed).`,
+          `[join-gate] Could not send reminder DM to ${userId} (DMs closed or fetch failed).`,
         );
       }
     })();
@@ -108,7 +131,7 @@ export async function handleMemberJoinVerifyGate(
         if (m.roles.cache.has(env.DISCORD_ROVER_VERIFIED_ROLE_ID)) return;
         if (m.roles.cache.has(env.DISCORD_APPROVED_ROLE_ID)) return;
         await m.kick(
-          "Rover verification not completed within 10 minutes — rejoin when ready.",
+          `Rover verification not completed within ${dl} — rejoin when ready.`,
         );
       } catch (e) {
         console.error(`[join-gate] Deadline kick failed for ${userId}:`, e);
