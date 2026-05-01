@@ -15,13 +15,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getRobloxHeadshots } from "@/lib/roblox";
+import { getRobloxHeadshots, isVerifiedRobloxUserId } from "@/lib/roblox";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 type PlayerProfileRow = {
   id: string;
   roblox_username: string;
-  roblox_user_id: string;
+  roblox_user_id: string | null;
   discord_username: string | null;
   status: string;
   position: string | null;
@@ -114,7 +114,7 @@ export default async function PlayerDetailPage({
   const decoded = decodeURIComponent(username);
   const player = await getPlayer(decoded);
 
-  if (!player) notFound();
+  if (!player || !isVerifiedRobloxUserId(player.roblox_user_id)) notFound();
 
   const headshotsMap = await getRobloxHeadshots([player.roblox_user_id]);
   const headshot = headshotsMap.get(player.roblox_user_id);

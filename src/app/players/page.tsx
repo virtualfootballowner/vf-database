@@ -1,8 +1,14 @@
 import { SiteNav } from "@/components/site-nav";
-import { getRobloxHeadshots } from "@/lib/roblox";
+import { getRobloxHeadshots, isVerifiedRobloxUserId } from "@/lib/roblox";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 import { PlayersList, type PlayerRow } from "./players-list";
+
+type VerifiedPlayerRow = PlayerRow & { roblox_user_id: string };
+
+function isVerifiedPlayerRow(p: PlayerRow): p is VerifiedPlayerRow {
+  return isVerifiedRobloxUserId(p.roblox_user_id);
+}
 
 async function getPlayers(): Promise<PlayerRow[]> {
   try {
@@ -22,7 +28,8 @@ async function getPlayers(): Promise<PlayerRow[]> {
 }
 
 export default async function PlayersPage() {
-  const players = await getPlayers();
+  const allPlayers = await getPlayers();
+  const players = allPlayers.filter(isVerifiedPlayerRow);
   const headshotsMap = await getRobloxHeadshots(
     players.map((p) => p.roblox_user_id),
   );
@@ -41,8 +48,8 @@ export default async function PlayersPage() {
             Players
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">
-            The full player database. Tap a card to reveal Roblox and Discord
-            identifiers, position, and status.
+            Players with a linked Roblox user id. Tap a card for Discord, position,
+            and status.
           </p>
         </section>
 

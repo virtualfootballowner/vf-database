@@ -71,6 +71,17 @@ export function effectiveRobloxPlayerId(
   return resolvedByLowerUsername.get(u.toLowerCase()) ?? null;
 }
 
+/** Non-null numeric string suitable for Roblox APIs (real user id on file). */
+export function isVerifiedRobloxUserId(
+  value: string | null | undefined,
+): value is string {
+  if (value == null) return false;
+  const s = String(value).trim();
+  if (!/^\d+$/.test(s)) return false;
+  const n = Number(s);
+  return Number.isSafeInteger(n) && n > 0;
+}
+
 export async function resolveRobloxIdentity(
   username: string,
   apiBaseUrl: string,
