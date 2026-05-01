@@ -258,10 +258,10 @@ EP1-F-01,S1,EuroBlox Playoffs,Milton,Nottingham,3-2,Assist,Milton,sc_16x,2003449
 EP1-F-01,S1,EuroBlox Playoffs,Milton,Nottingham,3-2,Goal,Milton,sc_16x,200344976,1,
 EP1-F-01,S1,EuroBlox Playoffs,Milton,Nottingham,3-2,Assist,Milton,cornzua,111729984,1,
 EL2-GW1-01,S2,EuroLeague,Cartiginia,Venezia,3-2,Goal,Cartiginia,cornzua,111729984,2,
-EL2-GW1-01,S2,EuroLeague,Cartiginia,Venezia,3-2,Goal,Cartiginia,NakaTsuramasu,2421324614,1,
+EL2-GW1-01,S2,EuroLeague,Cartiginia,Venezia,3-2,Goal,Cartiginia,li7wak,273444150,1,
 EL2-GW1-01,S2,EuroLeague,Cartiginia,Venezia,3-2,Goal,Venezia,kroupii,530399970,2,
 EL2-GW1-01,S2,EuroLeague,Cartiginia,Venezia,3-2,Assist,Cartiginia,GoldenArrow14,349241001,1,
-EL2-GW1-01,S2,EuroLeague,Cartiginia,Venezia,3-2,Assist,Cartiginia,NakaTsuramasu,2421324614,1,
+EL2-GW1-01,S2,EuroLeague,Cartiginia,Venezia,3-2,Assist,Cartiginia,li7wak,273444150,1,
 EL2-GW1-01,S2,EuroLeague,Cartiginia,Venezia,3-2,Yellow Card,Cartiginia,MangoFresc0,,1,⚠️ No Roblox ID
 EL2-GW1-01,S2,EuroLeague,Cartiginia,Venezia,3-2,MOTM,Cartiginia,IPlayedMyOLDMinecr,4954863691,1,
 EL2-GW1-02,S2,EuroLeague,Nottingham,Newham,3-4,Goal,Nottingham,A_etherius,104835988,3,Hat-trick
@@ -350,11 +350,11 @@ EL2-GW2-03,S2,EuroLeague,Milton,Stanford,7-4,Assist,Milton,bIondage,165728791,1,
 EL2-GW2-03,S2,EuroLeague,Milton,Stanford,7-4,Assist,Stanford,rxckfrost,180053970,1,
 EL2-GW2-03,S2,EuroLeague,Milton,Stanford,7-4,MOTM,Milton,Jasper021108,195149762,1,
 EL2-GW2-04,S2,EuroLeague,Cartiginia,DDG,6-0,Goal,Cartiginia,v_3dz,408529701,3,Hat-trick
-EL2-GW2-04,S2,EuroLeague,Cartiginia,DDG,6-0,Goal,Cartiginia,NakaTsuramasu,2421324614,2,
+EL2-GW2-04,S2,EuroLeague,Cartiginia,DDG,6-0,Goal,Cartiginia,li7wak,273444150,2,
 EL2-GW2-04,S2,EuroLeague,Cartiginia,DDG,6-0,Goal,Cartiginia,cornzua,111729984,1,
 EL2-GW2-04,S2,EuroLeague,Cartiginia,DDG,6-0,Assist,Cartiginia,MajinCrew,1056227705,1,
 EL2-GW2-04,S2,EuroLeague,Cartiginia,DDG,6-0,Assist,Cartiginia,GoldenArrow14,349241001,1,
-EL2-GW2-04,S2,EuroLeague,Cartiginia,DDG,6-0,Assist,Cartiginia,NakaTsuramasu,2421324614,1,
+EL2-GW2-04,S2,EuroLeague,Cartiginia,DDG,6-0,Assist,Cartiginia,li7wak,273444150,1,
 EL2-GW2-04,S2,EuroLeague,Cartiginia,DDG,6-0,MOTM,Cartiginia,v_3dz,408529701,1,
 EL2-GW2-05,S2,EuroLeague,Newport,Eltham,2-5,Goal,Newport,mateiryan,1252031180,1,
 EL2-GW2-05,S2,EuroLeague,Newport,Eltham,2-5,Goal,Newport,booskioo,25796457,1,
@@ -379,7 +379,7 @@ SI2-GW2-01,S2,Serie Italia,Milano,Casole,4-2,MOTM,Milano,shuxc,,1,⚠️ No Robl
 SI2-GW3-01,S2,Serie Italia,Casole,Cartiginia,6-0,Goal,Casole,bovchenko,2938101088,2,
 SI2-GW3-01,S2,Serie Italia,Casole,Cartiginia,6-0,Goal,Casole,vizuvitik,4802143228,3,Hat-trick
 SI2-GW3-01,S2,Serie Italia,Casole,Cartiginia,6-0,Goal,Casole,pIastictooth,5118250089,1,
-SI2-GW3-01,S2,Serie Italia,Casole,Cartiginia,6-0,Goal,Casole,Li7wak,,1,⚠️ No Roblox ID
+SI2-GW3-01,S2,Serie Italia,Casole,Cartiginia,6-0,Goal,Casole,li7wak,273444150,1,
 SI2-GW3-01,S2,Serie Italia,Casole,Cartiginia,6-0,Assist,Casole,vizuvitik,4802143228,3,
 SI2-GW3-01,S2,Serie Italia,Casole,Cartiginia,6-0,Assist,Casole,123Taras123,149273463,1,
 SI2-GW3-01,S2,Serie Italia,Casole,Cartiginia,6-0,MOTM,Casole,vizuvitik,4802143228,1,
@@ -454,14 +454,14 @@ SI2-GW4-01,S2,Serie Italia,Casole,Venezia,5-1,Assist,Casole,bovchenko,2938101088
 SI2-GW4-01,S2,Serie Italia,Casole,Venezia,5-1,MOTM,Casole,bovchenko,2938101088,1,
 SI2-GW4-02,S2,Serie Italia,Tretorre,Cartiginia,2-5,Goal,Tretorre,kvaradona_34,8801995315,2,
 SI2-GW4-02,S2,Serie Italia,Tretorre,Cartiginia,2-5,Goal,Cartiginia,DavidLukjanchuk,261855141,1,
-SI2-GW4-02,S2,Serie Italia,Tretorre,Cartiginia,2-5,Goal,Cartiginia,Li7wak,,2,⚠️ No Roblox ID
+SI2-GW4-02,S2,Serie Italia,Tretorre,Cartiginia,2-5,Goal,Cartiginia,li7wak,273444150,2,
 SI2-GW4-02,S2,Serie Italia,Tretorre,Cartiginia,2-5,Goal,Cartiginia,Deleted User,,1,⚠️ DELETED USER
 SI2-GW4-02,S2,Serie Italia,Tretorre,Cartiginia,2-5,Goal,Cartiginia,peng,40971,1,
 SI2-GW4-02,S2,Serie Italia,Tretorre,Cartiginia,2-5,Assist,Cartiginia,EdinDzeko1983,4935434467,1,
 SI2-GW4-02,S2,Serie Italia,Tretorre,Cartiginia,2-5,Assist,Cartiginia,DavidLukjanchuk,261855141,2,
 SI2-GW4-02,S2,Serie Italia,Tretorre,Cartiginia,2-5,Assist,Cartiginia,peng,40971,1,
 SI2-GW4-02,S2,Serie Italia,Tretorre,Cartiginia,2-5,Assist,Cartiginia,Marko_ExtremeKing,1417781724,1,
-SI2-GW4-02,S2,Serie Italia,Tretorre,Cartiginia,2-5,MOTM,Cartiginia,Li7wak,,1,⚠️ No Roblox ID
+SI2-GW4-02,S2,Serie Italia,Tretorre,Cartiginia,2-5,MOTM,Cartiginia,li7wak,273444150,1,
 SI2-GW5-01,S2,Serie Italia,Tretorre,Casole,2-6,Goal,Tretorre,kvaradona_34,8801995315,1,
 SI2-GW5-01,S2,Serie Italia,Tretorre,Casole,2-6,Goal,Casole,vizuvitik,4802143228,3,Hat-trick
 SI2-GW5-01,S2,Serie Italia,Tretorre,Casole,2-6,Goal,Casole,pIastictooth,5118250089,2,
