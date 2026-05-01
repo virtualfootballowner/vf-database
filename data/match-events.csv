@@ -471,6 +471,42 @@ SI2-GW5-01,S2,Serie Italia,Tretorre,Casole,2-6,Assist,Casole,bovchenko,293810108
 SI2-GW5-01,S2,Serie Italia,Tretorre,Casole,2-6,Assist,Casole,vizuvitik,4802143228,1,
 SI2-GW5-01,S2,Serie Italia,Tretorre,Casole,2-6,Yellow Card,Casole,kvaradona_34,8801995315,1,
 SI2-GW5-01,S2,Serie Italia,Tretorre,Casole,2-6,MOTM,Casole,vizuvitik,4802143228,1,
+SI2-MT-01,S2,Serie Italia,Milano,Tretorre,4-0,Goal,Milano,GRocHzz,134302790,2,
+SI2-MT-01,S2,Serie Italia,Milano,Tretorre,4-0,Goal,Milano,awful_2,718586034,1,
+SI2-MT-01,S2,Serie Italia,Milano,Tretorre,4-0,Goal,Milano,WiinaIdo,1656813451,1,
+SI2-MT-01,S2,Serie Italia,Milano,Tretorre,4-0,Assist,Milano,wandwandwandwandwand,429831847,1,
+SI2-MT-01,S2,Serie Italia,Milano,Tretorre,4-0,Assist,Milano,WiinaIdo,1656813451,1,
+SI2-MT-01,S2,Serie Italia,Milano,Tretorre,4-0,Assist,Milano,alexutu12cr,629378883,1,
+SI2-MT-01,S2,Serie Italia,Milano,Tretorre,4-0,Assist,Milano,GRocHzz,134302790,1,
+SI2-MT-01,S2,Serie Italia,Milano,Tretorre,4-0,MOTM,Milano,GRocHzz,134302790,1,Estimated from other S2 Serie Italia rosters
+SI2-MCA-01,S2,Serie Italia,Milano,Cartiginia,1-3,Goal,Milano,WiinaIdo,1656813451,1,
+SI2-MCA-01,S2,Serie Italia,Milano,Cartiginia,1-3,Goal,Cartiginia,li7wak,273444150,2,
+SI2-MCA-01,S2,Serie Italia,Milano,Cartiginia,1-3,Goal,Cartiginia,peng,40971,1,
+SI2-MCA-01,S2,Serie Italia,Milano,Cartiginia,1-3,Assist,Milano,GRocHzz,134302790,1,
+SI2-MCA-01,S2,Serie Italia,Milano,Cartiginia,1-3,Assist,Cartiginia,DavidLukjanchuk,261855141,1,
+SI2-MCA-01,S2,Serie Italia,Milano,Cartiginia,1-3,Assist,Cartiginia,peng,40971,1,
+SI2-MCA-01,S2,Serie Italia,Milano,Cartiginia,1-3,Assist,Cartiginia,Marko_ExtremeKing,1417781724,1,
+SI2-MCA-01,S2,Serie Italia,Milano,Cartiginia,1-3,MOTM,Cartiginia,li7wak,273444150,1,Estimated from other S2 Serie Italia rosters
+SI2-DS-01,S2,Serie Italia,DDG,Sassari,0-0,No Stats,—,—,,0,0-0 — no player-level sheet (synthetic placeholder)
+SI2-TVE-01,S2,Serie Italia,Tretorre,Venezia,1-5,Goal,Tretorre,kvaradona_34,8801995315,1,
+SI2-TVE-01,S2,Serie Italia,Tretorre,Venezia,1-5,Goal,Venezia,kroupii,530399970,3,
+SI2-TVE-01,S2,Serie Italia,Tretorre,Venezia,1-5,Goal,Venezia,specticaaI,3510065312,2,
+SI2-TVE-01,S2,Serie Italia,Tretorre,Venezia,1-5,Assist,Tretorre,kvaradona_34,8801995315,1,
+SI2-TVE-01,S2,Serie Italia,Tretorre,Venezia,1-5,Assist,Venezia,specticaaI,3510065312,2,
+SI2-TVE-01,S2,Serie Italia,Tretorre,Venezia,1-5,Assist,Venezia,kroupii,530399970,3,
+SI2-TVE-01,S2,Serie Italia,Tretorre,Venezia,1-5,MOTM,Venezia,kroupii,530399970,1,Estimated from other S2 Serie Italia rosters
+SI2-VCA-01,S2,Serie Italia,Viola,Cartiginia,0-3,Goal,Cartiginia,peng,40971,1,
+SI2-VCA-01,S2,Serie Italia,Viola,Cartiginia,0-3,Goal,Cartiginia,li7wak,273444150,1,
+SI2-VCA-01,S2,Serie Italia,Viola,Cartiginia,0-3,Goal,Cartiginia,DavidLukjanchuk,261855141,1,
+SI2-VCA-01,S2,Serie Italia,Viola,Cartiginia,0-3,Assist,Cartiginia,Marko_ExtremeKing,1417781724,1,
+SI2-VCA-01,S2,Serie Italia,Viola,Cartiginia,0-3,Assist,Cartiginia,peng,40971,1,
+SI2-VCA-01,S2,Serie Italia,Viola,Cartiginia,0-3,Assist,Cartiginia,EdinDzeko1983,4935434467,1,
+SI2-VCA-01,S2,Serie Italia,Viola,Cartiginia,0-3,MOTM,Cartiginia,peng,40971,1,Estimated from other S2 Serie Italia rosters
+SI2-VVE-01,S2,Serie Italia,Viola,Venezia,0-6,Goal,Venezia,kroupii,530399970,4,
+SI2-VVE-01,S2,Serie Italia,Viola,Venezia,0-6,Goal,Venezia,specticaaI,3510065312,2,
+SI2-VVE-01,S2,Serie Italia,Viola,Venezia,0-6,Assist,Venezia,specticaaI,3510065312,3,
+SI2-VVE-01,S2,Serie Italia,Viola,Venezia,0-6,Assist,Venezia,kroupii,530399970,3,
+SI2-VVE-01,S2,Serie Italia,Viola,Venezia,0-6,MOTM,Venezia,kroupii,530399970,1,Estimated from other S2 Serie Italia rosters
 SI2-GW1-02,S2,Serie Italia,Tretorre,Sassari,0-3,FFT,—,—,,0,Forfeit
 SI2-GW1-03,S2,Serie Italia,Sassari,Venezia,0-3,FFT,—,—,,0,Forfeit
 SI2-GW2-02,S2,Serie Italia,Viola,Tretorre,0-0,FFT,—,—,,0,Forfeit - 0-0

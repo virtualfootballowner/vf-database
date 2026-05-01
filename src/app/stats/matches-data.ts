@@ -161,19 +161,19 @@ const RAW: RawMatch[] = [
   ["BP2-AS-01", 2, "British Premier", "GW5", "2024-12-10", "Andover", "Stanford", 0, 0, "Group", "No", "—", "Date approximate"],
   ["BP2-CS-01", 2, "British Premier", "GW5", "2024-12-10", "Canterbury", "Stanford", 5, 0, "Group", "No", "—", "Date approximate — events estimated from other S2 squad lists (no sheet)"],
 
-  ["SI2-MT-01", 2, "Serie Italia", "GW5", "2024-12-12", "Milano", "Tretorre", 4, 0, "Group", "No", "—", "Date approximate"],
+  ["SI2-MT-01", 2, "Serie Italia", "GW5", "2024-12-12", "Milano", "Tretorre", 4, 0, "Group", "No", "—", "Date approximate — events estimated from other S2 Serie Italia rosters"],
   ["SI2-MV-01", 2, "Serie Italia", "GW5", "2024-12-12", "Milano", "Viola", 3, 0, "Group", "Yes", "—", "FFT - Date approximate"],
-  ["SI2-MCA-01", 2, "Serie Italia", "GW5", "2024-12-12", "Milano", "Cartiginia", 1, 3, "Group", "No", "—", "Date approximate"],
+  ["SI2-MCA-01", 2, "Serie Italia", "GW5", "2024-12-12", "Milano", "Cartiginia", 1, 3, "Group", "No", "—", "Date approximate — events estimated from other S2 Serie Italia rosters"],
   ["SI2-DT-01", 2, "Serie Italia", "GW5", "2024-12-12", "DDG", "Tretorre", 0, 3, "Group", "Yes", "—", "FFT - DDG forfeited - Date approximate"],
-  ["SI2-DS-01", 2, "Serie Italia", "GW5", "2024-12-12", "DDG", "Sassari", 0, 0, "Group", "No", "—", "Date approximate"],
+  ["SI2-DS-01", 2, "Serie Italia", "GW5", "2024-12-12", "DDG", "Sassari", 0, 0, "Group", "No", "—", "Date approximate — 0-0; no lineups in sheet (No Stats row only)"],
   ["SI2-DC-01", 2, "Serie Italia", "GW5", "2024-12-12", "DDG", "Casole", 0, 3, "Group", "Yes", "—", "FFT - DDG forfeited - Date approximate"],
   ["SI2-DV-01", 2, "Serie Italia", "GW5", "2024-12-12", "DDG", "Viola", 0, 3, "Group", "Yes", "—", "FFT - DDG forfeited - Date approximate"],
   ["SI2-DVE-01", 2, "Serie Italia", "GW5", "2024-12-12", "DDG", "Venezia", 0, 3, "Group", "Yes", "—", "FFT - DDG forfeited - Date approximate"],
-  ["SI2-TVE-01", 2, "Serie Italia", "GW5", "2024-12-12", "Tretorre", "Venezia", 1, 5, "Group", "No", "—", "Date approximate"],
+  ["SI2-TVE-01", 2, "Serie Italia", "GW5", "2024-12-12", "Tretorre", "Venezia", 1, 5, "Group", "No", "—", "Date approximate — events estimated from other S2 Serie Italia rosters"],
   ["SI2-SC-01", 2, "Serie Italia", "GW5", "2024-12-12", "Sassari", "Casole", 0, 3, "Group", "Yes", "—", "FFT - Date approximate"],
   ["SI2-SCA-01", 2, "Serie Italia", "GW5", "2024-12-12", "Sassari", "Cartiginia", 0, 3, "Group", "Yes", "—", "FFT - Date approximate"],
-  ["SI2-VCA-01", 2, "Serie Italia", "GW5", "2024-12-12", "Viola", "Cartiginia", 0, 3, "Group", "No", "—", "Date approximate"],
-  ["SI2-VVE-01", 2, "Serie Italia", "GW5", "2024-12-12", "Viola", "Venezia", 0, 6, "Group", "No", "—", "Date approximate"],
+  ["SI2-VCA-01", 2, "Serie Italia", "GW5", "2024-12-12", "Viola", "Cartiginia", 0, 3, "Group", "No", "—", "Date approximate — events estimated from other S2 Serie Italia rosters"],
+  ["SI2-VVE-01", 2, "Serie Italia", "GW5", "2024-12-12", "Viola", "Venezia", 0, 6, "Group", "No", "—", "Date approximate — events estimated from other S2 Serie Italia rosters"],
 ];
 
 export const matches: MatchRecord[] = RAW.map(
