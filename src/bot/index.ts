@@ -27,6 +27,10 @@ import {
   handleMemberJoinVerifyGate,
 } from "@/bot/join-verify-gate";
 import {
+  handleMemberRemoveOutgoing,
+  postMemberOutgoing,
+} from "@/bot/member-outgoing";
+import {
   APPROVE_BUTTON_ID_PREFIX,
   DENY_BUTTON_ID_PREFIX,
   handleApprovedRoleAdded,
@@ -41,6 +45,7 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildModeration,
   ],
 });
 
@@ -133,11 +138,24 @@ client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
   }
 });
 
+client.on(Events.GuildBanAdd, async (ban) => {
+  try {
+    if (ban.guild.id !== env.DISCORD_GUILD_ID) return;
+    await postMemberOutgoing(ban.guild, ban.user, "banned");
+  } catch (error) {
+    console.error("GuildBanAdd outgoing log failed:", error);
+  }
+});
+
 client.on(Events.GuildMemberRemove, async (member) => {
   try {
     if (member.id) cancelRoverVerifyDeadline(member.id);
     if (!member.id || !member.guild) return;
     await closeReviewCardsFor(member.guild, member.id);
+
+    if (member.guild.id === env.DISCORD_GUILD_ID && member.user) {
+      void handleMemberRemoveOutgoing(member.guild, member.user);
+    }
   } catch (error) {
     console.error("Failed to close cards for departing member:", error);
   }
