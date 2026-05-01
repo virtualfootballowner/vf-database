@@ -2,11 +2,8 @@ import { Client, EmbedBuilder, type GuildMember } from "discord.js";
 
 import { env } from "@/bot/config";
 
-/**
- * Testing: short window. For production, use e.g. 10 and 2 (minutes before kick for reminder).
- */
-const ROVER_VERIFY_DEADLINE_MINUTES = 1;
-const ROVER_VERIFY_REMINDER_MINUTES_BEFORE_KICK = 0.5;
+const ROVER_VERIFY_DEADLINE_MINUTES = 10;
+const ROVER_VERIFY_REMINDER_MINUTES_BEFORE_KICK = 2;
 
 const ROVER_VERIFY_DEADLINE_MS = ROVER_VERIFY_DEADLINE_MINUTES * 60 * 1000;
 const ROVER_VERIFY_REMINDER_AT_MS = Math.max(
@@ -24,7 +21,10 @@ function deadlineLabel(): string {
 function reminderLabel(): string {
   const seconds = ROVER_VERIFY_REMINDER_MINUTES_BEFORE_KICK * 60;
   if (seconds < 60) return `${Math.round(seconds)} seconds`;
-  if (seconds === 120) return "2 minutes";
+  if (ROVER_VERIFY_REMINDER_MINUTES_BEFORE_KICK === 1) return "1 minute";
+  if (Number.isInteger(ROVER_VERIFY_REMINDER_MINUTES_BEFORE_KICK)) {
+    return `${ROVER_VERIFY_REMINDER_MINUTES_BEFORE_KICK} minutes`;
+  }
   return `${ROVER_VERIFY_REMINDER_MINUTES_BEFORE_KICK} minutes`;
 }
 
@@ -130,8 +130,31 @@ export async function handleMemberJoinVerifyGate(
         if (!m) return;
         if (m.roles.cache.has(env.DISCORD_ROVER_VERIFIED_ROLE_ID)) return;
         if (m.roles.cache.has(env.DISCORD_APPROVED_ROLE_ID)) return;
+
+        const dlKick = deadlineLabel();
+        try {
+          const kickDm = new EmbedBuilder()
+            .setColor(0xdc2626)
+            .setTitle("You were removed from VFL")
+            .setDescription(
+              `You did not complete **Rover** verification within **${dlKick}** after joining, so you have been **removed** from the server.`,
+            )
+            .addFields({
+              name: "What’s next",
+              value:
+                "You can **rejoin** when you’re ready and complete Rover verification right away. If something blocked you (Rover, DMs, etc.), fix it first then try again.",
+            })
+            .setFooter({ text: "VFL Bot" })
+            .setTimestamp();
+          await m.send({ embeds: [kickDm] });
+        } catch {
+          console.warn(
+            `[join-gate] Could not send kick notice DM to ${userId} — kicking anyway.`,
+          );
+        }
+
         await m.kick(
-          `Rover verification not completed within ${dl} — rejoin when ready.`,
+          `Rover not verified within ${dlKick} — rejoin when ready to verify.`,
         );
       } catch (e) {
         console.error(`[join-gate] Deadline kick failed for ${userId}:`, e);
