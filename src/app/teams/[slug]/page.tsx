@@ -38,25 +38,30 @@ type TeamSeasonRecordRow = {
   matches_played: number;
 };
 
-async function getTeamSeasonRecord(
+async function getTeamSeasonRecordsForSeasons(
   slug: string,
-  season: number,
+  seasons: number[],
 ): Promise<TeamSeasonRecordRow | null> {
+  if (seasons.length === 0) return null;
   try {
     const supabase = createSupabaseServerClient();
     const { data, error } = await supabase
       .from("team_season_records")
       .select("wins, losses, draws, matches_played")
       .eq("team_slug", slug)
-      .eq("season", season)
-      .maybeSingle();
-    if (error || !data) return null;
-    return {
-      wins: Number(data.wins),
-      losses: Number(data.losses),
-      draws: Number(data.draws),
-      matches_played: Number(data.matches_played),
-    };
+      .in("season", seasons);
+    if (error || !data?.length) return null;
+    let wins = 0;
+    let losses = 0;
+    let draws = 0;
+    let matchesPlayed = 0;
+    for (const row of data) {
+      wins += Number(row.wins);
+      losses += Number(row.losses);
+      draws += Number(row.draws);
+      matchesPlayed += Number(row.matches_played);
+    }
+    return { wins, losses, draws, matches_played: matchesPlayed };
   } catch {
     return null;
   }
@@ -67,20 +72,23 @@ function formatSeasonRecord(row: TeamSeasonRecordRow | null): string {
   return `${row.wins}–${row.draws}–${row.losses}`;
 }
 
-async function getTeamSeasonHonors(
+async function getTeamSeasonHonorsForSeasons(
   slug: string,
-  season: number,
+  seasons: number[],
 ): Promise<string[]> {
+  if (seasons.length === 0) return [];
   try {
     const supabase = createSupabaseServerClient();
     const { data, error } = await supabase
       .from("team_season_honors")
       .select("honor_kind")
       .eq("team_slug", slug)
-      .eq("season", season)
+      .in("season", seasons)
       .order("honor_kind", { ascending: true });
     if (error || !data?.length) return [];
-    return data.map((r) => HONOR_LABELS[r.honor_kind] ?? r.honor_kind);
+    const kinds = [...new Set(data.map((r) => r.honor_kind))];
+    kinds.sort();
+    return kinds.map((k) => HONOR_LABELS[k] ?? k);
   } catch {
     return [];
   }
@@ -91,15 +99,18 @@ function formatTitles(honors: string[]): string {
   return honors.join(" · ");
 }
 
-/** Season to fetch record for: explicit filter, else S1 if club played it, else earliest listed season. */
-function resolveRecordSeason(
+/** Seasons for record/titles: one season when filtered, otherwise every season the club is listed in. */
+function seasonsForTeamStats(
   selectedSeason: number | null,
-  seasons: number[],
-): number | null {
-  if (selectedSeason !== null) return selectedSeason;
-  if (seasons.length === 0) return null;
-  if (seasons.includes(1)) return 1;
-  return Math.min(...seasons);
+  teamSeasons: number[],
+): number[] {
+  if (selectedSeason !== null) return [selectedSeason];
+  return [...teamSeasons].sort((a, b) => a - b);
+}
+
+function labelSeasonsSuffix(seasons: number[]): string {
+  if (seasons.length === 0) return "";
+  return seasons.map((s) => `S${s}`).join(" + ");
 }
 
 async function getTeamPlayers(
@@ -185,21 +196,22 @@ export default async function TeamDetailPage({
   );
   const headshots = Object.fromEntries(headshotsMap);
 
-  const recordSeason = resolveRecordSeason(selectedSeason, team.seasons);
+  const statsSeasons = seasonsForTeamStats(selectedSeason, team.seasons);
+  const seasonSuffix = labelSeasonsSuffix(statsSeasons);
   const seasonRecord =
-    recordSeason !== null
-      ? await getTeamSeasonRecord(slug, recordSeason)
+    statsSeasons.length > 0
+      ? await getTeamSeasonRecordsForSeasons(slug, statsSeasons)
       : null;
   const recordLabel = formatSeasonRecord(seasonRecord);
   const recordCardLabel =
-    recordSeason !== null ? `Record · S${recordSeason}` : "Record";
+    seasonSuffix.length > 0 ? `Record · ${seasonSuffix}` : "Record";
 
   const honorLines =
-    recordSeason !== null
-      ? await getTeamSeasonHonors(slug, recordSeason)
+    statsSeasons.length > 0
+      ? await getTeamSeasonHonorsForSeasons(slug, statsSeasons)
       : [];
   const titlesCardLabel =
-    recordSeason !== null ? `Titles · S${recordSeason}` : "Titles";
+    seasonSuffix.length > 0 ? `Titles · ${seasonSuffix}` : "Titles";
   const titlesValue = formatTitles(honorLines);
 
   return (
