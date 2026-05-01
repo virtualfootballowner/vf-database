@@ -14,6 +14,7 @@ import {
   type GuildMember,
   type GuildTextBasedChannel,
   type Interaction,
+  type User,
 } from "discord.js";
 
 
@@ -153,9 +154,26 @@ client.on(Events.GuildMemberRemove, async (member) => {
     if (!member.id || !member.guild) return;
     await closeReviewCardsFor(member.guild, member.id);
 
-    if (member.guild.id === env.DISCORD_GUILD_ID && member.user) {
-      void handleMemberRemoveOutgoing(member.guild, member.user);
+    if (member.guild.id !== env.DISCORD_GUILD_ID) return;
+
+    let user: User | null = member.user;
+    if (!user) {
+      try {
+        user = await client.users.fetch(member.id);
+      } catch {
+        console.error(
+          "GuildMemberRemove: could not resolve User for outgoing log;",
+          "member id",
+          member.id,
+        );
+        return;
+      }
     }
+
+    const guild = member.guild;
+    void handleMemberRemoveOutgoing(guild, user).catch((err) => {
+      console.error("handleMemberRemoveOutgoing failed:", err);
+    });
   } catch (error) {
     console.error("Failed to close cards for departing member:", error);
   }

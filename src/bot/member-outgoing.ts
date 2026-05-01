@@ -130,17 +130,44 @@ export async function inferKickOrVoluntaryLeave(
   guild: Guild,
   userId: string,
 ): Promise<"kicked" | "left_voluntarily"> {
+  const uid = String(userId);
+  const isKickEntry = (
+    entry: { action: number; targetId: string | null; createdTimestamp: number },
+  ) => {
+    if (entry.action !== AuditLogEvent.MemberKick) return false;
+    const tid = entry.targetId != null ? String(entry.targetId) : null;
+    if (tid !== uid) return false;
+    return true;
+  };
+
+  const now = Date.now();
+  const maxAgeMs = 45_000;
+
+  const scan = (entries: Iterable<{
+    action: number;
+    targetId: string | null;
+    createdTimestamp: number;
+  }>) => {
+    for (const entry of entries) {
+      if (!isKickEntry(entry)) continue;
+      if (now - entry.createdTimestamp > maxAgeMs) continue;
+      return "kicked" as const;
+    }
+    return null;
+  };
+
   try {
-    const logs = await guild.fetchAuditLogs({
-      limit: 8,
+    const typed = await guild.fetchAuditLogs({
+      limit: 20,
       type: AuditLogEvent.MemberKick,
     });
-    const now = Date.now();
-    for (const entry of logs.entries.values()) {
-      if (entry.targetId !== userId) continue;
-      if (now - entry.createdTimestamp > 12_000) continue;
-      return "kicked";
-    }
+    const hit = scan(typed.entries.values());
+    if (hit) return hit;
+
+    // Fallback: untyped fetch (some API paths return fuller ordering)
+    const broad = await guild.fetchAuditLogs({ limit: 30 });
+    const hit2 = scan(broad.entries.values());
+    if (hit2) return hit2;
   } catch (err) {
     console.error("inferKickOrVoluntaryLeave: audit log failed:", err);
   }
