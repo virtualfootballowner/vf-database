@@ -117,8 +117,10 @@ type HeadshotResponse = {
   }>;
 };
 
-export async function getRobloxHeadshots(
+async function fetchRobloxHeadshotMap(
   userIds: string[],
+  size: string,
+  fetchInit?: RequestInit,
 ): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   if (userIds.length === 0) return map;
@@ -133,10 +135,10 @@ export async function getRobloxHeadshots(
     chunks.map(async (chunk) => {
       const url = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${chunk.join(
         ",",
-      )}&size=150x150&format=Png&isCircular=true`;
+      )}&size=${encodeURIComponent(size)}&format=Png&isCircular=true`;
 
       try {
-        const response = await fetch(url, { next: { revalidate: 3600 } });
+        const response = await fetch(url, fetchInit ?? {});
         if (!response.ok) return;
         const payload = (await response.json()) as HeadshotResponse;
         for (const entry of payload.data ?? []) {
@@ -145,10 +147,29 @@ export async function getRobloxHeadshots(
           }
         }
       } catch {
-        // ignore network errors – fallback to monogram avatar
+        // ignore network errors – fallback to no thumbnail
       }
     }),
   );
 
   return map;
+}
+
+/** Cached headshots for Next.js server components. */
+export async function getRobloxHeadshots(
+  userIds: string[],
+): Promise<Map<string, string>> {
+  return fetchRobloxHeadshotMap(
+    userIds,
+    "150x150",
+    { next: { revalidate: 3600 } } as RequestInit,
+  );
+}
+
+/** Plain fetch for Node (Discord bot, scripts) — no Next `fetch` extensions. */
+export async function getRobloxHeadshotsForBot(
+  userIds: string[],
+  size: "150x150" | "180x180" | "352x352" | "420x420" = "180x180",
+): Promise<Map<string, string>> {
+  return fetchRobloxHeadshotMap(userIds, size);
 }

@@ -12,6 +12,7 @@ import {
 } from "discord.js";
 
 import { env } from "@/bot/config";
+import { getRobloxHeadshotsForBot } from "@/lib/roblox";
 import {
   buildTeamNameBySlug,
   createBotSupabase,
@@ -283,76 +284,108 @@ async function handlePlayer(
 
     const teamNames = await buildTeamNameBySlug(supabase);
     const careerLines = await fetchPlayerCareer(supabase, profile.id, teamNames);
-    const careerText =
-      careerLines.length > 0
-        ? careerLines.slice(0, 12).join("\n") +
-          (careerLines.length > 12
-            ? `\n_…+${careerLines.length - 12} more rows_`
-            : "")
-        : "—";
 
     const robloxProfile = `https://www.roblox.com/users/${profile.roblox_user_id}/profile`;
     const siteProfile = `${env.VFL_SITE_URL.replace(/\/$/, "")}/players/${encodeURIComponent(profile.roblox_username)}`;
+    const hostLabel = env.VFL_SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
+
+    const headshots = await getRobloxHeadshotsForBot(
+      [profile.roblox_user_id],
+      "420x420",
+    );
+    const robloxAvatarUrl = headshots.get(profile.roblox_user_id) ?? null;
 
     const ratingLine =
       profile.avg_rating != null && Number.isFinite(Number(profile.avg_rating))
-        ? String(profile.avg_rating)
-        : "— *(not stored yet)*";
+        ? `**${profile.avg_rating}**`
+        : "*—*";
     const appsLine =
       profile.appearances_total != null && profile.appearances_total > 0
-        ? String(profile.appearances_total)
-        : "—";
+        ? `**${profile.appearances_total}**`
+        : "*—*";
+
+    const trophiesText = formatHonorList(profile.trophies, 8).slice(0, 1024);
+    const accoladesText = formatHonorList(profile.accolades, 8).slice(0, 1024);
+
+    const identityLines = [
+      `> **Roblox ID** · \`${profile.roblox_user_id}\``,
+      profile.discord_username
+        ? `> **Discord** · \`${profile.discord_username}\``
+        : `> **Discord** · *not linked on profile*`,
+      `> **Position** · ${profile.position?.trim() || "*—*"}`,
+    ].join("\n");
+
+    const careerBlock =
+      careerLines.length > 0
+        ? `\`\`\`\n${careerLines.slice(0, 14).join("\n")}${careerLines.length > 14 ? `\n… +${careerLines.length - 14} more` : ""}\n\`\`\``
+        : "*No club seasons on file yet.*";
 
     const embed = new EmbedBuilder()
       .setColor(0x083696)
+      .setAuthor({
+        name: "VF League · Player profile",
+        url: siteProfile,
+      })
       .setTitle(profile.roblox_username)
       .setURL(siteProfile)
       .setDescription(
         [
-          `**Roblox** · \`${profile.roblox_user_id}\``,
-          profile.discord_username
-            ? `**Discord** · ${profile.discord_username}`
-            : null,
-          `**Position** · ${profile.position?.trim() || "—"}`,
-        ]
-          .filter(Boolean)
-          .join("\n"),
+          `[Roblox](${robloxProfile}) · [${hostLabel}](${siteProfile})`,
+          "",
+          identityLines,
+        ].join("\n"),
       )
       .addFields(
         {
-          name: "Goals · Assists",
-          value: `${profile.goals_total ?? 0} · ${profile.assists_total ?? 0}`,
+          name: "⚽ Goals",
+          value: `**${profile.goals_total ?? 0}**`,
           inline: true,
         },
         {
-          name: "Avg rating",
+          name: "🅰️ Assists",
+          value: `**${profile.assists_total ?? 0}**`,
+          inline: true,
+        },
+        {
+          name: "⭐ Avg rating",
           value: ratingLine,
           inline: true,
         },
         {
-          name: "Appearances (profile)",
+          name: "📋 Appearances",
           value: appsLine,
           inline: true,
         },
-        { name: "Career (club by season)", value: careerText, inline: false },
         {
-          name: "Trophies",
-          value: formatHonorList(profile.trophies, 6).slice(0, 1024),
-          inline: false,
-        },
-        {
-          name: "Accolades",
-          value: formatHonorList(profile.accolades, 6).slice(0, 1024),
-          inline: false,
-        },
-        {
-          name: "Links",
-          value: `[Roblox profile](${robloxProfile}) · [VF site](${siteProfile})`,
+          name: "🏟️ Career · club by season",
+          value: careerBlock.slice(0, 1024),
           inline: false,
         },
       )
-      .setFooter({ text: "VF League Database" })
+      .setFooter({
+        text: "VF League Database · Roblox avatar via thumbnails.roblox.com",
+      })
       .setTimestamp(new Date());
+
+    if (robloxAvatarUrl) {
+      embed.setThumbnail(robloxAvatarUrl);
+    }
+
+    if (trophiesText !== "—") {
+      embed.addFields({
+        name: "🏆 Trophies",
+        value: trophiesText,
+        inline: false,
+      });
+    }
+
+    if (accoladesText !== "—") {
+      embed.addFields({
+        name: "✨ Accolades",
+        value: accoladesText,
+        inline: false,
+      });
+    }
 
     await interaction.editReply({ embeds: [embed] });
   } catch (err) {
