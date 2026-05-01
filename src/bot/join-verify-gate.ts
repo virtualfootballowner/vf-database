@@ -2,8 +2,8 @@ import { Client, EmbedBuilder, type GuildMember } from "discord.js";
 
 import { env } from "@/bot/config";
 
-const ROVER_VERIFY_DEADLINE_MINUTES = 10;
-const ROVER_VERIFY_REMINDER_MINUTES_BEFORE_KICK = 2;
+const ROVER_VERIFY_DEADLINE_MINUTES: number = 10;
+const ROVER_VERIFY_REMINDER_MINUTES_BEFORE_KICK: number = 2;
 
 const ROVER_VERIFY_DEADLINE_MS = ROVER_VERIFY_DEADLINE_MINUTES * 60 * 1000;
 const ROVER_VERIFY_REMINDER_AT_MS = Math.max(
