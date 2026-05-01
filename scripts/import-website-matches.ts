@@ -170,7 +170,6 @@ async function ensurePlayersFromEvents(
           roblox_user_id: robloxUserId,
           discord_id: null,
           discord_username: null,
-          status: "inactive" as const,
         })
         .select("id")
         .single();
@@ -179,18 +178,6 @@ async function ensurePlayersFromEvents(
       byRobloxId.set(robloxUserId, id);
       byUsernameLower.set(username.toLowerCase(), id);
     } else {
-      const ex = await supabase
-        .from("players")
-        .select("id, roblox_user_id")
-        .ilike("roblox_username", username)
-        .is("roblox_user_id", null)
-        .maybeSingle();
-      if (ex.error) throw ex.error;
-      if (ex.data?.id) {
-        byUsernameLower.set(username.toLowerCase(), ex.data.id);
-        continue;
-      }
-
       const ex2 = await supabase
         .from("players")
         .select("id")
@@ -200,22 +187,7 @@ async function ensurePlayersFromEvents(
       if (ex2.error) throw ex2.error;
       if (ex2.data?.id) {
         byUsernameLower.set(username.toLowerCase(), ex2.data.id);
-        continue;
       }
-
-      const ins = await supabase
-        .from("players")
-        .insert({
-          roblox_username: username,
-          roblox_user_id: null,
-          discord_id: null,
-          discord_username: null,
-          status: "inactive" as const,
-        })
-        .select("id")
-        .single();
-      if (ins.error) throw ins.error;
-      byUsernameLower.set(username.toLowerCase(), ins.data!.id);
     }
   }
 
@@ -436,6 +408,13 @@ async function main() {
   const { error: rpcErr } = await supabase.rpc("refresh_player_goal_assist_totals");
   if (rpcErr) throw rpcErr;
   console.log("Refreshed players.goals_total / assists_total from match_events.");
+
+  const { data: linked, error: linkErr } = await supabase.rpc("link_fixtures_to_matches");
+  if (linkErr) {
+    console.warn("link_fixtures_to_matches:", linkErr.message);
+  } else {
+    console.log(`Linked fixtures → matches (${linked ?? 0} rows).`);
+  }
 
   console.log(`Teams: ${teamIdByName.size}, tournaments: ${tournamentIdByKey.size}. Done.`);
 }

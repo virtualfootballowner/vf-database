@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { TeamCrest } from "@/app/teams/team-crest";
-import { getTeamBySlug, type Team } from "@/app/teams/teams-data";
+import type { Team } from "@/app/teams/teams-data";
 import { SiteNav } from "@/components/site-nav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getRobloxHeadshots, isVerifiedRobloxUserId } from "@/lib/roblox";
+import { getTeamsCatalog } from "@/lib/site-db";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 type PlayerProfileRow = {
@@ -23,7 +24,6 @@ type PlayerProfileRow = {
   roblox_username: string;
   roblox_user_id: string | null;
   discord_username: string | null;
-  status: string;
   position: string | null;
   goals_total?: number | null;
   assists_total?: number | null;
@@ -84,7 +84,11 @@ async function getPlayerCareer(playerId: string): Promise<CareerEntry[]> {
 
     if (result.error) return [];
     const rows = (result.data ?? []) as CareerEntryRow[];
-    return rows.map((row) => ({ ...row, team: getTeamBySlug(row.team_slug) }));
+    const { teams } = await getTeamsCatalog();
+    return rows.map((row) => ({
+      ...row,
+      team: teams.find((t) => t.slug === row.team_slug),
+    }));
   } catch {
     return [];
   }
@@ -165,12 +169,6 @@ export default async function PlayerDetailPage({
               {player.position ?? "Position unset"}
             </p>
             <div className="mt-3 flex flex-wrap justify-center gap-1.5 sm:justify-start">
-              <Badge
-                variant="outline"
-                className="border-white/15 capitalize text-white/70"
-              >
-                {player.status}
-              </Badge>
               {player.discord_username ? (
                 <Badge
                   variant="outline"

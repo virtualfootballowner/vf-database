@@ -16,7 +16,7 @@ async function getPlayers(): Promise<PlayerRow[]> {
     const result = await supabase
       .from("players")
       .select(
-        "id, roblox_username, roblox_user_id, discord_username, status, position",
+        "id, roblox_username, roblox_user_id, discord_username, position",
       )
       .order("roblox_username", { ascending: true });
 
@@ -49,7 +49,7 @@ export default async function PlayersPage() {
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">
             Players with a linked Roblox user id. Tap a card for Discord, position,
-            and status.
+            and stats.
           </p>
         </section>
 

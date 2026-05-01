@@ -154,32 +154,6 @@ async function main() {
         roblox_user_id: robloxUserId,
         discord_id: null,
         discord_username: null,
-        status: "pending_discord",
-        player_source: "stats_csv_s1",
-      });
-      if (ins.error) throw ins.error;
-      inserted++;
-    } else {
-      const existing = await supabase
-        .from("players")
-        .select("id")
-        .ilike("roblox_username", username)
-        .is("roblox_user_id", null)
-        .limit(1)
-        .maybeSingle();
-
-      if (existing.error) throw existing.error;
-      if (existing.data?.id) {
-        skipped++;
-        continue;
-      }
-
-      const ins = await supabase.from("players").insert({
-        roblox_username: username,
-        roblox_user_id: null,
-        discord_id: null,
-        discord_username: null,
-        status: "pending_discord",
         player_source: "stats_csv_s1",
       });
       if (ins.error) throw ins.error;
@@ -188,7 +162,7 @@ async function main() {
   }
 
   console.log(
-    `Players: ${merged.size} unique goal/assist/OG profiles; inserted ${inserted}, skipped ${skipped} (already present).`,
+    `Players (Roblox id only): ${[...merged.values()].filter((v) => v.robloxUserId).length} profiles with ids; inserted ${inserted}, skipped ${skipped} (already present). Name-only rows are not created.`,
   );
   console.log("Done.");
 }

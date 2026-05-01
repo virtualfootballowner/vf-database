@@ -1,9 +1,10 @@
 import { SiteNav } from "@/components/site-nav";
+import { getTeamsCatalog } from "@/lib/site-db";
 
 import { TeamsList } from "./teams-list";
-import { teams } from "./teams-data";
 
-export default function TeamsPage() {
+export default async function TeamsPage() {
+  const { teams } = await getTeamsCatalog();
   return (
     <main className="relative min-h-screen w-full overflow-hidden text-white">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 pb-16 pt-6 sm:px-8 sm:pt-10">

@@ -62,6 +62,21 @@ export function getMatchTeam(slug: string | null, fallbackName: string): Team {
   };
 }
 
+/** Prefer rows from `catalog` (e.g. Supabase), then built-in `teams`. */
+export function getMatchTeamFromList(
+  catalog: Team[],
+  slug: string | null,
+  fallbackName: string,
+): Team {
+  if (slug) {
+    const found = catalog.find((team) => team.slug === slug);
+    if (found) return found;
+  }
+  const byName = catalog.find((t) => t.name === fallbackName);
+  if (byName) return byName;
+  return getMatchTeam(slug, fallbackName);
+}
+
 type RawMatch = [
   id: string,
   season: 1 | 2,

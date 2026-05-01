@@ -144,12 +144,6 @@ export function TeamsList({ teams }: TeamsListProps) {
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className="shrink-0 border-white/15 text-white/75"
-                  >
-                    Active
-                  </Badge>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap items-center gap-1.5">

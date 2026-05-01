@@ -14,18 +14,53 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getRobloxHeadshots } from "@/lib/roblox";
+import { getAllTeamSlugs, getTeamBySlugFromDb } from "@/lib/site-db";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 import { TeamCrest } from "../team-crest";
-import { getTeamBySlug, teams } from "../teams-data";
 
 type TeamPlayerRow = {
   id: string;
   roblox_username: string;
-  roblox_user_id: string;
+  roblox_user_id: string | null;
   position: string | null;
-  status: string;
 };
+
+type TeamSeasonRecordRow = {
+  wins: number;
+  losses: number;
+  draws: number;
+  matches_played: number;
+};
+
+async function getTeamSeasonRecord(
+  slug: string,
+  season: number,
+): Promise<TeamSeasonRecordRow | null> {
+  try {
+    const supabase = createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("team_season_records")
+      .select("wins, losses, draws, matches_played")
+      .eq("team_slug", slug)
+      .eq("season", season)
+      .maybeSingle();
+    if (error || !data) return null;
+    return {
+      wins: Number(data.wins),
+      losses: Number(data.losses),
+      draws: Number(data.draws),
+      matches_played: Number(data.matches_played),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function formatSeasonRecord(row: TeamSeasonRecordRow | null): string {
+  if (!row || row.matches_played === 0) return "—";
+  return `${row.wins}–${row.losses}–${row.draws}`;
+}
 
 async function getTeamPlayers(
   slug: string,
@@ -33,25 +68,34 @@ async function getTeamPlayers(
 ): Promise<TeamPlayerRow[]> {
   try {
     const supabase = createSupabaseServerClient();
-    let query = supabase
-      .from("players")
-      .select("id, roblox_username, roblox_user_id, position, status")
+    let linksQuery = supabase
+      .from("player_team_seasons")
+      .select("player_id")
       .eq("team_slug", slug);
-
     if (season !== null) {
-      query = query.eq("season", season);
+      linksQuery = linksQuery.eq("season", season);
     }
+    const links = await linksQuery;
+    if (links.error) return [];
 
-    const result = await query.order("roblox_username", { ascending: true });
-    if (result.error) return [];
-    return (result.data ?? []) as TeamPlayerRow[];
+    const ids = [...new Set((links.data ?? []).map((r) => r.player_id))];
+    if (ids.length === 0) return [];
+
+    const playersResult = await supabase
+      .from("players")
+      .select("id, roblox_username, roblox_user_id, position")
+      .in("id", ids)
+      .order("roblox_username", { ascending: true });
+    if (playersResult.error) return [];
+    return (playersResult.data ?? []) as TeamPlayerRow[];
   } catch {
     return [];
   }
 }
 
 export async function generateStaticParams() {
-  return teams.map((team) => ({ slug: team.slug }));
+  const slugs = await getAllTeamSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
 type TeamPageParams = { slug: string };
@@ -63,7 +107,7 @@ export async function generateMetadata({
   params: Promise<TeamPageParams>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const team = getTeamBySlug(slug);
+  const team = await getTeamBySlugFromDb(slug);
   if (!team) return { title: "Team not found · VF" };
   return {
     title: `${team.name} · VF League Database`,
@@ -80,7 +124,7 @@ export default async function TeamDetailPage({
 }) {
   const { slug } = await params;
   const { season: seasonParam } = await searchParams;
-  const team = getTeamBySlug(slug);
+  const team = await getTeamBySlugFromDb(slug);
   if (!team) notFound();
 
   const parsedSeason = Number.parseInt(seasonParam ?? "", 10);
@@ -91,9 +135,19 @@ export default async function TeamDetailPage({
 
   const players = await getTeamPlayers(slug, selectedSeason);
   const headshotsMap = await getRobloxHeadshots(
-    players.map((player) => player.roblox_user_id),
+    players
+      .map((player) => player.roblox_user_id)
+      .filter((id): id is string => id != null && id !== ""),
   );
   const headshots = Object.fromEntries(headshotsMap);
+
+  const recordSeason =
+    selectedSeason ?? (team.seasons.length === 1 ? team.seasons[0]! : null);
+  const seasonRecord =
+    recordSeason !== null
+      ? await getTeamSeasonRecord(slug, recordSeason)
+      : null;
+  const recordLabel = formatSeasonRecord(seasonRecord);
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden text-white">
@@ -140,7 +194,7 @@ export default async function TeamDetailPage({
 
         <section className="grid gap-3 sm:grid-cols-3">
           {[
-            { label: "Record", value: "TBD" },
+            { label: "Record", value: recordLabel },
             { label: "Squad Size", value: String(players.length) },
             { label: "Cup", value: "Group Stage" },
           ].map((stat) => (
@@ -187,28 +241,25 @@ export default async function TeamDetailPage({
                     : "No squad assigned yet."}
                 </p>
                 <p className="max-w-md text-xs text-white/55">
-                  Players will appear here once team rosters are wired up in
-                  the database. Add a{" "}
+                  Roster rows come from{" "}
                   <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">
-                    team_slug
+                    player_team_seasons
                   </code>{" "}
-                  column (and a{" "}
+                  for this club and season filter. Run{" "}
                   <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">
-                    season
+                    npm run db:fill:s1-squads
                   </code>{" "}
-                  column for season filtering) to the players table and tag
-                  rows with{" "}
-                  <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">
-                    {team.slug}
-                  </code>{" "}
-                  to populate this roster.
+                  after importing matches to seed S1 squads from scorers and
+                  assisters.
                 </p>
               </CardContent>
             </Card>
           ) : (
             <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {players.map((player) => {
-                const headshot = headshots[player.roblox_user_id];
+                const headshot = player.roblox_user_id
+                  ? headshots[player.roblox_user_id]
+                  : undefined;
                 return (
                   <Card key={player.id} className="gap-0 py-0">
                     <div className="flex items-center gap-3 px-4 py-4">
@@ -234,12 +285,6 @@ export default async function TeamDetailPage({
                           {player.position ?? "Position unset"}
                         </p>
                       </div>
-                      <Badge
-                        variant="outline"
-                        className="shrink-0 border-white/15 text-white/65"
-                      >
-                        {player.status}
-                      </Badge>
                     </div>
                   </Card>
                 );

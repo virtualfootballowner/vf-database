@@ -1,34 +1,59 @@
 import Link from "next/link";
 
-import { TeamCrest } from "@/app/teams/team-crest";
 import { SiteNav } from "@/components/site-nav";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-
 import {
-  fixtureCounts,
-  fixtureGroups,
-  type FixtureRow,
-} from "./fixtures-data";
-import { getMatchTeam, type MatchRecord } from "./matches-data";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  getRobloxHeadshots,
+  isVerifiedRobloxUserId,
+  resolveRobloxUserIdsByUsernames,
+} from "@/lib/roblox";
+import { getLeaderboards, type LeaderEntry } from "@/lib/stats-leaders";
+import { getSiteStatsBundle } from "@/lib/site-db";
+import { cn } from "@/lib/utils";
 
-const DATE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-});
+import { StatsSectionNav } from "./stats-section-nav";
 
-function formatDate(value: string): string {
-  const date = new Date(`${value}T12:00:00Z`);
-  if (Number.isNaN(date.getTime())) return value;
-  return DATE_FORMATTER.format(date);
+function headshotUserId(
+  r: LeaderEntry,
+  resolved: Map<string, string>,
+): string | null {
+  if (isVerifiedRobloxUserId(r.roblox_user_id)) {
+    return r.roblox_user_id;
+  }
+  return resolved.get(r.roblox_username.toLowerCase()) ?? null;
 }
 
-export default function StatsPage() {
+export default async function StatsPage() {
+  const [boards, bundle] = await Promise.all([
+    getLeaderboards(),
+    getSiteStatsBundle(),
+  ]);
+
+  const combined = [...boards.goals, ...boards.assists];
+  const needLookup = combined
+    .filter((r) => !isVerifiedRobloxUserId(r.roblox_user_id))
+    .map((r) => r.roblox_username);
+  const resolved = await resolveRobloxUserIdsByUsernames(needLookup);
+
+  const headshotIds = new Set<string>();
+  for (const r of combined) {
+    const id = headshotUserId(r, resolved);
+    if (id) headshotIds.add(id);
+  }
+  const headshots = await getRobloxHeadshots([...headshotIds]);
+
   return (
     <main className="relative min-h-screen w-full overflow-hidden text-white">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 pb-16 pt-6 sm:px-8 sm:pt-10">
         <SiteNav active="stats" />
+        <StatsSectionNav />
 
         <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -36,251 +61,165 @@ export default function StatsPage() {
               League data
             </p>
             <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl">
-              All Matches
+              Stats
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">
-              Every fixture from the league archive. Played matches show full
-              data and link to the match report; missing fixtures are tagged
-              No Data.
+              All-time leaders from every recorded match. Open a player for
+              full history; switch to{" "}
+              <Link
+                href="/stats/matches"
+                className="font-semibold text-white underline decoration-white/35 underline-offset-4 hover:decoration-white/70"
+              >
+                All matches
+              </Link>{" "}
+              for the fixture archive.
             </p>
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            <Badge
-              variant="outline"
-              className="border-white/15 bg-white/5 text-white/85"
-            >
-              {fixtureCounts.total} fixtures
-            </Badge>
-            <Badge
-              variant="outline"
-              className="border-emerald-300/30 bg-emerald-400/10 text-emerald-200"
-            >
-              {fixtureCounts.played} played
-            </Badge>
-            <Badge
-              variant="outline"
-              className="border-white/10 bg-white/5 text-white/55"
-            >
-              {fixtureCounts.missing} no data
-            </Badge>
-          </div>
+          <Badge
+            variant="outline"
+            className="border-white/15 bg-white/5 text-white/70"
+          >
+            Source · {boards.source === "supabase" ? "Database" : "Events file"}
+          </Badge>
         </section>
 
-        <section className="flex flex-col gap-8">
-          {fixtureGroups.map((group) => {
-            const playedInGroup = group.rows.filter((r) => r.match !== null)
-              .length;
-            return (
-              <div key={group.key} className="flex flex-col gap-3">
-                <div className="flex flex-wrap items-end justify-between gap-2 px-1">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
-                      Season {group.season}
-                    </p>
-                    <h2 className="mt-1 text-lg font-semibold tracking-tight sm:text-xl">
-                      {group.competition}
-                    </h2>
-                  </div>
-                  <span className="text-[11px] font-medium text-white/55">
-                    {playedInGroup} of {group.rows.length} played
-                  </span>
+        <section className="grid gap-6 lg:grid-cols-2">
+          <LeaderCard
+            title="Top goal scorers"
+            subtitle="All-time top 10 · goals in recorded matches"
+            rows={boards.goals}
+            valueLabel="Goals"
+            headshots={headshots}
+            resolvedUserIds={resolved}
+          />
+          <LeaderCard
+            title="Top assisters"
+            subtitle="All-time top 10 · assists in recorded matches"
+            rows={boards.assists}
+            valueLabel="Assists"
+            headshots={headshots}
+            resolvedUserIds={resolved}
+          />
+        </section>
+
+        <section>
+          <Link href="/stats/matches" className="block">
+            <Card className="gap-0 py-0 transition hover:bg-white/[0.07] hover:ring-1 hover:ring-white/15">
+              <CardContent className="flex flex-col gap-3 px-5 py-6 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/50">
+                    Fixture archive
+                  </p>
+                  <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
+                    All matches
+                  </h2>
+                  <p className="mt-1 max-w-xl text-sm text-white/60">
+                    {bundle.fixtureCounts.played} played ·{" "}
+                    {bundle.fixtureCounts.total} slots ·{" "}
+                    {bundle.fixtureCounts.missing} missing data
+                  </p>
                 </div>
-                <div className="flex flex-col gap-2">
-                  {group.rows.map((row) =>
-                    row.match ? (
-                      <PlayedRow key={row.match.id} match={row.match} />
-                    ) : (
-                      <MissingRow key={row.id} row={row} />
-                    ),
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/55">
+                  Open →
+                </span>
+              </CardContent>
+            </Card>
+          </Link>
         </section>
       </div>
     </main>
   );
 }
 
-function PlayedRow({ match }: { match: MatchRecord }) {
-  const home = getMatchTeam(match.homeSlug, match.homeTeam);
-  const away = getMatchTeam(match.awaySlug, match.awayTeam);
-  const isFFT = match.fft !== "No";
-  const homeWon = match.homeScore > match.awayScore;
-  const awayWon = match.awayScore > match.homeScore;
-
+function LeaderCard({
+  title,
+  subtitle,
+  rows,
+  valueLabel,
+  headshots,
+  resolvedUserIds,
+}: {
+  title: string;
+  subtitle: string;
+  rows: LeaderEntry[];
+  valueLabel: string;
+  headshots: Map<string, string>;
+  resolvedUserIds: Map<string, string>;
+}) {
   return (
-    <Link
-      href={`/stats/matches/${match.id}`}
-      className="block rounded-xl outline-none transition focus-visible:ring-2 focus-visible:ring-white/40"
-    >
-      <Card className="gap-0 py-0 transition hover:bg-white/[0.07] hover:ring-white/25">
-        <CardContent className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-3 sm:grid-cols-[110px_1fr_auto] sm:gap-4 sm:px-4 sm:py-3.5">
-          <div className="flex flex-col gap-1">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
-              {formatDate(match.date)}
-            </span>
-            <span className="text-[10px] uppercase tracking-[0.18em] text-white/40">
-              S{match.season} · {match.gameWeek}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-4">
-            <TeamLine team={home} name={match.homeTeam} align="end" />
-            <div className="flex flex-col items-center gap-0.5">
-              <div className="flex items-center gap-1.5 text-lg font-bold tabular-nums text-white sm:text-xl">
-                <span className={homeWon ? "" : "text-white/65"}>
-                  {match.homeScore}
-                </span>
-                <span className="text-white/35">–</span>
-                <span className={awayWon ? "" : "text-white/65"}>
-                  {match.awayScore}
-                </span>
-              </div>
-              {match.stage !== "Group" ? (
-                <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/45">
-                  {match.stage}
-                </span>
-              ) : null}
-            </div>
-            <TeamLine team={away} name={match.awayTeam} align="start" />
-          </div>
-
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            <Badge
-              variant="outline"
-              className="border-white/15 px-2 py-0 text-[10px] text-white/70"
-            >
-              {abbreviate(match.competition)}
-            </Badge>
-            {isFFT ? (
-              <Badge
-                variant="outline"
-                className="border-amber-300/30 bg-amber-400/10 px-2 py-0 text-[10px] text-amber-200"
-              >
-                {match.fft === "Mercy"
-                  ? "Mercy"
-                  : match.fft === "Partial"
-                    ? "Partial FFT"
-                    : "FFT"}
-              </Badge>
-            ) : null}
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}
-
-function MissingRow({ row }: { row: FixtureRow }) {
-  const teamA = row.teamA
-    ? getMatchTeam(null, row.teamA)
-    : null;
-  const teamB = row.teamB
-    ? getMatchTeam(null, row.teamB)
-    : null;
-  const isKnockoutSlot = !teamA && !teamB;
-
-  return (
-    <Card className="gap-0 py-0 opacity-60 grayscale">
-      <CardContent className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-3 sm:grid-cols-[110px_1fr_auto] sm:gap-4 sm:px-4 sm:py-3.5">
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40">
-            —
-          </span>
-          <span className="text-[10px] uppercase tracking-[0.18em] text-white/35">
-            S{row.season} · {row.id}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-4">
-          {teamA ? (
-            <TeamLine team={teamA} name={row.teamA} align="end" muted />
-          ) : (
-            <span className="justify-self-end text-right text-xs uppercase tracking-[0.2em] text-white/35">
-              {isKnockoutSlot ? "TBD" : ""}
-            </span>
-          )}
-          <div className="flex items-center gap-1.5 text-lg font-bold tabular-nums text-white/30 sm:text-xl">
-            <span>—</span>
-            <span className="text-white/20">–</span>
-            <span>—</span>
-          </div>
-          {teamB ? (
-            <TeamLine team={teamB} name={row.teamB} align="start" muted />
-          ) : (
-            <span className="justify-self-start text-left text-xs uppercase tracking-[0.2em] text-white/35">
-              {isKnockoutSlot ? "TBD" : ""}
-            </span>
-          )}
-        </div>
-
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          <Badge
-            variant="outline"
-            className="border-white/15 px-2 py-0 text-[10px] text-white/55"
-          >
-            {abbreviate(row.competition)}
-          </Badge>
-          <Badge
-            variant="outline"
-            className="border-white/10 bg-white/5 px-2 py-0 text-[10px] uppercase tracking-wider text-white/55"
-          >
-            No Data
-          </Badge>
-        </div>
+    <Card className="gap-0 border-white/10 bg-white/[0.03] py-0">
+      <CardHeader className="px-5 pb-2 pt-5">
+        <CardTitle className="text-lg font-semibold text-white">
+          {title}
+        </CardTitle>
+        <CardDescription className="text-white/55">{subtitle}</CardDescription>
+      </CardHeader>
+      <CardContent className="px-2 pb-4 pt-0 sm:px-4">
+        {rows.length === 0 ? (
+          <p className="px-3 py-6 text-sm text-white/45">No data yet.</p>
+        ) : (
+          <ul className="flex flex-col gap-0.5">
+            {rows.map((r) => {
+              const uid = headshotUserId(r, resolvedUserIds);
+              const src = uid ? headshots.get(uid) : undefined;
+              return (
+                <li key={`${r.rank}-${r.roblox_username}`}>
+                  <Link
+                    href={`/players/${encodeURIComponent(r.roblox_username)}`}
+                    className="flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 outline-none transition hover:bg-white/[0.06] focus-visible:ring-2 focus-visible:ring-white/30"
+                  >
+                    <span className="flex min-w-0 flex-1 items-center gap-3">
+                      <span className="w-6 shrink-0 text-center text-xs font-bold tabular-nums text-white/45">
+                        {r.rank}
+                      </span>
+                      <LeaderAvatar src={src} name={r.roblox_username} />
+                      <span className="truncate text-sm font-medium text-white/90">
+                        {r.roblox_username}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-sm font-bold tabular-nums text-white">
+                      {r.total}{" "}
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                        {valueLabel}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-function TeamLine({
-  team,
-  name,
-  align,
-  muted = false,
-}: {
-  team: ReturnType<typeof getMatchTeam>;
-  name: string;
-  align: "start" | "end";
-  muted?: boolean;
-}) {
-  const nameClass = `hidden truncate text-sm font-semibold sm:inline ${
-    muted ? "text-white/55" : "text-white"
-  }`;
+function LeaderAvatar({ src, name }: { src: string | undefined; name: string }) {
+  const initials = name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "?";
+
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={`${name} avatar`}
+        className="size-9 shrink-0 rounded-full object-cover ring-1 ring-white/15"
+      />
+    );
+  }
+
   return (
     <div
-      className={`flex min-w-0 items-center gap-2 ${
-        align === "end" ? "justify-end text-right" : "justify-start text-left"
-      }`}
-    >
-      {align === "end" ? (
-        <>
-          <span className={nameClass}>{name}</span>
-          <TeamCrest team={team} size="sm" />
-        </>
-      ) : (
-        <>
-          <TeamCrest team={team} size="sm" />
-          <span className={nameClass}>{name}</span>
-        </>
+      className={cn(
+        "flex size-9 shrink-0 items-center justify-center rounded-full bg-white/[0.07] text-[10px] font-semibold text-white/60 ring-1 ring-white/10",
       )}
+      aria-hidden
+    >
+      {initials}
     </div>
   );
-}
-
-function abbreviate(competition: string): string {
-  switch (competition) {
-    case "EuroLeague":
-      return "EL";
-    case "EuroBlox Playoffs":
-      return "Playoffs";
-    case "British Premier":
-      return "BP";
-    case "Serie Italia":
-      return "SI";
-    default:
-      return competition;
-  }
 }

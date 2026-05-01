@@ -11,6 +11,10 @@
     "bot:start": "tsx src/bot/index.ts",
     "db:seed:s1": "tsx scripts/seed-s1-stats.ts",
     "db:import:website": "tsx scripts/import-website-matches.ts",
+    "db:seed:fixtures": "tsx scripts/seed-fixtures-assets.ts",
+    "db:sync:stats": "npm run db:import:website && npm run db:seed:fixtures",
+    "db:fill:s1-squads": "tsx scripts/fill-s1-squads-from-events.ts",
+    "db:fill:s1-records": "tsx scripts/fill-s1-records-from-matches.ts",
     "db:refresh:player-goals-assists": "tsx scripts/refresh-player-goal-assist-totals.ts",
     "db:verify:repo": "tsx scripts/verify-repo-vs-db.ts"
   },

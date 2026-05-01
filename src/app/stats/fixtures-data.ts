@@ -2,7 +2,7 @@ import { matches, type MatchRecord } from "./matches-data";
 
 export type Fixture = {
   id: string;
-  season: 1 | 2;
+  season: number;
   competition: string;
   stage: string;
   teamA: string;
@@ -13,9 +13,17 @@ export type FixtureRow = Fixture & {
   match: MatchRecord | null;
 };
 
-type Raw = [season: 1 | 2, competition: string, stage: string, id: string, a: string, b: string];
+export type FixtureScheduleRaw = [
+  season: 1 | 2,
+  competition: string,
+  stage: string,
+  id: string,
+  a: string,
+  b: string,
+];
 
-const RAW: Raw[] = [
+/** Canonical S1/S2 schedule rows (also used by `db:seed:fixtures`). */
+export const FIXTURE_SCHEDULE_RAW: readonly FixtureScheduleRaw[] = [
   [1, "EuroLeague", "Group", "S1-EL-01", "Newport", "Nottingham"],
   [1, "EuroLeague", "Group", "S1-EL-02", "Newport", "Milton"],
   [1, "EuroLeague", "Group", "S1-EL-03", "Newport", "Newham"],
@@ -109,7 +117,7 @@ const RAW: Raw[] = [
   [2, "Serie Italia", "Group", "S2-SI-28", "Cartiginia", "Venezia"],
 ];
 
-const fixtures: Fixture[] = RAW.map(([season, competition, stage, id, teamA, teamB]) => ({
+const fixtures: Fixture[] = FIXTURE_SCHEDULE_RAW.map(([season, competition, stage, id, teamA, teamB]) => ({
   id,
   season,
   competition,
@@ -174,7 +182,7 @@ export const fixtureCounts = {
 
 export type FixtureGroup = {
   key: string;
-  season: 1 | 2;
+  season: number;
   competition: string;
   rows: FixtureRow[];
 };
@@ -207,3 +215,96 @@ export const fixtureGroups: FixtureGroup[] = (() => {
 
   return ordered;
 })();
+
+/** Row shape for `public.fixtures` seeds (S1/S2). */
+export type FixtureDbSeedRow = {
+  season: number;
+  competition: string;
+  fixture_code: string;
+  stage: string;
+  round_order: number;
+  group_code: string | null;
+  home_team_name: string;
+  away_team_name: string;
+  roblox_match_id: string | null;
+  metadata: Record<string, unknown>;
+};
+
+function structureKindForS1S2(season: number, competition: string): string {
+  if (season === 1 && competition === "EuroLeague") {
+    return "s1_euroleague_round_robin_knockout";
+  }
+  if (season === 2) return "s2_multi_league";
+  return "league";
+}
+
+/**
+ * Builds DB upsert rows matching `buildResolvedFixtures`, with `roblox_match_id`
+ * filled when a `MatchRecord` is paired.
+ */
+export function buildS1S2FixtureDbSeedRows(allMatches: MatchRecord[]): FixtureDbSeedRow[] {
+  const used = new Set<string>();
+  const out: FixtureDbSeedRow[] = [];
+  let order = 0;
+
+  for (const fixture of fixtures) {
+    order += 1;
+    const hasTeams = Boolean(fixture.teamA) && Boolean(fixture.teamB);
+    let match: MatchRecord | undefined;
+
+    if (hasTeams) {
+      match = allMatches.find(
+        (m) =>
+          !used.has(m.id) &&
+          m.season === fixture.season &&
+          ((m.homeTeam === fixture.teamA && m.awayTeam === fixture.teamB) ||
+            (m.homeTeam === fixture.teamB && m.awayTeam === fixture.teamA)),
+      );
+    } else {
+      match = allMatches.find(
+        (m) =>
+          !used.has(m.id) &&
+          m.season === fixture.season &&
+          m.stage === fixture.stage,
+      );
+    }
+
+    if (match) used.add(match.id);
+    out.push({
+      season: fixture.season,
+      competition: fixture.competition,
+      fixture_code: fixture.id,
+      stage: fixture.stage,
+      round_order: order,
+      group_code: null,
+      home_team_name: fixture.teamA,
+      away_team_name: fixture.teamB,
+      roblox_match_id: match?.id ?? null,
+      metadata: {
+        structure_kind: structureKindForS1S2(fixture.season, fixture.competition),
+      },
+    });
+  }
+
+  for (const m of allMatches) {
+    if (used.has(m.id)) continue;
+    order += 1;
+    out.push({
+      season: m.season,
+      competition: m.competition,
+      fixture_code: m.id,
+      stage: m.stage,
+      round_order: order,
+      group_code: null,
+      home_team_name: m.homeTeam,
+      away_team_name: m.awayTeam,
+      roblox_match_id: m.id,
+      metadata: {
+        structure_kind: structureKindForS1S2(m.season, m.competition),
+        appended: true,
+      },
+    });
+  }
+
+  return out;
+}

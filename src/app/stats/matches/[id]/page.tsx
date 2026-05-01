@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { TeamCrest } from "@/app/teams/team-crest";
+import type { Team } from "@/app/teams/teams-data";
 import { SiteNav } from "@/components/site-nav";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,25 +14,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import {
   effectiveRobloxPlayerId,
   extractRobloxUsername,
   getRobloxHeadshots,
   resolveRobloxUserIdsByUsernames,
 } from "@/lib/roblox";
+import {
+  getAllRobloxMatchIds,
+  getMatchRecordByRobloxId,
+  getMatchTeamResolver,
+  getSiteStatsBundle,
+  loadMatchEventsForRobloxId,
+} from "@/lib/site-db";
+import { cn } from "@/lib/utils";
 
 import { getEventsForMatch, type MatchEvent } from "../../match-events-data";
-import {
-  getMatchTeam,
-  matches,
-  type MatchRecord,
-} from "../../matches-data";
+import type { MatchRecord } from "../../matches-data";
 
 const matchSurfaceClass =
   "border-0 bg-white/[0.035] shadow-none ring-1 ring-white/[0.08] backdrop-blur-md";
 const insetRowClass =
   "rounded-lg bg-white/[0.03] px-3 py-2 ring-1 ring-white/[0.06]";
+
+type GetTeam = (slug: string | null, name: string) => Team;
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
   weekday: "long",
@@ -47,7 +53,8 @@ function formatDate(value: string): string {
 }
 
 export async function generateStaticParams() {
-  return matches.map((m) => ({ id: m.id }));
+  const ids = await getAllRobloxMatchIds();
+  return ids.map((id) => ({ id }));
 }
 
 type MatchPageParams = { id: string };
@@ -58,7 +65,7 @@ export async function generateMetadata({
   params: Promise<MatchPageParams>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const match = matches.find((m) => m.id === id);
+  const match = await getMatchRecordByRobloxId(id);
   if (!match) return { title: "Match not found · VF" };
   return {
     title: `${match.homeTeam} ${match.homeScore}-${match.awayScore} ${match.awayTeam} · VF`,
@@ -72,10 +79,16 @@ export default async function MatchDetailPage({
   params: Promise<MatchPageParams>;
 }) {
   const { id } = await params;
-  const match = matches.find((m) => m.id === id);
+  const bundle = await getSiteStatsBundle();
+  const match = bundle.matchesByRobloxId.get(id) ?? null;
   if (!match) notFound();
 
-  const events = getEventsForMatch(match.id);
+  const events =
+    bundle.source === "supabase"
+      ? ((await loadMatchEventsForRobloxId(id)) ?? [])
+      : getEventsForMatch(id);
+
+  const getTeam = getMatchTeamResolver(bundle.teams);
   const namesToResolve = [
     ...new Set(
       events
@@ -96,8 +109,8 @@ export default async function MatchDetailPage({
   ];
   const headshots = await getRobloxHeadshots(robloxIds);
 
-  const home = getMatchTeam(match.homeSlug, match.homeTeam);
-  const away = getMatchTeam(match.awaySlug, match.awayTeam);
+  const home = getTeam(match.homeSlug, match.homeTeam);
+  const away = getTeam(match.awaySlug, match.awayTeam);
   const homeWon = match.homeScore > match.awayScore;
   const awayWon = match.awayScore > match.homeScore;
   const isFFT = match.fft !== "No";
@@ -180,6 +193,7 @@ export default async function MatchDetailPage({
           events={events}
           headshots={headshots}
           resolvedByLowerUsername={resolvedByLowerUsername}
+          getTeam={getTeam}
         />
 
         <section className="grid gap-4 lg:grid-cols-2">
@@ -189,6 +203,7 @@ export default async function MatchDetailPage({
             side="home"
             headshots={headshots}
             resolvedByLowerUsername={resolvedByLowerUsername}
+            getTeam={getTeam}
           />
           <TeamPanel
             match={match}
@@ -196,6 +211,7 @@ export default async function MatchDetailPage({
             side="away"
             headshots={headshots}
             resolvedByLowerUsername={resolvedByLowerUsername}
+            getTeam={getTeam}
           />
         </section>
 
@@ -231,11 +247,13 @@ function MotmBanner({
   events,
   headshots,
   resolvedByLowerUsername,
+  getTeam,
 }: {
   match: MatchRecord;
   events: MatchEvent[];
   headshots: Map<string, string>;
   resolvedByLowerUsername: Map<string, string>;
+  getTeam: GetTeam;
 }) {
   const motm = events.find((e) => e.type === "MOTM") ?? null;
   if (!motm) return null;
@@ -246,7 +264,7 @@ function MotmBanner({
       : motm.team === match.awayTeam
         ? match.awaySlug
         : null;
-  const teamMeta = getMatchTeam(slug, motm.team);
+  const teamMeta = getTeam(slug, motm.team);
 
   const inner = (
     <div
@@ -350,7 +368,7 @@ function TeamHeader({
   slug,
   align,
 }: {
-  team: ReturnType<typeof getMatchTeam>;
+  team: Team;
   name: string;
   slug: string | null;
   align: "start" | "end";
@@ -386,16 +404,18 @@ function TeamPanel({
   side,
   headshots,
   resolvedByLowerUsername,
+  getTeam,
 }: {
   match: MatchRecord;
   events: MatchEvent[];
   side: "home" | "away";
   headshots: Map<string, string>;
   resolvedByLowerUsername: Map<string, string>;
+  getTeam: GetTeam;
 }) {
   const teamName = side === "home" ? match.homeTeam : match.awayTeam;
   const slug = side === "home" ? match.homeSlug : match.awaySlug;
-  const teamMeta = getMatchTeam(slug, teamName);
+  const teamMeta = getTeam(slug, teamName);
 
   const teamEvents = events.filter((e) => e.team === teamName);
   const goals = teamEvents.filter((e) => e.type === "Goal");

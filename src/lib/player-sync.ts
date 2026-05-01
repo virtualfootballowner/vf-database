@@ -26,7 +26,6 @@ export async function upsertVerifiedPlayer(input: PlayerUpsertInput) {
         discord_id: input.discordId,
         discord_username: input.discordUsername,
         roblox_username: input.robloxUsername,
-        status: "active",
       })
       .eq("id", statsOnly.data.id);
 
@@ -80,7 +79,6 @@ export async function upsertVerifiedPlayer(input: PlayerUpsertInput) {
       discord_username: input.discordUsername,
       roblox_username: input.robloxUsername,
       roblox_user_id: input.robloxUserId,
-      status: "active",
     },
     { onConflict: "discord_id" },
   );

@@ -14,7 +14,6 @@ export type PlayerRow = {
   roblox_username: string;
   roblox_user_id: string | null;
   discord_username: string | null;
-  status: string;
   position: string | null;
 };
 
