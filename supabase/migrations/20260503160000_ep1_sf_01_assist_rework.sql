@@ -73,11 +73,3 @@ where m.roblox_match_id = 'EP1-SF-01'
   );
 
 select public.refresh_player_goal_assist_totals();
-
-update public.players
-set assists_total = 7
-where lower(trim(roblox_username)) = 'booskioo';
-
-update public.players
-set assists_total = 8
-where lower(trim(roblox_username)) = 'wizente';

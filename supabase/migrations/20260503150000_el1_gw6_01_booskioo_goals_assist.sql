@@ -41,11 +41,3 @@ where me.match_id = m.id
   and p.roblox_user_id = '25796457';
 
 select public.refresh_player_goal_assist_totals();
-
-update public.players
-set assists_total = 7
-where lower(trim(roblox_username)) = 'booskioo';
-
-update public.players
-set assists_total = 8
-where lower(trim(roblox_username)) = 'wizente';
