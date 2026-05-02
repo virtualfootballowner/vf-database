@@ -26,7 +26,7 @@ import {
   findPlayersByUsername,
   formatHonorList,
   loadTeams,
-  resolveTeamFromList,
+  resolveTeamForSlashCommand,
 } from "@/bot/stats-queries";
 import {
   APPROVE_BUTTON_ID_PREFIX,
@@ -484,7 +484,7 @@ async function handleTeam(
   try {
     const supabase = createBotSupabase();
     const teamRows = await loadTeams(supabase);
-    const resolved = resolveTeamFromList(teamRows, teamRaw);
+    const resolved = await resolveTeamForSlashCommand(supabase, teamRows, teamRaw);
 
     if (!resolved) {
       await interaction.editReply({
@@ -607,7 +607,7 @@ async function handleSquad(
   try {
     const supabase = createBotSupabase();
     const teamRows = await loadTeams(supabase);
-    const resolved = resolveTeamFromList(teamRows, teamRaw);
+    const resolved = await resolveTeamForSlashCommand(supabase, teamRows, teamRaw);
 
     if (!resolved) {
       await interaction.editReply({
@@ -1016,7 +1016,7 @@ async function handleAppoint(
   try {
     const supabase = createBotSupabase();
     const teamRows = await loadTeams(supabase);
-    const resolved = resolveTeamFromList(teamRows, teamRaw);
+    const resolved = await resolveTeamForSlashCommand(supabase, teamRows, teamRaw);
 
     if (!resolved) {
       await interaction.editReply({

@@ -39,7 +39,8 @@ export async function loadTeams(supabase: SupabaseClient): Promise<TeamRow[]> {
     .from("teams")
     .select("name, slug, logo_url, abbreviation, seasons")
     .not("slug", "is", null)
-    .order("name", { ascending: true });
+    .order("name", { ascending: true })
+    .limit(5000);
 
   if (error) throw error;
   const rows = (data ?? []).map((r) => ({
@@ -58,11 +59,41 @@ export type ResolvedTeam = {
   abbreviation: string | null;
 };
 
+/** Trim, Unicode‑normalize, strip zero‑width chars — same rules for user input and DB slugs. */
+export function normalizeTeamInputForLookup(raw: string): string {
+  return raw
+    .normalize("NFKC")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+/** Site / chat often say “Turkey”; DB slug is `turkiye`. */
+const SLUG_LOOKUP_ALIASES: Record<string, string> = {
+  turkey: "turkiye",
+};
+
+function mapResolvedRow(row: {
+  name: string;
+  slug: string | null;
+  logo_url: string | null;
+  abbreviation: string | null;
+}): ResolvedTeam | null {
+  const slug = row.slug?.trim() ?? "";
+  if (!slug) return null;
+  return {
+    name: row.name,
+    slug,
+    logo_url: row.logo_url ?? null,
+    abbreviation: row.abbreviation ?? null,
+  };
+}
+
 export function resolveTeamFromList(
   teams: TeamRow[],
   raw: string,
 ): ResolvedTeam | null {
-  const q = raw.trim().toLowerCase();
+  const q = normalizeTeamInputForLookup(raw);
   if (!q) return null;
 
   const withSlug = teams
@@ -74,24 +105,93 @@ export function resolveTeamFromList(
     }))
     .filter((t) => t.slug.length > 0);
 
-  const bySlug = withSlug.find((t) => t.slug.toLowerCase() === q);
+  const aliasSlug = SLUG_LOOKUP_ALIASES[q];
+  const bySlug = withSlug.find((t) => {
+    const s = normalizeTeamInputForLookup(t.slug);
+    return s === q || (aliasSlug !== undefined && s === aliasSlug);
+  });
   if (bySlug) return bySlug;
 
-  const byName = withSlug.find((t) => t.name.trim().toLowerCase() === q);
+  const byName = withSlug.find(
+    (t) => normalizeTeamInputForLookup(t.name) === q,
+  );
   if (byName) return byName;
 
   const partial = withSlug.find(
     (t) =>
-      t.name.toLowerCase().includes(q) || t.slug.toLowerCase().includes(q),
+      normalizeTeamInputForLookup(t.name).includes(q) ||
+      normalizeTeamInputForLookup(t.slug).includes(q),
   );
   return partial ?? null;
+}
+
+/**
+ * Resolve team for slash options: in‑memory list first, then direct DB lookup.
+ * Covers invisible Unicode, hyphen/spacing variants, and cached list drift.
+ */
+export async function resolveTeamForSlashCommand(
+  supabase: SupabaseClient,
+  cachedRows: TeamRow[],
+  raw: string,
+): Promise<ResolvedTeam | null> {
+  const fromList = resolveTeamFromList(cachedRows, raw);
+  if (fromList) return fromList;
+
+  const base = normalizeTeamInputForLookup(raw);
+  if (!base) return null;
+
+  const alias = SLUG_LOOKUP_ALIASES[base];
+  const candidates = [
+    ...new Set(
+      [base, alias, base.replace(/\s+/g, "-"), base.replace(/-+/g, "-")].filter(
+        (s): s is string => typeof s === "string" && s.length > 0,
+      ),
+    ),
+  ];
+
+  const { data: rowsIn, error: errIn } = await supabase
+    .from("teams")
+    .select("name, slug, logo_url, abbreviation")
+    .in("slug", candidates)
+    .limit(1);
+
+  if (errIn) throw errIn;
+  const hitIn = mapResolvedRow(rowsIn?.[0] ?? {});
+  if (hitIn) return hitIn;
+
+  const safeIlike = base.replace(/[%_\\]/g, "");
+  if (safeIlike.length > 0) {
+    const { data: rowsLike, error: errLike } = await supabase
+      .from("teams")
+      .select("name, slug, logo_url, abbreviation")
+      .ilike("slug", safeIlike)
+      .limit(1);
+
+    if (errLike) throw errLike;
+    const hitLike = mapResolvedRow(rowsLike?.[0] ?? {});
+    if (hitLike) return hitLike;
+  }
+
+  if (/^[a-z]{2,4}$/.test(base)) {
+    const { data: rowsAbbr, error: errAbbr } = await supabase
+      .from("teams")
+      .select("name, slug, logo_url, abbreviation")
+      .ilike("abbreviation", base)
+      .limit(1);
+
+    if (errAbbr) throw errAbbr;
+    const hitAbbr = mapResolvedRow(rowsAbbr?.[0] ?? {});
+    if (hitAbbr) return hitAbbr;
+  }
+
+  return null;
 }
 
 export function filterTeamsForAutocomplete(
   teams: TeamRow[],
   focused: string,
 ): { name: string; slug: string }[] {
-  const q = focused.trim().toLowerCase();
+  const q = normalizeTeamInputForLookup(focused);
   const enriched = teams
     .map((t) => ({
       name: t.name,
