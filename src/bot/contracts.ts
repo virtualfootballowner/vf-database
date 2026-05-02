@@ -439,6 +439,12 @@ export async function handleContractButton(
       return;
     }
 
+    const { error: posErr } = await supabase
+      .from("players")
+      .update({ position: offer.roster_position })
+      .eq("id", offer.signee_player_id);
+    if (posErr) throw posErr;
+
     const { error: ptsErr } = await supabase.from("player_team_seasons").upsert(
       {
         player_id: offer.signee_player_id,
@@ -452,12 +458,6 @@ export async function handleContractButton(
     );
 
     if (ptsErr) throw ptsErr;
-
-    const { error: posErr } = await supabase
-      .from("players")
-      .update({ position: offer.roster_position })
-      .eq("id", offer.signee_player_id);
-    if (posErr) console.warn("players.position update:", posErr);
 
     await supabase
       .from("contract_offers")

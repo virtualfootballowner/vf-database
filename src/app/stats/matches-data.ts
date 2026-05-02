@@ -197,7 +197,6 @@ const RAW: RawMatch[] = [
 
   ["BP2-MA-01", 2, "British Premier", "GW5", "2024-12-10", "Milton", "Andover", 3, 0, "Group", "Yes", "—", "FFT - Date approximate"],
   ["BP2-MC-01", 2, "British Premier", "GW5", "2024-12-10", "Milton", "Canterbury", 5, 5, "Group", "No", "—", "Date approximate — events estimated from other S2 squad lists (no sheet)"],
-  ["BP2-MNP-01", 2, "British Premier", "GW5", "2024-12-10", "Milton", "Newport", 5, 2, "Group", "No", "—", "Date approximate — events estimated from other S2 squad lists (no sheet)"],
   ["BP2-EN-01", 2, "British Premier", "GW5", "2024-12-10", "Eltham", "Newham", 0, 0, "Group", "No", "—", "Game never played - recorded as 0-0"],
   ["BP2-EC-01", 2, "British Premier", "GW5", "2024-12-10", "Eltham", "Canterbury", 3, 0, "Group", "Yes", "—", "FFT - Date approximate"],
   ["BP2-ES-01", 2, "British Premier", "GW5", "2024-12-10", "Eltham", "Stanford", 3, 0, "Group", "Yes", "—", "FFT - Date approximate"],
