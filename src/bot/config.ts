@@ -46,6 +46,14 @@ const envSchema = z.object({
     .string()
     .url()
     .default("https://myvirtualfootball.com"),
+  /**
+   * Only this season’s rosters can be updated via `/contract`. Older seasons stay frozen.
+   */
+  VF_ACTIVE_ROSTER_SEASON: z.preprocess((raw) => {
+    if (raw == null || raw === "") return 3;
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 1 && n <= 99 ? n : 3;
+  }, z.number().int().min(1).max(99)),
 });
 
 export const env = envSchema.parse({
@@ -61,4 +69,5 @@ export const env = envSchema.parse({
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   ROBLOX_API_BASE_URL: process.env.ROBLOX_API_BASE_URL,
   VFL_SITE_URL: process.env.VFL_SITE_URL,
+  VF_ACTIVE_ROSTER_SEASON: process.env.VF_ACTIVE_ROSTER_SEASON,
 });

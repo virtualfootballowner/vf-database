@@ -25,6 +25,11 @@ import {
   handleContractButton,
 } from "@/bot/contracts";
 import {
+  RELEASE_BTN_APPROVE,
+  RELEASE_BTN_DENY,
+  handleReleaseStaffButton,
+} from "@/bot/release";
+import {
   handleAutocomplete,
   handleSlashCommand,
   slashCommandDefinitions,
@@ -215,6 +220,23 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         interaction,
         "deny",
         customId.slice(CONTRACT_BTN_DENY.length),
+      );
+      return;
+    }
+
+    if (customId.startsWith(RELEASE_BTN_APPROVE)) {
+      await handleReleaseStaffButton(
+        interaction,
+        "approve",
+        customId.slice(RELEASE_BTN_APPROVE.length),
+      );
+      return;
+    }
+    if (customId.startsWith(RELEASE_BTN_DENY)) {
+      await handleReleaseStaffButton(
+        interaction,
+        "deny",
+        customId.slice(RELEASE_BTN_DENY.length),
       );
       return;
     }

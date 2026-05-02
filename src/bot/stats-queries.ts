@@ -493,9 +493,6 @@ export async function fetchSquadForSeason(
   return out;
 }
 
-/** Season used for Discord `/contract` roster rows (current league sheet). */
-export const CONTRACT_ROSTER_SEASON = 3;
-
 export type ResolveManagerTeamResult =
   | { ok: true; teamSlug: string }
   | {

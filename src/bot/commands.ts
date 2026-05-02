@@ -32,7 +32,12 @@ import {
   APPROVE_BUTTON_ID_PREFIX,
   DENY_BUTTON_ID_PREFIX,
 } from "@/bot/sync";
-import { handleContractCommand } from "@/bot/contracts";
+import {
+  CONTRACT_POSITION_CHOICES,
+  CONTRACT_ROLE_CHOICES,
+  handleContractCommand,
+} from "@/bot/contracts";
+import { handleReleaseCommand } from "@/bot/release";
 
 function formatCommandError(err: unknown): string {
   if (err instanceof Error && err.message.trim()) return err.message.trim();
@@ -232,7 +237,7 @@ export const slashCommandDefinitions = [
   new SlashCommandBuilder()
     .setName("contract")
     .setDescription(
-      "Offer an S3 roster contract (club manager role only)",
+      "Offer a roster contract for the active season (club manager role only)",
     )
     .addUserOption((opt) =>
       opt
@@ -243,16 +248,36 @@ export const slashCommandDefinitions = [
     .addStringOption((opt) =>
       opt
         .setName("position")
-        .setDescription("Position on the sheet (e.g. GK, CB, ST)")
+        .setDescription("Tactical position on the sheet")
         .setRequired(true)
-        .setMaxLength(80),
+        .addChoices(...CONTRACT_POSITION_CHOICES),
     )
     .addStringOption((opt) =>
       opt
         .setName("role")
-        .setDescription("Squad role (e.g. Captain, Starter, Sub)")
+        .setDescription("Squad role (starter through reserve)")
         .setRequired(true)
-        .setMaxLength(80),
+        .addChoices(...CONTRACT_ROLE_CHOICES),
+    )
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("release")
+    .setDescription(
+      "Request to remove a player from your roster (staff approves in review channel)",
+    )
+    .addUserOption((opt) =>
+      opt
+        .setName("player")
+        .setDescription("Player to release from your team’s active-season sheet")
+        .setRequired(true),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("reason")
+        .setDescription("Optional note for staff")
+        .setRequired(false)
+        .setMaxLength(500),
     )
     .toJSON(),
 ];
@@ -284,6 +309,9 @@ export async function handleSlashCommand(
       return;
     case "contract":
       await handleContractCommand(interaction);
+      return;
+    case "release":
+      await handleReleaseCommand(interaction);
       return;
     default:
       await interaction.reply({

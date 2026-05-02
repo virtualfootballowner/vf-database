@@ -12,9 +12,9 @@ import {
 } from "discord.js";
 
 import { env } from "@/bot/config";
+import { fetchTeamLogoUrl } from "@/bot/site-assets";
 import {
   buildTeamNameBySlug,
-  CONTRACT_ROSTER_SEASON,
   createBotSupabase,
   findPlayerByDiscordId,
   listPlayerRosterTeamsForSeason,
@@ -23,6 +23,25 @@ import {
 
 export const CONTRACT_BTN_APPROVE = "vfl:con:a:";
 export const CONTRACT_BTN_DENY = "vfl:con:d:";
+
+/** Slash-command choices (name shown in picker, value stored). */
+export const CONTRACT_POSITION_CHOICES = [
+  { name: "CB", value: "CB" },
+  { name: "WB", value: "WB" },
+  { name: "CDM", value: "CDM" },
+  { name: "CM", value: "CM" },
+  { name: "CAM", value: "CAM" },
+  { name: "ST", value: "ST" },
+  { name: "LW", value: "LW" },
+  { name: "RW", value: "RW" },
+] as const;
+
+export const CONTRACT_ROLE_CHOICES = [
+  { name: "Starter", value: "Starter" },
+  { name: "Rotational", value: "Rotational" },
+  { name: "Bench", value: "Bench" },
+  { name: "Reserve", value: "Reserve" },
+] as const;
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -58,6 +77,8 @@ export async function handleContractCommand(
     return;
   }
 
+  const activeSeason = env.VF_ACTIVE_ROSTER_SEASON;
+
   const member = interaction.member as GuildMember;
   const roleId = env.DISCORD_TEAM_MANAGER_ROLE_ID;
   const hasManagerRole = member.roles.cache.has(roleId);
@@ -72,23 +93,8 @@ export async function handleContractCommand(
   }
 
   const signeeUser = interaction.options.getUser("player", true);
-  const positionRaw = interaction.options.getString("position", true).trim();
-  const roleRaw = interaction.options.getString("role", true).trim();
-
-  if (!positionRaw || positionRaw.length > 80) {
-    await interaction.reply({
-      flags: MessageFlags.Ephemeral,
-      content: "Enter a **position** (max 80 characters).",
-    });
-    return;
-  }
-  if (!roleRaw || roleRaw.length > 80) {
-    await interaction.reply({
-      flags: MessageFlags.Ephemeral,
-      content: "Enter a **role** (max 80 characters).",
-    });
-    return;
-  }
+  const positionRaw = interaction.options.getString("position", true);
+  const roleRaw = interaction.options.getString("role", true);
 
   if (signeeUser.bot) {
     await interaction.reply({
@@ -113,7 +119,7 @@ export async function handleContractCommand(
     const teamRes = await resolveManagerTeamSlugForSeason(
       supabase,
       interaction.user.id,
-      CONTRACT_ROSTER_SEASON,
+      activeSeason,
     );
 
     if (!teamRes.ok) {
@@ -124,7 +130,7 @@ export async function handleContractCommand(
             ? "Your player record has no **Roblox username** on file."
             : teamRes.reason === "ambiguous"
               ? "You are listed as manager for **more than one** team this season in the database. Ask staff to fix `team_season_managers`."
-              : "You are not listed as a **team manager** for **S3** in the database (see `team_season_managers`). Ask staff to use `/appoint` if this is wrong.";
+              : `You are not listed as a **team manager** for **S${activeSeason}** in the database (see \`team_season_managers\`). Ask staff to use \`/appoint\` if this is wrong.`;
       await interaction.editReply({ content: msg });
       return;
     }
@@ -141,6 +147,9 @@ export async function handleContractCommand(
     const offerId = randomUUID();
     const teamNames = await buildTeamNameBySlug(supabase);
     const teamLabel = teamNames.get(teamRes.teamSlug) ?? teamRes.teamSlug;
+    const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
+    const teamUrl = `${siteBase}/teams/${encodeURIComponent(teamRes.teamSlug)}?season=${activeSeason}`;
+    const logoUrl = await fetchTeamLogoUrl(supabase, teamRes.teamSlug, siteBase);
 
     const { error: insErr } = await supabase.from("contract_offers").insert({
       id: offerId,
@@ -150,7 +159,7 @@ export async function handleContractCommand(
       contractor_discord_id: interaction.user.id,
       signee_discord_id: signeeUser.id,
       team_slug: teamRes.teamSlug,
-      season: CONTRACT_ROSTER_SEASON,
+      season: activeSeason,
       roster_position: positionRaw,
       roster_role: roleRaw,
       signee_player_id: signeeProfile.id,
@@ -165,26 +174,48 @@ export async function handleContractCommand(
       return;
     }
 
-    const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
-    const teamUrl = `${siteBase}/teams/${encodeURIComponent(teamRes.teamSlug)}?season=${CONTRACT_ROSTER_SEASON}`;
-
     const embed = new EmbedBuilder()
       .setColor(0x083696)
+      .setAuthor({
+        name: teamLabel,
+        iconURL: logoUrl ?? undefined,
+        url: teamUrl,
+      })
       .setTitle("Contract offer")
       .setDescription(
-        [
-          `<@${signeeUser.id}> — you’ve been offered a spot on the **S${CONTRACT_ROSTER_SEASON}** sheet.`,
-          "",
-          `**Team** · [${teamLabel}](${teamUrl}) (\`${teamRes.teamSlug}\`)`,
-          `**Signee** · ${signeeUser} · \`${signeeProfile.roblox_username}\``,
-          `**Offered by** · ${interaction.user}`,
-          `**Position** · ${positionRaw}`,
-          `**Role** · ${roleRaw}`,
-          "",
-          "Only **you** (the signee) can use the buttons below.",
-        ].join("\n"),
+        `<@${signeeUser.id}> — you’ve been offered a spot on the **Season ${activeSeason}** roster.\n\nOnly **you** can use the buttons below.`,
       )
-      .setFooter({ text: `Offer ID ${offerId.slice(0, 8)}… · VF League` })
+      .addFields(
+        {
+          name: "Team",
+          value: `[${teamLabel}](${teamUrl})\n\`${teamRes.teamSlug}\``,
+          inline: false,
+        },
+        {
+          name: "Signee",
+          value: `${signeeUser}\n\`${signeeProfile.roblox_username}\``,
+          inline: true,
+        },
+        {
+          name: "Offered by",
+          value: `${interaction.user}`,
+          inline: true,
+        },
+        {
+          name: "Position",
+          value: `**${positionRaw}**`,
+          inline: true,
+        },
+        {
+          name: "Role",
+          value: `**${roleRaw}**`,
+          inline: true,
+        },
+      )
+      .setThumbnail(logoUrl ?? null)
+      .setFooter({
+        text: `Offer ${offerId.slice(0, 8)}… · Season ${activeSeason}`,
+      })
       .setTimestamp(new Date());
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -234,7 +265,9 @@ export async function handleContractButton(
     return;
   }
 
+  const activeSeason = env.VF_ACTIVE_ROSTER_SEASON;
   const supabase = createBotSupabase();
+  const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
 
   const { data: row, error: fetchErr } = await supabase
     .from("contract_offers")
@@ -276,18 +309,38 @@ export async function handleContractButton(
     return;
   }
 
+  const teamNamesPromise = buildTeamNameBySlug(supabase);
+  const logoUrlPromise = fetchTeamLogoUrl(supabase, offer.team_slug, siteBase);
+
   if (kind === "deny") {
     await interaction.deferUpdate();
+    const teamLabel = (await teamNamesPromise).get(offer.team_slug) ?? offer.team_slug;
+    const logoUrl = await logoUrlPromise;
+    const teamUrl = `${siteBase}/teams/${encodeURIComponent(offer.team_slug)}?season=${offer.season}`;
+
     const embedDenied = new EmbedBuilder()
       .setColor(0x6b7280)
+      .setAuthor({
+        name: teamLabel,
+        iconURL: logoUrl ?? undefined,
+        url: teamUrl,
+      })
       .setTitle("Contract denied")
-      .setDescription(
-        [
-          `<@${offer.signee_discord_id}> **declined** the offer.`,
-          `**Team** · \`${offer.team_slug}\``,
-          `**Position** · ${offer.roster_position} · **Role** · ${offer.roster_role}`,
-        ].join("\n"),
+      .setDescription(`<@${offer.signee_discord_id}> **declined** the offer.`)
+      .addFields(
+        {
+          name: "Team",
+          value: `[${teamLabel}](${teamUrl})\n\`${offer.team_slug}\``,
+          inline: false,
+        },
+        {
+          name: "Squad",
+          value: `**${offer.roster_position}** · ${offer.roster_role}`,
+          inline: false,
+        },
       )
+      .setThumbnail(logoUrl ?? null)
+      .setFooter({ text: `Season ${offer.season}` })
       .setTimestamp(new Date());
 
     await supabase
@@ -306,26 +359,72 @@ export async function handleContractButton(
   await interaction.deferUpdate();
 
   try {
+    if (offer.season !== activeSeason) {
+      const teamNames = await teamNamesPromise;
+      const logoUrl = await logoUrlPromise;
+      const teamLabel = teamNames.get(offer.team_slug) ?? offer.team_slug;
+      const teamUrl = `${siteBase}/teams/${encodeURIComponent(offer.team_slug)}?season=${offer.season}`;
+
+      const embedLocked = new EmbedBuilder()
+        .setColor(0xf59e0b)
+        .setAuthor({
+          name: teamLabel,
+          iconURL: logoUrl ?? undefined,
+          url: teamUrl,
+        })
+        .setTitle("Roster locked for this season")
+        .setDescription(
+          [
+            `This offer was for **Season ${offer.season}**, but only **Season ${activeSeason}** accepts signings now.`,
+            "Past-season rosters can’t be changed via contracts.",
+          ].join("\n\n"),
+        )
+        .setThumbnail(logoUrl ?? null)
+        .setFooter({ text: `Offer season ${offer.season} · Active S${activeSeason}` })
+        .setTimestamp(new Date());
+
+      await supabase
+        .from("contract_offers")
+        .update({
+          status: "denied",
+          resolved_at: new Date().toISOString(),
+        })
+        .eq("id", offerId);
+
+      await interaction.editReply({ embeds: [embedLocked], components: [] });
+      return;
+    }
+
     const existingTeams = await listPlayerRosterTeamsForSeason(
       supabase,
       offer.signee_player_id,
-      CONTRACT_ROSTER_SEASON,
+      activeSeason,
     );
     const otherTeam = existingTeams.find((t) => t !== offer.team_slug);
     if (otherTeam) {
-      const teamNames = await buildTeamNameBySlug(supabase);
+      const teamNames = await teamNamesPromise;
+      const logoUrl = await logoUrlPromise;
       const otherLabel = teamNames.get(otherTeam) ?? otherTeam;
+      const teamLabel = teamNames.get(offer.team_slug) ?? offer.team_slug;
+      const teamUrlOther = `${siteBase}/teams/${encodeURIComponent(otherTeam)}?season=${activeSeason}`;
+
       const embedBlock = new EmbedBuilder()
         .setColor(0xef4444)
-        .setTitle("Cannot accept — already on an S3 roster")
+        .setAuthor({
+          name: teamLabel,
+          iconURL: logoUrl ?? undefined,
+        })
+        .setTitle(`Already rostered — Season ${activeSeason}`)
         .setDescription(
           [
-            `You’re already on the **Season ${CONTRACT_ROSTER_SEASON}** sheet for **${otherLabel}** (\`${otherTeam}\`).`,
-            "Leave that roster (staff) before signing with another club.",
+            `You’re already on **[${otherLabel}](${teamUrlOther})** (\`${otherTeam}\`).`,
+            "Leave that roster (staff) before signing elsewhere.",
             "",
-            `_Offer was for \`${offer.team_slug}\`._`,
+            `_This offer: \`${offer.team_slug}\`._`,
           ].join("\n"),
         )
+        .setThumbnail(logoUrl ?? null)
+        .setFooter({ text: `Season ${activeSeason}` })
         .setTimestamp(new Date());
 
       await supabase
@@ -368,22 +467,46 @@ export async function handleContractButton(
       })
       .eq("id", offerId);
 
-    const teamNames = await buildTeamNameBySlug(supabase);
+    const teamNames = await teamNamesPromise;
+    const logoUrl = await logoUrlPromise;
     const teamLabel = teamNames.get(offer.team_slug) ?? offer.team_slug;
+    const teamUrl = `${siteBase}/teams/${encodeURIComponent(offer.team_slug)}?season=${offer.season}`;
 
     const embedOk = new EmbedBuilder()
       .setColor(0x10b981)
+      .setAuthor({
+        name: teamLabel,
+        iconURL: logoUrl ?? undefined,
+        url: teamUrl,
+      })
       .setTitle("Contract signed")
       .setDescription(
-        [
-          `<@${offer.signee_discord_id}> **accepted** — added to **S${offer.season}** roster.`,
-          `**Team** · ${teamLabel} (\`${offer.team_slug}\`)`,
-          `**Position** · ${offer.roster_position}`,
-          `**Role** · ${offer.roster_role}`,
-          "",
-          "Database: `player_team_seasons`",
-        ].join("\n"),
+        `<@${offer.signee_discord_id}> **accepted** — added to the **Season ${offer.season}** roster.`,
       )
+      .addFields(
+        {
+          name: "Team",
+          value: `[${teamLabel}](${teamUrl})\n\`${offer.team_slug}\``,
+          inline: false,
+        },
+        {
+          name: "Position",
+          value: `**${offer.roster_position}**`,
+          inline: true,
+        },
+        {
+          name: "Role",
+          value: `**${offer.roster_role}**`,
+          inline: true,
+        },
+        {
+          name: "Manager",
+          value: `<@${offer.contractor_discord_id}>`,
+          inline: true,
+        },
+      )
+      .setThumbnail(logoUrl ?? null)
+      .setFooter({ text: `Season ${offer.season} · VF League` })
       .setTimestamp(new Date());
 
     await interaction.editReply({ embeds: [embedOk], components: [] });
