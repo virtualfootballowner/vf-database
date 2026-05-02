@@ -230,7 +230,7 @@ export const teams: Team[] = [
     name: "Brazil",
     short: "BRA",
     slug: "brazil",
-    logo: null,
+    logo: "/brazil.png",
     form: "National squad · Season 3 · Hosts",
     seasons: [3],
   },
