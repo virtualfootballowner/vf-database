@@ -18,7 +18,7 @@ import type { Team } from "@/app/teams/teams-data";
 import { teams as fileTeams } from "@/app/teams/teams-data";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
-const STATS_SEASONS = [1, 2] as const;
+const STATS_SEASONS = [1, 2, 3] as const;
 
 function normStr(v: unknown): string {
   if (v == null || v === "") return "";
@@ -65,7 +65,9 @@ function mapDbRowToMatchRecord(
 
   return {
     id: row.roblox_match_id ?? "",
-    season: (row.season === 1 || row.season === 2 ? row.season : 1) as MatchRecord["season"],
+    season: (row.season === 1 || row.season === 2 || row.season === 3
+      ? row.season
+      : 1) as MatchRecord["season"],
     competition: row.competition?.trim() || "—",
     gameWeek: gw,
     date: day,

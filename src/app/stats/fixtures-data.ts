@@ -14,7 +14,7 @@ export type FixtureRow = Fixture & {
 };
 
 export type FixtureScheduleRaw = [
-  season: 1 | 2,
+  season: 1 | 2 | 3,
   competition: string,
   stage: string,
   id: string,

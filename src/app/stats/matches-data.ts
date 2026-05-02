@@ -2,7 +2,7 @@ import { teams, type Team } from "../teams/teams-data";
 
 export type MatchRecord = {
   id: string;
-  season: 1 | 2;
+  season: 1 | 2 | 3;
   competition: string;
   gameWeek: string;
   date: string;
@@ -36,6 +36,33 @@ const TEAM_NAME_TO_SLUG: Record<string, string | null> = {
   Tretorre: "tre-torre-libertas-fc",
   Sassari: "sassari-calcio",
   Stafford: "stafford-wanderers",
+  // Season 3 · national teams (fixture / CSV short names → slug)
+  France: "france",
+  Spain: "spain",
+  England: "england",
+  Germany: "germany",
+  Belgium: "belgium",
+  Croatia: "croatia",
+  Netherlands: "netherlands",
+  Italy: "italy",
+  Portugal: "portugal",
+  Türkiye: "turkiye",
+  Turkey: "turkiye",
+  Brazil: "brazil",
+  Argentina: "argentina",
+  Colombia: "colombia",
+  Uruguay: "uruguay",
+  Ecuador: "ecuador",
+  USA: "usa",
+  Canada: "canada",
+  Mexico: "mexico",
+  Algeria: "algeria",
+  Nigeria: "nigeria",
+  Morocco: "morocco",
+  "South Africa": "south-africa",
+  Japan: "japan",
+  "South Korea": "south-korea",
+  Korea: "south-korea",
 };
 
 export function slugFor(name: string): string | null {
@@ -79,7 +106,7 @@ export function getMatchTeamFromList(
 
 type RawMatch = [
   id: string,
-  season: 1 | 2,
+  season: 1 | 2 | 3,
   competition: string,
   gw: string,
   date: string,
