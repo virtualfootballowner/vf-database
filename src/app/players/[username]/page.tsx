@@ -4,15 +4,16 @@ import {
   CalendarDays,
   Medal,
   Star,
-  Trophy,
 } from "lucide-react";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { TeamCrest } from "@/app/teams/team-crest";
 import type { Team } from "@/app/teams/teams-data";
 import { SiteNav } from "@/components/site-nav";
+import { TrophyHonorIcon } from "@/components/trophy-honor-icon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,6 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getRobloxHeadshots, isVerifiedRobloxUserId } from "@/lib/roblox";
+import { trophyImageForTrophyTitle, TROPHY_IMAGE } from "@/lib/trophy-assets";
 import {
   getPlayerMatchAppearances,
   summaryLine,
@@ -219,7 +221,7 @@ export default async function PlayerDetailPage({
               }
             />
             <StatTile label="Appearances" value={stats.appearances} />
-            <StatTile label="Trophies" value={stats.trophies.length} />
+            <TrophyStatTile trophies={stats.trophies} />
             <StatTile label="Accolades" value={stats.accolades.length} />
           </div>
         </section>
@@ -320,9 +322,25 @@ export default async function PlayerDetailPage({
         <section className="grid gap-4 lg:grid-cols-2">
           <Card className="gap-3 py-5">
             <CardHeader className="flex flex-row items-center gap-3">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-amber-400/20 text-amber-200 ring-1 ring-amber-300/30">
-                <Trophy className="size-4" />
-              </div>
+              <span
+                className="flex shrink-0 items-center gap-1"
+                aria-hidden
+              >
+                <Image
+                  src={TROPHY_IMAGE.euroleague}
+                  alt=""
+                  width={36}
+                  height={36}
+                  className="size-9 object-contain drop-shadow-sm"
+                />
+                <Image
+                  src={TROPHY_IMAGE.eurobloxCup}
+                  alt=""
+                  width={36}
+                  height={36}
+                  className="size-9 object-contain drop-shadow-sm"
+                />
+              </span>
               <div>
                 <CardTitle className="text-base font-semibold">
                   Trophies
@@ -340,7 +358,7 @@ export default async function PlayerDetailPage({
                   {stats.trophies.map((trophy, idx) => (
                     <ListRow
                       key={idx}
-                      icon={<Trophy className="size-3.5 text-amber-300" />}
+                      icon={<TrophyHonorIcon trophyTitle={trophy.title} />}
                       title={trophy.title}
                       meta={[
                         trophy.season ? `Season ${trophy.season}` : null,
@@ -442,6 +460,40 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
           {label}
         </p>
         <p className="mt-1.5 text-2xl font-semibold text-white">{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TrophyStatTile({ trophies }: { trophies: Trophy[] }) {
+  const srcs = new Set<string>();
+  for (const t of trophies) {
+    const s = trophyImageForTrophyTitle(t.title);
+    if (s) srcs.add(s);
+  }
+  return (
+    <Card className="gap-1 py-4">
+      <CardContent>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
+          Trophies
+        </p>
+        <p className="mt-1.5 text-2xl font-semibold text-white">
+          {trophies.length}
+        </p>
+        {srcs.size > 0 ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {[...srcs].map((src) => (
+              <Image
+                key={src}
+                src={src}
+                alt=""
+                width={28}
+                height={28}
+                className="size-7 object-contain opacity-95"
+              />
+            ))}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -573,9 +625,7 @@ function ListRow({
 }) {
   return (
     <li className="flex items-center gap-3 rounded-md border border-white/10 bg-[#02103f]/65 px-3 py-2.5">
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-white/5">
-        {icon}
-      </span>
+      <span className="flex shrink-0 items-center justify-center">{icon}</span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-white">{title}</p>
         {meta ? (

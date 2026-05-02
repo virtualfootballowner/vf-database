@@ -20,7 +20,9 @@
     "db:fill:s2-squads": "tsx scripts/fill-season-squads-from-events.ts 2",
     "db:award:s1-trophies": "tsx scripts/award-s1-champion-trophies.ts",
     "db:refresh:player-goals-assists": "tsx scripts/refresh-player-goal-assist-totals.ts",
-    "db:verify:repo": "tsx scripts/verify-repo-vs-db.ts"
+    "db:verify:repo": "tsx scripts/verify-repo-vs-db.ts",
+    "db:seed:managers": "tsx scripts/apply-team-manager-seed.ts",
+    "db:ensure:manager-rows": "tsx scripts/apply-team-manager-seed.ts --ensure-rows"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

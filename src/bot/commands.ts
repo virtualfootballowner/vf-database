@@ -19,6 +19,7 @@ import {
   fetchPlayerCareer,
   fetchSquadForSeason,
   fetchTeamSeasonHonors,
+  fetchTeamSeasonManagerName,
   fetchTeamSeasonRecord,
   filterTeamsForAutocomplete,
   findPlayerByDiscordId,
@@ -463,9 +464,10 @@ async function handleTeam(
     const hostLabel = env.VFL_SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
     const crestUrl = absoluteSiteAssetUrl(resolved.logo_url, siteBase);
 
-    const [record, honors] = await Promise.all([
+    const [record, honors, managerName] = await Promise.all([
       fetchTeamSeasonRecord(supabase, resolved.slug, season),
       fetchTeamSeasonHonors(supabase, resolved.slug, season),
+      fetchTeamSeasonManagerName(supabase, resolved.slug, season),
     ]);
 
     const metaLines = [
@@ -497,6 +499,12 @@ async function handleTeam(
       .setTimestamp(new Date());
 
     if (crestUrl) embed.setThumbnail(crestUrl);
+
+    embed.addFields({
+      name: "Manager",
+      value: managerName?.trim() ? managerName.trim() : "—",
+      inline: true,
+    });
 
     if (record && record.matches_played > 0) {
       embed.addFields(

@@ -1,9 +1,11 @@
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SiteNav } from "@/components/site-nav";
+import { TrophyHonorIcon } from "@/components/trophy-honor-icon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { getRobloxHeadshots } from "@/lib/roblox";
 import { getAllTeamSlugs, getTeamBySlugFromDb } from "@/lib/site-db";
+import { TROPHY_IMAGE } from "@/lib/trophy-assets";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 import { TeamCrest } from "../team-crest";
@@ -72,10 +75,12 @@ function formatSeasonRecord(row: TeamSeasonRecordRow | null): string {
   return `${row.wins}–${row.draws}–${row.losses}`;
 }
 
+type TeamHonorRow = { honorKind: string; label: string };
+
 async function getTeamSeasonHonorsForSeasons(
   slug: string,
   seasons: number[],
-): Promise<string[]> {
+): Promise<TeamHonorRow[]> {
   if (seasons.length === 0) return [];
   try {
     const supabase = createSupabaseServerClient();
@@ -88,18 +93,72 @@ async function getTeamSeasonHonorsForSeasons(
     if (error || !data?.length) return [];
     const kinds = [...new Set(data.map((r) => r.honor_kind))];
     kinds.sort();
-    return kinds.map((k) => HONOR_LABELS[k] ?? k);
+    return kinds.map((k) => ({
+      honorKind: k,
+      label: HONOR_LABELS[k] ?? k,
+    }));
   } catch {
     return [];
   }
 }
 
-function formatTitles(honors: string[]): string {
-  if (honors.length === 0) return "—";
-  return honors.join(" · ");
+async function getTeamSeasonManagersBySeason(
+  slug: string,
+  seasons: number[],
+): Promise<Map<number, string | null>> {
+  const out = new Map<number, string | null>();
+  if (seasons.length === 0) return out;
+  try {
+    const supabase = createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("team_season_managers")
+      .select("season, manager_display_name")
+      .eq("team_slug", slug)
+      .in("season", seasons);
+    if (error || !data?.length) return out;
+    for (const row of data) {
+      const s = Number(row.season);
+      if (s !== 1 && s !== 2 && s !== 3) continue;
+      const raw = row.manager_display_name;
+      const t =
+        raw == null || String(raw).trim() === ""
+          ? null
+          : String(raw).trim();
+      out.set(s, t);
+    }
+    return out;
+  } catch {
+    return out;
+  }
 }
 
-/** Seasons for record/titles: one season when filtered, otherwise every season the club is listed in. */
+function formatManagersLine(
+  seasons: number[],
+  selectedSeason: number | null,
+  bySeason: Map<number, string | null>,
+): string {
+  const sorted = [...seasons].sort((a, b) => a - b);
+  if (selectedSeason !== null) {
+    return bySeason.get(selectedSeason) ?? "—";
+  }
+  if (sorted.length === 0) return "—";
+  return sorted
+    .map((s) => {
+      const name = bySeason.get(s);
+      return `S${s}: ${name ?? "—"}`;
+    })
+    .join(" · ");
+}
+
+function managersCardLabel(
+  seasons: number[],
+  selectedSeason: number | null,
+): string {
+  if (selectedSeason !== null) return `Manager · S${selectedSeason}`;
+  const suffix = seasons.map((s) => `S${s}`).join(" + ");
+  return suffix.length > 0 ? `Manager · ${suffix}` : "Manager";
+}
+
 function seasonsForTeamStats(
   selectedSeason: number | null,
   teamSeasons: number[],
@@ -206,13 +265,23 @@ export default async function TeamDetailPage({
   const recordCardLabel =
     seasonSuffix.length > 0 ? `Record · ${seasonSuffix}` : "Record";
 
-  const honorLines =
+  const honorRows =
     statsSeasons.length > 0
       ? await getTeamSeasonHonorsForSeasons(slug, statsSeasons)
       : [];
   const titlesCardLabel =
     seasonSuffix.length > 0 ? `Titles · ${seasonSuffix}` : "Titles";
-  const titlesValue = formatTitles(honorLines);
+
+  const managerBySeason =
+    statsSeasons.length > 0
+      ? await getTeamSeasonManagersBySeason(slug, statsSeasons)
+      : new Map<number, string | null>();
+  const managerValue = formatManagersLine(
+    statsSeasons,
+    selectedSeason,
+    managerBySeason,
+  );
+  const managerCardLabel = managersCardLabel(statsSeasons, selectedSeason);
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden text-white">
@@ -257,23 +326,79 @@ export default async function TeamDetailPage({
           </div>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-3">
-          {[
-            { label: recordCardLabel, value: recordLabel },
-            { label: "Squad Size", value: String(players.length) },
-            { label: titlesCardLabel, value: titlesValue },
-          ].map((stat) => (
-            <Card key={stat.label} className="gap-2 py-5">
-              <CardContent>
+        <section className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          <Card className="gap-2 py-5">
+            <CardContent>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
+                {recordCardLabel}
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-white">
+                {recordLabel}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="gap-2 py-5">
+            <CardContent>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
+                {managerCardLabel}
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-white">
+                {managerValue}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="gap-2 py-5">
+            <CardContent>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
+                Squad Size
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-white">
+                {String(players.length)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="gap-2 py-5">
+            <CardContent>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="flex shrink-0 items-center gap-0.5" aria-hidden>
+                  <Image
+                    src={TROPHY_IMAGE.euroleague}
+                    alt=""
+                    width={28}
+                    height={28}
+                    className="size-7 object-contain opacity-95"
+                  />
+                  <Image
+                    src={TROPHY_IMAGE.eurobloxCup}
+                    alt=""
+                    width={28}
+                    height={28}
+                    className="size-7 object-contain opacity-95"
+                  />
+                </span>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
-                  {stat.label}
+                  {titlesCardLabel}
                 </p>
-                <p className="mt-2 text-2xl font-semibold text-white">
-                  {stat.value}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+              {honorRows.length === 0 ? (
+                <p className="mt-2 text-2xl font-semibold text-white">—</p>
+              ) : (
+                <ul className="mt-2 flex flex-col gap-2">
+                  {honorRows.map((h) => (
+                    <li
+                      key={h.honorKind}
+                      className="flex items-center gap-2.5"
+                    >
+                      <TrophyHonorIcon honorKind={h.honorKind} />
+                      <span className="min-w-0 text-sm font-semibold leading-snug text-white">
+                        {h.label}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
         </section>
 
         <section className="flex flex-col gap-4">

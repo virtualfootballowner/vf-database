@@ -39,6 +39,9 @@ yarn-error.log*
 # cursor (local mcp config may contain secrets)
 /.cursor/
 
+# supabase local temp
+/supabase/.temp/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

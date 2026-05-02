@@ -204,6 +204,25 @@ const HONOR_LABELS: Record<string, string> = {
   euroblox_cup_champion: "EuroBlox Cup champion",
 };
 
+export async function fetchTeamSeasonManagerName(
+  supabase: SupabaseClient,
+  teamSlug: string,
+  season: number,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("team_season_managers")
+    .select("manager_display_name")
+    .eq("team_slug", teamSlug)
+    .eq("season", season)
+    .maybeSingle();
+
+  if (error) throw error;
+  const raw = data?.manager_display_name;
+  if (raw == null) return null;
+  const t = String(raw).trim();
+  return t.length > 0 ? t : null;
+}
+
 export async function fetchTeamSeasonHonors(
   supabase: SupabaseClient,
   teamSlug: string,
