@@ -1,4 +1,7 @@
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   ComponentType,
   EmbedBuilder,
   MessageFlags,
@@ -103,6 +106,14 @@ export const slashCommandDefinitions = [
       "Show every pending whitelist request waiting on staff approval",
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("postverify")
+    .setDescription(
+      "Post the VFL website verification card (Click to verify) in this channel",
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .toJSON(),
 
   new SlashCommandBuilder()
@@ -288,6 +299,9 @@ export async function handleSlashCommand(
   switch (interaction.commandName) {
     case "backlog":
       await handleBacklog(interaction);
+      return;
+    case "postverify":
+      await handlePostVerifyCard(interaction);
       return;
     case "kick":
       await handleKick(interaction);
@@ -750,6 +764,58 @@ async function handleSquad(
     console.error("/squad failed:", err);
     await interaction.editReply({ content: `Could not load squad: ${msg}` });
   }
+}
+
+async function handlePostVerifyCard(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  if (
+    !interaction.guild ||
+    !interaction.channel?.isTextBased() ||
+    !interaction.channel.isSendable()
+  ) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Use this command in a sendable text channel inside the server.",
+    });
+    return;
+  }
+
+  if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "You need **Manage Server** to post the verification card.",
+    });
+    return;
+  }
+
+  const verifyUrl = `${env.VFL_SITE_URL.replace(/\/$/, "")}/verify`;
+  const embed = new EmbedBuilder()
+    .setColor(0x083696)
+    .setTitle("Verify your account")
+    .setDescription(
+      [
+        "New here? **Click below**, then sign in with **Discord** and **Roblox**.",
+        "",
+        "After that, your nickname will match your Roblox username and staff will review your registration — same process as before, on the VFL site (no third-party verify bot).",
+      ].join("\n"),
+    )
+    .setFooter({ text: "VFL · Website verification" })
+    .setTimestamp(new Date());
+
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setLabel("Click to verify")
+      .setStyle(ButtonStyle.Link)
+      .setURL(verifyUrl),
+  );
+
+  await interaction.reply({
+    flags: MessageFlags.Ephemeral,
+    content: "Posted.",
+  });
+
+  await interaction.channel.send({ embeds: [embed], components: [row] });
 }
 
 async function handleBacklog(

@@ -19,6 +19,7 @@ const optionalOutgoingChannel = z.preprocess(
 const envSchema = z.object({
   DISCORD_BOT_TOKEN: z.string().min(1),
   DISCORD_GUILD_ID: z.string().min(1).transform((s) => s.trim()),
+  /** Role granted after user completes website /verify (Discord+Roblox). Replaces third-party verify bots. */
   DISCORD_ROVER_VERIFIED_ROLE_ID: z
     .string()
     .min(1)

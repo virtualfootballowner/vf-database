@@ -53,7 +53,7 @@ function needsRoverGate(member: GuildMember): boolean {
 }
 
 /**
- * Instant DM + reminder before deadline + kick if Rover not verified in time.
+ * Instant DM + reminder before deadline + kick if verification not completed in time.
  */
 export async function handleMemberJoinVerifyGate(
   client: Client,
@@ -65,17 +65,18 @@ export async function handleMemberJoinVerifyGate(
 
   const dl = deadlineLabel();
   const rem = reminderLabel();
+  const verifyUrl = `${env.VFL_SITE_URL.replace(/\/$/, "")}/verify`;
 
   try {
     const embed = new EmbedBuilder()
       .setColor(0xf59e0b)
       .setTitle(`⏱️ You have ${dl} to verify`)
       .setDescription(
-        `Welcome to **VFL**. Complete **Rover** Roblox verification in this server within **${dl}** or you will be **removed** automatically.`,
+        `Welcome to **VFL**. Open **[Click to verify](${verifyUrl})** and sign in with **Discord**, then **Roblox**, within **${dl}** or you will be **removed** automatically.`,
       )
       .addFields({
         name: "What to do",
-        value: `Use the server’s verification / Rover flow now so your Roblox account is linked. You’ll get another DM with **${rem} left** if you’re not verified yet. If you’re stuck, open a ticket or ask staff — the timer does not pause.`,
+        value: `Use the link above on the VFL website (works on mobile). You’ll get another DM with **${rem} left** if you’re not verified yet. If you’re stuck, open a ticket or ask staff — the timer does not pause.`,
       })
       .setFooter({ text: "VFL Bot" })
       .setTimestamp();
@@ -102,12 +103,12 @@ export async function handleMemberJoinVerifyGate(
           .setColor(0xea580c)
           .setTitle(`⏱️ ${rem} left to verify`)
           .setDescription(
-            `You still need to complete **Rover** verification in **VFL**. About **${rem}** remain before you are removed from the server.`,
+            `You still need to finish **[Click to verify](${verifyUrl})** in **VFL**. About **${rem}** remain before you are removed from the server.`,
           )
           .addFields({
             name: "Verify now",
             value:
-              "Finish the server’s Rover / verification flow immediately. This is your last heads-up before an automatic kick.",
+              "Complete Discord + Roblox sign-in on the site immediately. This is your last heads-up before an automatic kick.",
           })
           .setFooter({ text: "VFL Bot" })
           .setTimestamp();
@@ -137,12 +138,12 @@ export async function handleMemberJoinVerifyGate(
             .setColor(0xdc2626)
             .setTitle("You were removed from VFL")
             .setDescription(
-              `You did not complete **Rover** verification within **${dlKick}** after joining, so you have been **removed** from the server.`,
+              `You did not finish **[Click to verify](${verifyUrl})** within **${dlKick}** after joining, so you have been **removed** from the server.`,
             )
             .addFields({
               name: "What’s next",
               value:
-                "You can **rejoin** when you’re ready and complete Rover verification right away. If something blocked you (Rover, DMs, etc.), fix it first then try again.",
+                "You can **rejoin** when you’re ready and verify right away on the site. If something blocked you (login, DMs, etc.), fix it first then try again.",
             })
             .setFooter({ text: "VFL Bot" })
             .setTimestamp();
@@ -154,7 +155,7 @@ export async function handleMemberJoinVerifyGate(
         }
 
         await m.kick(
-          `Rover not verified within ${dlKick} — rejoin when ready to verify.`,
+          `Website verify not completed within ${dlKick} — rejoin when ready.`,
         );
       } catch (e) {
         console.error(`[join-gate] Deadline kick failed for ${userId}:`, e);

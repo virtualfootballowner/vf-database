@@ -361,7 +361,7 @@ async function handleDenyClick(
       .addFields({
         name: "💬 Think this is a mistake?",
         value:
-          "Reach out to a staff member in the VFL Discord and try re-verifying.",
+          "Reach out to a staff member in the VFL Discord and try again via the site’s **Click to verify** link.",
       })
       .setFooter({ text: "VFL Bot" })
       .setTimestamp(new Date());
