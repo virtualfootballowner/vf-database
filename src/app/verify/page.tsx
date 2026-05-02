@@ -2,23 +2,29 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-function isVerifyConfigured(): boolean {
-  const keys = [
-    process.env.DISCORD_BOT_TOKEN,
-    process.env.DISCORD_GUILD_ID,
-    process.env.DISCORD_ROVER_VERIFIED_ROLE_ID,
-    process.env.DISCORD_CLIENT_ID,
-    process.env.DISCORD_CLIENT_SECRET,
-    process.env.ROBLOX_OAUTH_CLIENT_ID,
-    process.env.ROBLOX_OAUTH_CLIENT_SECRET,
-    process.env.VFL_SITE_URL,
-    process.env.VERIFY_COOKIE_SECRET,
-  ];
-  return keys.every((v) => typeof v === "string" && v.trim().length > 0);
+const VERIFY_ENV_KEYS = [
+  "DISCORD_BOT_TOKEN",
+  "DISCORD_GUILD_ID",
+  "DISCORD_ROVER_VERIFIED_ROLE_ID",
+  "DISCORD_CLIENT_ID",
+  "DISCORD_CLIENT_SECRET",
+  "ROBLOX_OAUTH_CLIENT_ID",
+  "ROBLOX_OAUTH_CLIENT_SECRET",
+  "VFL_SITE_URL",
+  "VERIFY_COOKIE_SECRET",
+] as const;
+
+function missingVerifyEnvKeys(): string[] {
+  const env = process.env;
+  return VERIFY_ENV_KEYS.filter((name) => {
+    const v = env[name];
+    return typeof v !== "string" || v.trim().length === 0;
+  });
 }
 
 export default function VerifyPage() {
-  const configured = isVerifyConfigured();
+  const missing = missingVerifyEnvKeys();
+  const configured = missing.length === 0;
 
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col justify-center gap-6 px-6 py-16">
@@ -40,10 +46,23 @@ export default function VerifyPage() {
           Click to verify
         </Link>
       ) : (
-        <p className="text-destructive text-sm">
-          Verification isn&apos;t configured on this deployment yet (missing env
-          keys).
-        </p>
+        <div className="border-destructive/50 bg-destructive/5 space-y-2 rounded-md border p-4 text-sm">
+          <p className="text-destructive font-medium">
+            Verification isn&apos;t configured — add these environment variables
+            (empty = missing):
+          </p>
+          <ul className="font-mono text-muted-foreground list-disc space-y-1 pl-5 text-xs">
+            {missing.map((k) => (
+              <li key={k}>{k}</li>
+            ))}
+          </ul>
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            Local: <code className="text-foreground/90">.env.local</code>. Production: Vercel
+            project → Settings → Environment Variables. Set{" "}
+            <code className="text-foreground/90">VFL_SITE_URL</code> to your real public URL
+            and register the same base in Discord + Roblox OAuth redirect URLs.
+          </p>
+        </div>
       )}
       <p className="text-muted-foreground text-xs">
         You must already be in the VFL Discord server. If you finish this page
