@@ -69,6 +69,15 @@ export default function VerifyPage() {
         but aren&apos;t in the server, Discord can&apos;t update your nickname or
         role.
       </p>
+      <p className="text-muted-foreground text-xs">
+        <Link href="/privacy" className="underline underline-offset-2">
+          Privacy Policy
+        </Link>
+        {" · "}
+        <Link href="/terms" className="underline underline-offset-2">
+          Terms of Service
+        </Link>
+      </p>
     </main>
   );
 }
