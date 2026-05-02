@@ -1,0 +1,20 @@
+-- Point national team logo_url at new public assets (paths match teams-data.ts / Vercel static files).
+update public.teams set logo_url = '/belgium.png' where slug = 'belgium' and (logo_url is distinct from '/belgium.png');
+update public.teams set logo_url = '/Croatia.png' where slug = 'croatia' and (logo_url is distinct from '/Croatia.png');
+update public.teams set logo_url = '/netherlands.png' where slug = 'netherlands' and (logo_url is distinct from '/netherlands.png');
+update public.teams set logo_url = '/italy.png' where slug = 'italy' and (logo_url is distinct from '/italy.png');
+update public.teams set logo_url = '/Portugal.png' where slug = 'portugal' and (logo_url is distinct from '/Portugal.png');
+update public.teams set logo_url = '/TURKEY.png' where slug = 'turkiye' and (logo_url is distinct from '/TURKEY.png');
+update public.teams set logo_url = '/Argentina.png' where slug = 'argentina' and (logo_url is distinct from '/Argentina.png');
+update public.teams set logo_url = '/Colombia.png' where slug = 'colombia' and (logo_url is distinct from '/Colombia.png');
+update public.teams set logo_url = '/URUGAWAY.png' where slug = 'uruguay' and (logo_url is distinct from '/URUGAWAY.png');
+update public.teams set logo_url = '/Ecuador.png' where slug = 'ecuador' and (logo_url is distinct from '/Ecuador.png');
+update public.teams set logo_url = '/usa.png' where slug = 'usa' and (logo_url is distinct from '/usa.png');
+update public.teams set logo_url = '/Canada.png' where slug = 'canada' and (logo_url is distinct from '/Canada.png');
+update public.teams set logo_url = '/Mexico.png' where slug = 'mexico' and (logo_url is distinct from '/Mexico.png');
+update public.teams set logo_url = '/Algeria.png' where slug = 'algeria' and (logo_url is distinct from '/Algeria.png');
+update public.teams set logo_url = '/Nigeria.png' where slug = 'nigeria' and (logo_url is distinct from '/Nigeria.png');
+update public.teams set logo_url = '/Morocco.png' where slug = 'morocco' and (logo_url is distinct from '/Morocco.png');
+update public.teams set logo_url = '/South Africa.png' where slug = 'south-africa' and (logo_url is distinct from '/South Africa.png');
+update public.teams set logo_url = '/japan.png' where slug = 'japan' and (logo_url is distinct from '/japan.png');
+update public.teams set logo_url = '/SK.png' where slug = 'south-korea' and (logo_url is distinct from '/SK.png');
