@@ -4,8 +4,8 @@
  * Idempotent: skips if the same title + season + team name is already present.
  *
  * Honors follow `team_season_honors` for Season 1:
- *   - andover-fc → EuroLeague champions
- *   - milton-town-fc → Euroblox Cup champions
+ *   - andover-fc → EuroLeague Champions
+ *   - milton-town-fc → EuroBlox Cup Champions
  *
  * Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  * Run: npm run db:award:s1-trophies
@@ -34,8 +34,8 @@ type Trophy = { title: string; season?: number; team?: string };
 const SLUGS = ["andover-fc", "milton-town-fc"] as const;
 
 const SLUG_TO_TITLE: Record<(typeof SLUGS)[number], string> = {
-  "andover-fc": "EuroLeague champions",
-  "milton-town-fc": "Euroblox Cup champions",
+  "andover-fc": "EuroLeague Champions",
+  "milton-town-fc": "EuroBlox Cup Champions",
 };
 
 function trophyKey(t: Trophy): string {

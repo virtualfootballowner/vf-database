@@ -322,25 +322,12 @@ export default async function PlayerDetailPage({
         <section className="grid gap-4 lg:grid-cols-2">
           <Card className="gap-3 py-5">
             <CardHeader className="flex flex-row items-center gap-3">
-              <span
-                className="flex shrink-0 items-center gap-1"
+              <div
+                className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-400/20 text-lg leading-none ring-1 ring-amber-300/30"
                 aria-hidden
               >
-                <Image
-                  src={TROPHY_IMAGE.euroleague}
-                  alt=""
-                  width={36}
-                  height={36}
-                  className="size-9 object-contain drop-shadow-sm"
-                />
-                <Image
-                  src={TROPHY_IMAGE.eurobloxCup}
-                  alt=""
-                  width={36}
-                  height={36}
-                  className="size-9 object-contain drop-shadow-sm"
-                />
-              </span>
+                🏆
+              </div>
               <div>
                 <CardTitle className="text-base font-semibold">
                   Trophies

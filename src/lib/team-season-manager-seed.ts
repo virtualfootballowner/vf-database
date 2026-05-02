@@ -16,7 +16,7 @@ export const TEAM_SEASON_MANAGER_SEED: Record<
   "newport-wanderers-fc": { 1: "MajinCrew", 2: "Mateiryan" },
   "viola-fc": { 1: "Lxv34ngel", 2: "Lxv34ngel" },
   "stafford-wanderers": { 1: "guzuwan" },
-  "eltham-united": { 1: "Togzema", 2: "Togzema" },
+  "eltham-united": { 1: "Teskid10", 2: "Teskid10" },
   "newham-united": { 1: "Tomiezi", 2: "Jamesinho_0" },
   "ac-casole": { 2: "Bogkaku" },
   "tre-torre-libertas-fc": { 2: "RememberPastGlory" },

@@ -32,6 +32,11 @@ const envSchema = z.object({
     .string()
     .min(1)
     .transform((s) => s.trim()),
+  /** Given to Discord users when an admin /appoint's them as a club manager. */
+  DISCORD_TEAM_MANAGER_ROLE_ID: z
+    .string()
+    .min(1)
+    .transform((s) => s.trim()),
   /** Outgoing log: posts when members leave (ban / kick / voluntary). Optional — omit to disable. */
   DISCORD_MEMBER_OUTGOING_CHANNEL_ID: optionalOutgoingChannel,
   SUPABASE_URL: z.url(),
@@ -50,6 +55,7 @@ export const env = envSchema.parse({
   DISCORD_APPROVED_ROLE_ID: process.env.DISCORD_APPROVED_ROLE_ID,
   DISCORD_STAFF_REVIEW_CHANNEL_ID: process.env.DISCORD_STAFF_REVIEW_CHANNEL_ID,
   DISCORD_SYNC_LOG_CHANNEL_ID: process.env.DISCORD_SYNC_LOG_CHANNEL_ID,
+  DISCORD_TEAM_MANAGER_ROLE_ID: process.env.DISCORD_TEAM_MANAGER_ROLE_ID,
   DISCORD_MEMBER_OUTGOING_CHANNEL_ID: process.env.DISCORD_MEMBER_OUTGOING_CHANNEL_ID,
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,

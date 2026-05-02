@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { fillManagerNamesFromSeed } from "@/lib/team-season-manager-fallback";
 
 /** Service-role client (normalized Supabase URL — matches `player-sync`). */
 export function createBotSupabase(): SupabaseClient {
@@ -200,8 +201,8 @@ export async function fetchTeamSeasonRecord(
 }
 
 const HONOR_LABELS: Record<string, string> = {
-  euroleague_champion: "EuroLeague champion",
-  euroblox_cup_champion: "EuroBlox Cup champion",
+  euroleague_champion: "EuroLeague Champions",
+  euroblox_cup_champion: "EuroBlox Cup Champions",
 };
 
 export async function fetchTeamSeasonManagerName(
@@ -209,18 +210,36 @@ export async function fetchTeamSeasonManagerName(
   teamSlug: string,
   season: number,
 ): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("team_season_managers")
-    .select("manager_display_name")
-    .eq("team_slug", teamSlug)
-    .eq("season", season)
-    .maybeSingle();
+  const mergeSeed = (fromDb: Map<number, string | null>) =>
+    fillManagerNamesFromSeed(teamSlug, [season], fromDb).get(season) ?? null;
+  const empty = new Map<number, string | null>();
 
-  if (error) throw error;
-  const raw = data?.manager_display_name;
-  if (raw == null) return null;
-  const t = String(raw).trim();
-  return t.length > 0 ? t : null;
+  try {
+    const { data, error } = await supabase
+      .from("team_season_managers")
+      .select("manager_display_name")
+      .eq("team_slug", teamSlug)
+      .eq("season", season)
+      .maybeSingle();
+
+    // PGRST205: table not migrated / not in PostgREST schema cache yet
+    if (error) {
+      return mergeSeed(empty);
+    }
+
+    const fromDb = new Map<number, string | null>();
+    if (data) {
+      const raw = data.manager_display_name;
+      const t =
+        raw != null && String(raw).trim() !== ""
+          ? String(raw).trim()
+          : null;
+      fromDb.set(season, t);
+    }
+    return mergeSeed(fromDb);
+  } catch {
+    return mergeSeed(empty);
+  }
 }
 
 export async function fetchTeamSeasonHonors(

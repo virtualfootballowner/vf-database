@@ -1,6 +1,5 @@
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -15,16 +14,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getRobloxHeadshots } from "@/lib/roblox";
+import { getRobloxHeadshots, isVerifiedRobloxUserId } from "@/lib/roblox";
+import { fillManagerNamesFromSeed } from "@/lib/team-season-manager-fallback";
 import { getAllTeamSlugs, getTeamBySlugFromDb } from "@/lib/site-db";
-import { TROPHY_IMAGE } from "@/lib/trophy-assets";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 import { TeamCrest } from "../team-crest";
 
 const HONOR_LABELS: Record<string, string> = {
-  euroleague_champion: "EuroLeague champions",
-  euroblox_cup_champion: "Euroblox Cup champions",
+  euroleague_champion: "EuroLeague Champions",
+  euroblox_cup_champion: "EuroBlox Cup Champions",
 };
 
 type TeamPlayerRow = {
@@ -106,8 +105,8 @@ async function getTeamSeasonManagersBySeason(
   slug: string,
   seasons: number[],
 ): Promise<Map<number, string | null>> {
-  const out = new Map<number, string | null>();
-  if (seasons.length === 0) return out;
+  const fromDb = new Map<number, string | null>();
+  if (seasons.length === 0) return fromDb;
   try {
     const supabase = createSupabaseServerClient();
     const { data, error } = await supabase
@@ -115,48 +114,45 @@ async function getTeamSeasonManagersBySeason(
       .select("season, manager_display_name")
       .eq("team_slug", slug)
       .in("season", seasons);
-    if (error || !data?.length) return out;
-    for (const row of data) {
-      const s = Number(row.season);
-      if (s !== 1 && s !== 2 && s !== 3) continue;
-      const raw = row.manager_display_name;
-      const t =
-        raw == null || String(raw).trim() === ""
-          ? null
-          : String(raw).trim();
-      out.set(s, t);
+    if (!error && data?.length) {
+      for (const row of data) {
+        const s = Number(row.season);
+        if (s !== 1 && s !== 2 && s !== 3) continue;
+        const raw = row.manager_display_name;
+        const t =
+          raw == null || String(raw).trim() === ""
+            ? null
+            : String(raw).trim();
+        fromDb.set(s, t);
+      }
     }
-    return out;
   } catch {
-    return out;
+    /* table missing / env — use seed only */
   }
+  return fillManagerNamesFromSeed(
+    slug,
+    [...seasons].sort((a, b) => a - b),
+    fromDb,
+  );
 }
 
-function formatManagersLine(
-  seasons: number[],
-  selectedSeason: number | null,
-  bySeason: Map<number, string | null>,
-): string {
-  const sorted = [...seasons].sort((a, b) => a - b);
-  if (selectedSeason !== null) {
-    return bySeason.get(selectedSeason) ?? "—";
+async function lookupPlayerByRobloxUsername(
+  robloxUsername: string,
+): Promise<TeamPlayerRow | null> {
+  const term = robloxUsername.trim();
+  if (!term) return null;
+  try {
+    const supabase = createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("players")
+      .select("id, roblox_username, roblox_user_id, position")
+      .ilike("roblox_username", term)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data as TeamPlayerRow;
+  } catch {
+    return null;
   }
-  if (sorted.length === 0) return "—";
-  return sorted
-    .map((s) => {
-      const name = bySeason.get(s);
-      return `S${s}: ${name ?? "—"}`;
-    })
-    .join(" · ");
-}
-
-function managersCardLabel(
-  seasons: number[],
-  selectedSeason: number | null,
-): string {
-  if (selectedSeason !== null) return `Manager · S${selectedSeason}`;
-  const suffix = seasons.map((s) => `S${s}`).join(" + ");
-  return suffix.length > 0 ? `Manager · ${suffix}` : "Manager";
 }
 
 function seasonsForTeamStats(
@@ -248,12 +244,45 @@ export default async function TeamDetailPage({
       : null;
 
   const players = await getTeamPlayers(slug, selectedSeason);
-  const headshotsMap = await getRobloxHeadshots(
-    players
+
+  const managerName =
+    selectedSeason != null
+      ? ((await getTeamSeasonManagersBySeason(slug, [selectedSeason])).get(
+          selectedSeason,
+        ) ?? null)
+      : null;
+
+  const managerPlayer =
+    managerName != null && managerName.trim() !== ""
+      ? await lookupPlayerByRobloxUsername(managerName)
+      : null;
+
+  const managerRobloxId =
+    managerPlayer?.roblox_user_id &&
+    isVerifiedRobloxUserId(managerPlayer.roblox_user_id)
+      ? managerPlayer.roblox_user_id.trim()
+      : null;
+
+  const playerIdsForHeadshots = [
+    ...players
       .map((player) => player.roblox_user_id)
       .filter((id): id is string => id != null && id !== ""),
-  );
+    ...(managerRobloxId ? [managerRobloxId] : []),
+  ];
+  const headshotsMap = await getRobloxHeadshots(playerIdsForHeadshots);
   const headshots = Object.fromEntries(headshotsMap);
+
+  const displayManagerName =
+    managerPlayer?.roblox_username?.trim() ||
+    managerName?.trim() ||
+    null;
+  const managerHeadshot = managerRobloxId
+    ? headshots[managerRobloxId]
+    : undefined;
+  const managerProfileHref =
+    managerPlayer && managerRobloxId
+      ? `/players/${encodeURIComponent(managerPlayer.roblox_username)}`
+      : null;
 
   const statsSeasons = seasonsForTeamStats(selectedSeason, team.seasons);
   const seasonSuffix = labelSeasonsSuffix(statsSeasons);
@@ -271,17 +300,6 @@ export default async function TeamDetailPage({
       : [];
   const titlesCardLabel =
     seasonSuffix.length > 0 ? `Titles · ${seasonSuffix}` : "Titles";
-
-  const managerBySeason =
-    statsSeasons.length > 0
-      ? await getTeamSeasonManagersBySeason(slug, statsSeasons)
-      : new Map<number, string | null>();
-  const managerValue = formatManagersLine(
-    statsSeasons,
-    selectedSeason,
-    managerBySeason,
-  );
-  const managerCardLabel = managersCardLabel(statsSeasons, selectedSeason);
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden text-white">
@@ -326,7 +344,7 @@ export default async function TeamDetailPage({
           </div>
         </section>
 
-        <section className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <section className="grid gap-3 grid-cols-2 lg:grid-cols-3">
           <Card className="gap-2 py-5">
             <CardContent>
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
@@ -334,16 +352,6 @@ export default async function TeamDetailPage({
               </p>
               <p className="mt-2 text-2xl font-semibold text-white">
                 {recordLabel}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="gap-2 py-5">
-            <CardContent>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
-                {managerCardLabel}
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-white">
-                {managerValue}
               </p>
             </CardContent>
           </Card>
@@ -360,22 +368,12 @@ export default async function TeamDetailPage({
           <Card className="gap-2 py-5">
             <CardContent>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="flex shrink-0 items-center gap-0.5" aria-hidden>
-                  <Image
-                    src={TROPHY_IMAGE.euroleague}
-                    alt=""
-                    width={28}
-                    height={28}
-                    className="size-7 object-contain opacity-95"
-                  />
-                  <Image
-                    src={TROPHY_IMAGE.eurobloxCup}
-                    alt=""
-                    width={28}
-                    height={28}
-                    className="size-7 object-contain opacity-95"
-                  />
-                </span>
+                <div
+                  className="flex size-7 shrink-0 items-center justify-center rounded-md bg-amber-400/15 text-base leading-none ring-1 ring-amber-300/25"
+                  aria-hidden
+                >
+                  🏆
+                </div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
                   {titlesCardLabel}
                 </p>
@@ -399,6 +397,48 @@ export default async function TeamDetailPage({
               )}
             </CardContent>
           </Card>
+        </section>
+
+        <section className="flex flex-col gap-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
+              Manager
+            </p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
+              {selectedSeason != null
+                ? `Season ${selectedSeason}`
+                : "Select a season"}
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm text-white/55">
+              Head coach for the season you choose in the pills above.
+            </p>
+          </div>
+
+          {selectedSeason === null ? (
+            <Card className="py-8">
+              <CardContent className="flex flex-col items-center gap-2 text-center">
+                <p className="text-sm font-medium text-white/75">
+                  Choose <strong className="text-white">Season {team.seasons.join(", ")}</strong>{" "}
+                  to view this club&apos;s manager.
+                </p>
+              </CardContent>
+            </Card>
+          ) : !displayManagerName ? (
+            <Card className="py-8">
+              <CardContent className="flex flex-col items-center gap-2 text-center">
+                <p className="text-sm font-medium text-white/75">
+                  No manager on file for Season {selectedSeason}.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <TeamManagerProfileCard
+              displayManagerName={displayManagerName}
+              managerHeadshot={managerHeadshot}
+              managerProfileHref={managerProfileHref}
+              selectedSeason={selectedSeason}
+            />
+          )}
         </section>
 
         <section className="flex flex-col gap-4">
@@ -510,6 +550,63 @@ export default async function TeamDetailPage({
       </div>
     </main>
   );
+}
+
+function TeamManagerProfileCard({
+  displayManagerName,
+  managerHeadshot,
+  managerProfileHref,
+  selectedSeason,
+}: {
+  displayManagerName: string;
+  managerHeadshot: string | undefined;
+  managerProfileHref: string | null;
+  selectedSeason: number;
+}) {
+  const managerInitials = displayManagerName.slice(0, 2).toUpperCase();
+  const card = (
+    <Card
+      className={`gap-0 py-0 ${managerProfileHref ? "transition hover:bg-white/[0.07] hover:ring-white/25" : ""}`}
+    >
+      <div className="flex items-center gap-3 px-4 py-4">
+        <Avatar
+          size="lg"
+          className="bg-[#083696]/40 ring-1 ring-white/15"
+        >
+          {managerHeadshot ? (
+            <AvatarImage
+              src={managerHeadshot}
+              alt={`${displayManagerName} headshot`}
+            />
+          ) : null}
+          <AvatarFallback className="bg-[#083696] text-sm font-black uppercase text-white">
+            {managerInitials}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-base font-semibold text-white">
+            {displayManagerName}
+          </p>
+          <p className="truncate text-xs text-white/55">
+            Head coach · Season {selectedSeason}
+            {managerProfileHref ? " · VF profile" : ""}
+          </p>
+        </div>
+      </div>
+    </Card>
+  );
+
+  if (managerProfileHref) {
+    return (
+      <Link
+        href={managerProfileHref}
+        className="block max-w-xl rounded-xl outline-none transition focus-visible:ring-2 focus-visible:ring-white/40"
+      >
+        {card}
+      </Link>
+    );
+  }
+  return <div className="max-w-xl">{card}</div>;
 }
 
 function SeasonPill({

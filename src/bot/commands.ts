@@ -199,6 +199,34 @@ export const slashCommandDefinitions = [
         .setMaxValue(20),
     )
     .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("appoint")
+    .setDescription(
+      "Appoint a club/nation manager for a season (Manage Server or owner).",
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("team")
+        .setDescription("Club or nation — pick from suggestions or type name/slug")
+        .setRequired(true)
+        .setAutocomplete(true),
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("season")
+        .setDescription("Season (1–3)")
+        .setRequired(true)
+        .setMinValue(1)
+        .setMaxValue(3),
+    )
+    .addUserOption((opt) =>
+      opt
+        .setName("manager")
+        .setDescription("Discord user (must be linked in VF players table)")
+        .setRequired(true),
+    )
+    .toJSON(),
 ];
 
 export async function handleSlashCommand(
@@ -223,6 +251,9 @@ export async function handleSlashCommand(
     case "squad":
       await handleSquad(interaction);
       return;
+    case "appoint":
+      await handleAppoint(interaction);
+      return;
     default:
       await interaction.reply({
         flags: MessageFlags.Ephemeral,
@@ -234,7 +265,11 @@ export async function handleSlashCommand(
 export async function handleAutocomplete(
   interaction: AutocompleteInteraction,
 ): Promise<void> {
-  if (interaction.commandName !== "team" && interaction.commandName !== "squad")
+  if (
+    interaction.commandName !== "team" &&
+    interaction.commandName !== "squad" &&
+    interaction.commandName !== "appoint"
+  )
     return;
 
   const focused = interaction.options.getFocused(true);
@@ -941,6 +976,166 @@ async function handleBan(
     .setTimestamp(new Date());
 
   await interaction.editReply({ embeds: [result] });
+}
+
+async function handleAppoint(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  if (!interaction.guild) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Run this command inside the server.",
+    });
+    return;
+  }
+
+  const perms = interaction.memberPermissions;
+  const isOwner = interaction.guild.ownerId === interaction.user.id;
+  const allowed =
+    isOwner ||
+    Boolean(
+      perms?.has(PermissionFlagsBits.Administrator) ||
+        perms?.has(PermissionFlagsBits.ManageGuild),
+    );
+
+  if (!allowed) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content:
+        "You need **Manage Server** (or **Administrator**), or be the **server owner**, to use `/appoint`.",
+    });
+    return;
+  }
+
+  const teamRaw = interaction.options.getString("team", true);
+  const season = interaction.options.getInteger("season", true);
+  const managerDiscordUser = interaction.options.getUser("manager", true);
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  try {
+    const supabase = createBotSupabase();
+    const teamRows = await loadTeams(supabase);
+    const resolved = resolveTeamFromList(teamRows, teamRaw);
+
+    if (!resolved) {
+      await interaction.editReply({
+        content:
+          "Could not resolve that team. Use **team** suggestions or the exact slug (e.g. `algeria`).",
+      });
+      return;
+    }
+
+    const { data: teamMeta, error: metaErr } = await supabase
+      .from("teams")
+      .select("seasons")
+      .eq("slug", resolved.slug)
+      .maybeSingle();
+
+    if (metaErr) throw metaErr;
+
+    const seasonsOnFile = teamMeta?.seasons as number[] | null | undefined;
+    if (
+      Array.isArray(seasonsOnFile) &&
+      seasonsOnFile.length > 0 &&
+      !seasonsOnFile.includes(season)
+    ) {
+      const allowed = [...seasonsOnFile]
+        .sort((a, b) => a - b)
+        .map((s) => `**S${s}**`)
+        .join(", ");
+      await interaction.editReply({
+        content: `**${resolved.name}** is only on file for ${allowed}. Pick one of those seasons.`,
+      });
+      return;
+    }
+
+    const profile = await findPlayerByDiscordId(supabase, managerDiscordUser.id);
+    if (!profile) {
+      await interaction.editReply({
+        content: `${managerDiscordUser} has no VF **players** row linked to that Discord account. They need to sync / approve first.`,
+      });
+      return;
+    }
+
+    const robloxName = profile.roblox_username?.trim();
+    if (!robloxName) {
+      await interaction.editReply({
+        content: "That VF player record has no **roblox_username** set.",
+      });
+      return;
+    }
+
+    const { error: upsertErr } = await supabase
+      .from("team_season_managers")
+      .upsert(
+        {
+          team_slug: resolved.slug,
+          season,
+          manager_display_name: robloxName,
+        },
+        { onConflict: "team_slug,season" },
+      );
+
+    if (upsertErr) throw upsertErr;
+
+    const roleId = env.DISCORD_TEAM_MANAGER_ROLE_ID;
+    let roleLines: string;
+    try {
+      const targetMember = await interaction.guild.members.fetch(
+        managerDiscordUser.id,
+      );
+      if (targetMember.roles.cache.has(roleId)) {
+        roleLines = `**Discord role** · Already had <@&${roleId}>.`;
+      } else if (!targetMember.manageable) {
+        roleLines =
+          "**Discord role** · Could not assign — bot cannot modify this member (role hierarchy / owner). Database was still updated.";
+      } else {
+        try {
+          await targetMember.roles.add(
+            roleId,
+            `/appoint by ${interaction.user.tag} · ${resolved.slug} S${season}`,
+          );
+          roleLines = `**Discord role** · Gave <@&${roleId}>.`;
+        } catch (roleErr) {
+          const r = formatCommandError(roleErr);
+          roleLines = `**Discord role** · Failed (${r}). Database was still updated — check bot role position & **Manage Roles**.`;
+        }
+      }
+    } catch {
+      roleLines =
+        "**Discord role** · Member not in server or fetch failed — database was still updated. Add the role manually if needed.";
+    }
+
+    const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
+    const teamUrl = `${siteBase}/teams/${encodeURIComponent(resolved.slug)}?season=${season}`;
+
+    const embed = new EmbedBuilder()
+      .setColor(0x10b981)
+      .setTitle("Manager appointed")
+      .setDescription(
+        [
+          `**Team** · [${resolved.name}](${teamUrl})`,
+          `**Season** · **${season}**`,
+          `**Manager (Roblox)** · \`${robloxName}\``,
+          `**Discord** · ${managerDiscordUser}`,
+          "",
+          roleLines,
+          "",
+          `> Stored in \`team_season_managers\` — site & bot will use this name.`,
+        ].join("\n"),
+      )
+      .setFooter({ text: `By ${interaction.user.tag}` })
+      .setTimestamp(new Date());
+
+    await interaction.editReply({ embeds: [embed] });
+  } catch (err) {
+    const msg = formatCommandError(err);
+    console.error("/appoint failed:", err);
+    await interaction.editReply({
+      content: `Could not save manager: ${msg}`,
+    });
+  }
 }
 
 async function collectReviewCardLinks(

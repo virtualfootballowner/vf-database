@@ -23,9 +23,9 @@ update public.team_season_managers set manager_display_name = 'Lxv34ngel'
 update public.team_season_managers set manager_display_name = 'guzuwan'
   where team_slug = 'stafford-wanderers' and season = 1;
 
-update public.team_season_managers set manager_display_name = 'Togzema'
+update public.team_season_managers set manager_display_name = 'Teskid10'
   where team_slug = 'eltham-united' and season = 1;
-update public.team_season_managers set manager_display_name = 'Togzema'
+update public.team_season_managers set manager_display_name = 'Teskid10'
   where team_slug = 'eltham-united' and season = 2;
 
 update public.team_season_managers set manager_display_name = 'Tomiezi'
