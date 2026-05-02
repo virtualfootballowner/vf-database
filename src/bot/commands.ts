@@ -32,6 +32,7 @@ import {
   APPROVE_BUTTON_ID_PREFIX,
   DENY_BUTTON_ID_PREFIX,
 } from "@/bot/sync";
+import { handleContractCommand } from "@/bot/contracts";
 
 function formatCommandError(err: unknown): string {
   if (err instanceof Error && err.message.trim()) return err.message.trim();
@@ -227,6 +228,33 @@ export const slashCommandDefinitions = [
         .setRequired(true),
     )
     .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("contract")
+    .setDescription(
+      "Offer an S3 roster contract (club manager role only)",
+    )
+    .addUserOption((opt) =>
+      opt
+        .setName("player")
+        .setDescription("Player to sign (Discord — must be linked in VF)")
+        .setRequired(true),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("position")
+        .setDescription("Position on the sheet (e.g. GK, CB, ST)")
+        .setRequired(true)
+        .setMaxLength(80),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("role")
+        .setDescription("Squad role (e.g. Captain, Starter, Sub)")
+        .setRequired(true)
+        .setMaxLength(80),
+    )
+    .toJSON(),
 ];
 
 export async function handleSlashCommand(
@@ -253,6 +281,9 @@ export async function handleSlashCommand(
       return;
     case "appoint":
       await handleAppoint(interaction);
+      return;
+    case "contract":
+      await handleContractCommand(interaction);
       return;
     default:
       await interaction.reply({

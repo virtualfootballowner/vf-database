@@ -20,6 +20,11 @@ import {
 
 import { env } from "@/bot/config";
 import {
+  CONTRACT_BTN_APPROVE,
+  CONTRACT_BTN_DENY,
+  handleContractButton,
+} from "@/bot/contracts";
+import {
   handleAutocomplete,
   handleSlashCommand,
   slashCommandDefinitions,
@@ -196,6 +201,23 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
     if (!interaction.isButton()) return;
     const customId = interaction.customId;
+
+    if (customId.startsWith(CONTRACT_BTN_APPROVE)) {
+      await handleContractButton(
+        interaction,
+        "approve",
+        customId.slice(CONTRACT_BTN_APPROVE.length),
+      );
+      return;
+    }
+    if (customId.startsWith(CONTRACT_BTN_DENY)) {
+      await handleContractButton(
+        interaction,
+        "deny",
+        customId.slice(CONTRACT_BTN_DENY.length),
+      );
+      return;
+    }
 
     if (customId.startsWith(APPROVE_BUTTON_ID_PREFIX)) {
       const discordId = customId.slice(APPROVE_BUTTON_ID_PREFIX.length);

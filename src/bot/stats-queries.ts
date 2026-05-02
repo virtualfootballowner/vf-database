@@ -493,6 +493,64 @@ export async function fetchSquadForSeason(
   return out;
 }
 
+/** Season used for Discord `/contract` roster rows (current league sheet). */
+export const CONTRACT_ROSTER_SEASON = 3;
+
+export type ResolveManagerTeamResult =
+  | { ok: true; teamSlug: string }
+  | {
+      ok: false;
+      reason: "no_player" | "no_username" | "not_manager" | "ambiguous";
+    };
+
+/** Resolve team slug from `team_season_managers` for the contractor’s linked Roblox name. */
+export async function resolveManagerTeamSlugForSeason(
+  supabase: SupabaseClient,
+  contractorDiscordId: string,
+  season: number,
+): Promise<ResolveManagerTeamResult> {
+  const profile = await findPlayerByDiscordId(supabase, contractorDiscordId);
+  if (!profile) return { ok: false, reason: "no_player" };
+  const name = profile.roblox_username?.trim();
+  if (!name) return { ok: false, reason: "no_username" };
+
+  const { data, error } = await supabase
+    .from("team_season_managers")
+    .select("team_slug")
+    .eq("season", season)
+    .ilike("manager_display_name", name);
+
+  if (error) throw error;
+  const rows = data ?? [];
+  const slugs = [
+    ...new Set(
+      rows.map((r) => String((r as { team_slug: string }).team_slug)),
+    ),
+  ];
+  if (slugs.length === 0) return { ok: false, reason: "not_manager" };
+  if (slugs.length > 1) return { ok: false, reason: "ambiguous" };
+  return { ok: true, teamSlug: slugs[0]! };
+}
+
+/** All `team_slug` values the player is on for this season (usually 0–1). */
+export async function listPlayerRosterTeamsForSeason(
+  supabase: SupabaseClient,
+  playerId: string,
+  season: number,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("player_team_seasons")
+    .select("team_slug")
+    .eq("player_id", playerId)
+    .eq("season", season);
+  if (error) throw error;
+  return [
+    ...new Set(
+      (data ?? []).map((r) => String((r as { team_slug: string }).team_slug)),
+    ),
+  ];
+}
+
 type HonorJson = { title?: string; season?: number; team?: string; meta?: string };
 
 export function formatHonorList(raw: unknown, maxLines: number): string {
