@@ -405,7 +405,28 @@ export async function getTeamsCatalog(): Promise<{
   source: SiteStatsSource;
 }> {
   const bundle = await getSiteStatsBundle();
-  return { teams: bundle.teams, source: bundle.source };
+
+  if (bundle.source !== "supabase") {
+    return { teams: bundle.teams, source: bundle.source };
+  }
+
+  // Supabase only has rows that were migrated/imported. Merge repo `teams-data`
+  // entries missing in DB (e.g. new S3 nations before `db push` / import).
+  const bySlug = new Map<string, Team>();
+  for (const t of bundle.teams) {
+    const s = t.slug?.trim();
+    if (s) bySlug.set(s, t);
+  }
+  for (const t of fileTeams) {
+    const s = t.slug?.trim();
+    if (!s || bySlug.has(s)) continue;
+    bySlug.set(s, t);
+  }
+
+  const teams = [...bySlug.values()].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+  return { teams, source: bundle.source };
 }
 
 export function getMatchTeamResolver(teams: Team[]) {
