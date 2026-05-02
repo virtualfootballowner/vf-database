@@ -7,12 +7,17 @@ export function createBotSupabase(): SupabaseClient {
   return supabaseAdmin;
 }
 
-export type TeamRow = { name: string; slug: string | null };
+export type TeamRow = {
+  name: string;
+  slug: string | null;
+  logo_url: string | null;
+  abbreviation: string | null;
+};
 
 export async function loadTeams(supabase: SupabaseClient): Promise<TeamRow[]> {
   const { data, error } = await supabase
     .from("teams")
-    .select("name, slug")
+    .select("name, slug, logo_url, abbreviation")
     .not("slug", "is", null)
     .order("name", { ascending: true });
 
@@ -22,10 +27,17 @@ export async function loadTeams(supabase: SupabaseClient): Promise<TeamRow[]> {
   ) as TeamRow[];
 }
 
+export type ResolvedTeam = {
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  abbreviation: string | null;
+};
+
 export function resolveTeamFromList(
   teams: TeamRow[],
   raw: string,
-): { name: string; slug: string } | null {
+): ResolvedTeam | null {
   const q = raw.trim().toLowerCase();
   if (!q) return null;
 
@@ -33,6 +45,8 @@ export function resolveTeamFromList(
     .map((t) => ({
       name: t.name,
       slug: (t.slug ?? "").trim(),
+      logo_url: t.logo_url ?? null,
+      abbreviation: t.abbreviation ?? null,
     }))
     .filter((t) => t.slug.length > 0);
 

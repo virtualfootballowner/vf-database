@@ -47,6 +47,19 @@ function formatCommandError(err: unknown): string {
   return "unknown error";
 }
 
+/** Crest/logo for Discord embeds (DB often stores `/file.png` — needs absolute URL). */
+function absoluteSiteAssetUrl(
+  pathOrUrl: string | null | undefined,
+  siteBaseRaw: string,
+): string | null {
+  const raw = pathOrUrl?.trim();
+  if (!raw) return null;
+  const siteBase = siteBaseRaw.replace(/\/$/, "");
+  if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+  if (raw.startsWith("/")) return `${siteBase}${raw}`;
+  return `${siteBase}/${raw.replace(/^\//, "")}`;
+}
+
 export const slashCommandDefinitions = [
   new SlashCommandBuilder()
     .setName("backlog")
@@ -416,37 +429,92 @@ async function handleTeam(
       return;
     }
 
+    const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
+    const siteTeam = `${siteBase}/teams/${encodeURIComponent(resolved.slug)}`;
+    const hostLabel = env.VFL_SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    const crestUrl = absoluteSiteAssetUrl(resolved.logo_url, siteBase);
+
     const [record, honors] = await Promise.all([
       fetchTeamSeasonRecord(supabase, resolved.slug, season),
       fetchTeamSeasonHonors(supabase, resolved.slug, season),
     ]);
 
-    const siteTeam = `${env.VFL_SITE_URL.replace(/\/$/, "")}/teams/${encodeURIComponent(resolved.slug)}`;
-
-    const recordLines = record
-      ? `Played **${record.matches_played}** · ${record.wins}W · ${record.draws}D · ${record.losses}L`
-      : `_No aggregated record in **team_season_records** for S${season} yet._`;
-
-    const honorsText =
-      honors.length > 0
-        ? honors.map((h) => `• ${h}`).join("\n")
-        : "—";
+    const metaLines = [
+      `> **Season** · **${season}**`,
+      `> **Slug** · \`${resolved.slug}\``,
+      resolved.abbreviation?.trim()
+        ? `> **Short** · \`${resolved.abbreviation.trim()}\``
+        : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     const embed = new EmbedBuilder()
       .setColor(0x083696)
-      .setTitle(`${resolved.name} · Season ${season}`)
+      .setAuthor({
+        name: "VF League · Club",
+        url: siteTeam,
+      })
+      .setTitle(resolved.name)
       .setURL(siteTeam)
-      .addFields(
-        { name: "Record", value: recordLines, inline: false },
-        { name: "Honors", value: honorsText.slice(0, 1024), inline: false },
+      .setDescription(
+        [`[Team page on ${hostLabel}](${siteTeam})`, "", metaLines].join(
+          "\n",
+        ),
+      )
+      .setFooter({
+        text: "VF League Database · Crest from site when available",
+      })
+      .setTimestamp(new Date());
+
+    if (crestUrl) embed.setThumbnail(crestUrl);
+
+    if (record && record.matches_played > 0) {
+      embed.addFields(
         {
-          name: "Site",
-          value: `[Team page](${siteTeam})`,
+          name: "📋 Played",
+          value: `**${record.matches_played}**`,
+          inline: true,
+        },
+        {
+          name: "✅ Wins",
+          value: `**${record.wins}**`,
+          inline: true,
+        },
+        {
+          name: "🤝 Draws",
+          value: `**${record.draws}**`,
+          inline: true,
+        },
+        {
+          name: "❌ Losses",
+          value: `**${record.losses}**`,
+          inline: true,
+        },
+        {
+          name: "📈 League points",
+          value: `**${record.wins * 3 + record.draws}** earned · **${record.matches_played * 3}** max *(3 pts win, 1 draw)*`,
           inline: false,
         },
-      )
-      .setFooter({ text: "VF League Database" })
-      .setTimestamp(new Date());
+      );
+    } else {
+      embed.addFields({
+        name: "📊 Season record",
+        value:
+          record && record.matches_played === 0
+            ? "*No completed matches in record yet.*"
+            : `_No row in **team_season_records** for **S${season}**._`,
+        inline: false,
+      });
+    }
+
+    if (honors.length > 0) {
+      embed.addFields({
+        name: "🏆 Honors",
+        value: honors.map((h) => `▸ ${h}`).join("\n").slice(0, 1024),
+        inline: false,
+      });
+    }
 
     await interaction.editReply({ embeds: [embed] });
   } catch (err) {
@@ -477,6 +545,11 @@ async function handleSquad(
       return;
     }
 
+    const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
+    const siteTeam = `${siteBase}/teams/${encodeURIComponent(resolved.slug)}`;
+    const hostLabel = env.VFL_SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    const crestUrl = absoluteSiteAssetUrl(resolved.logo_url, siteBase);
+
     const squad = await fetchSquadForSeason(supabase, resolved.slug, season);
 
     if (squad.length === 0) {
@@ -486,32 +559,59 @@ async function handleSquad(
       return;
     }
 
-    const lines = squad.map((row) => {
-      const pos = row.position?.trim() || "—";
-      const g =
-        row.games != null && row.games > 0
-          ? ` · ${row.games} app${row.games === 1 ? "" : "s"}`
-          : "";
-      return `${row.roblox_username} · ${pos}${g}`;
+    const pad = (s: string, n: number) => {
+      const t = s.trim();
+      if (t.length >= n) return t.slice(0, n);
+      return t.padEnd(n, " ");
+    };
+    const header = `${pad("#", 4)}${pad("Player", 20)}${pad("Pos", 8)}Apps`;
+    const sep = "─".repeat(42);
+    const bodyLines = squad.map((row, i) => {
+      const pos = (row.position ?? "—").trim() || "—";
+      const apps =
+        row.games != null && row.games > 0 ? String(row.games) : "—";
+      return `${pad(String(i + 1), 4)}${pad(row.roblox_username, 20)}${pad(pos, 8)}${apps}`;
     });
+    let rosterTable = [header, sep, ...bodyLines].join("\n");
 
-    let body = lines.join("\n");
-    if (body.length > 3500) {
-      const kept = Math.max(1, Math.floor(lines.length * 0.85));
-      body =
-        lines.slice(0, kept).join("\n") +
-        `\n_…${lines.length - kept} more — open site for full list._`;
+    const intro = [
+      `[Team page · ${hostLabel}](${siteTeam})`,
+      "",
+      `Season **${season}** · **${squad.length}** registered`,
+      "",
+      "> `player_team_seasons` · roster & apps when stored",
+      "",
+    ].join("\n");
+
+    const descPrefix = `${intro}\`\`\`\n`;
+    const descSuffix = `\n\`\`\``;
+    const maxRosterLen = 4096 - descPrefix.length - descSuffix.length;
+    if (rosterTable.length > maxRosterLen) {
+      const kept = Math.max(4, Math.floor(bodyLines.length * 0.7));
+      rosterTable = [header, sep, ...bodyLines.slice(0, kept)].join("\n");
+      rosterTable += `\n\n… **+${bodyLines.length - kept}** more — [open team page](${siteTeam})`;
     }
-
-    const siteTeam = `${env.VFL_SITE_URL.replace(/\/$/, "")}/teams/${encodeURIComponent(resolved.slug)}`;
+    if (rosterTable.length > maxRosterLen) {
+      rosterTable =
+        rosterTable.slice(0, Math.max(0, maxRosterLen - 32)).trimEnd() +
+        "\n…";
+    }
 
     const embed = new EmbedBuilder()
       .setColor(0x083696)
-      .setTitle(`Squad · ${resolved.name} · S${season}`)
+      .setAuthor({
+        name: "VF League · Squad sheet",
+        url: siteTeam,
+      })
+      .setTitle(resolved.name)
       .setURL(siteTeam)
-      .setDescription(`**${squad.length}** registered\n\`\`\`\n${body.slice(0, 3900)}\`\`\``)
-      .setFooter({ text: "From player_team_seasons · VF League Database" })
+      .setDescription(descPrefix + rosterTable + descSuffix)
+      .setFooter({
+        text: "VF League Database · Crest from site when available",
+      })
       .setTimestamp(new Date());
+
+    if (crestUrl) embed.setThumbnail(crestUrl);
 
     await interaction.editReply({ embeds: [embed] });
   } catch (err) {
