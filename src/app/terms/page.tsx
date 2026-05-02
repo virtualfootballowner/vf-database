@@ -6,7 +6,7 @@ import { SiteNav } from "@/components/site-nav";
 export const metadata: Metadata = {
   title: "Terms of Service · VF League",
   description:
-    "Terms of Service for the VF League (Virtual Football League) website and verification tools.",
+    "Terms for using the Virtual Football League (VFL) website, Roblox–Discord verification, and related community services.",
 };
 
 export default function TermsPage() {

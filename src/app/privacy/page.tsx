@@ -6,7 +6,7 @@ import { SiteNav } from "@/components/site-nav";
 export const metadata: Metadata = {
   title: "Privacy Policy · VF League",
   description:
-    "How VF League (Virtual Football League) handles data for the website, Discord verification, and Roblox sign-in.",
+    "How Virtual Football League (VFL) uses data when you verify with Discord and Roblox, browse league stats, and use our official website.",
 };
 
 export default function PrivacyPage() {
