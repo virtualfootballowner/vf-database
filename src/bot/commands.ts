@@ -47,17 +47,46 @@ function formatCommandError(err: unknown): string {
   return "unknown error";
 }
 
-/** Crest/logo for Discord embeds (DB often stores `/file.png` — needs absolute URL). */
+/** Crest/logo for Discord embeds (DB often stores `/file.png` — absolute + path-encoded). */
 function absoluteSiteAssetUrl(
   pathOrUrl: string | null | undefined,
   siteBaseRaw: string,
 ): string | null {
   const raw = pathOrUrl?.trim();
   if (!raw) return null;
-  const siteBase = siteBaseRaw.replace(/\/$/, "");
-  if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
-  if (raw.startsWith("/")) return `${siteBase}${raw}`;
-  return `${siteBase}/${raw.replace(/^\//, "")}`;
+
+  try {
+    if (raw.startsWith("https://") || raw.startsWith("http://")) {
+      const u = new URL(raw);
+      return u.href;
+    }
+
+    const baseStr = siteBaseRaw.replace(/\/$/, "").trim();
+    if (!baseStr) return null;
+    const base = new URL(baseStr);
+
+    const rel = raw.startsWith("/") ? raw.slice(1) : raw;
+    const pathEncoded =
+      "/" +
+      rel
+        .split("/")
+        .filter(Boolean)
+        .map((segment) => {
+          try {
+            return encodeURIComponent(decodeURIComponent(segment));
+          } catch {
+            return encodeURIComponent(segment);
+          }
+        })
+        .join("/");
+
+    const out = `${base.origin}${pathEncoded}`;
+    const check = new URL(out);
+    if (check.protocol !== "http:" && check.protocol !== "https:") return null;
+    return check.href;
+  } catch {
+    return null;
+  }
 }
 
 export const slashCommandDefinitions = [
