@@ -1,0 +1,327 @@
+import Link from "next/link";
+
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import type { MatchRecord } from "@/app/stats/matches-data";
+import { getSiteStatsBundle } from "@/lib/site-db";
+import {
+  buildKnockoutRounds,
+  competitionKeysWithResults,
+  computeGroupStandings,
+  type StandingRow,
+} from "@/lib/stats-tournaments";
+
+const SEASON_INTRO: Record<number, string> = {
+  1: "EuroLeague table plus the EuroBlox Playoffs knockout — bird’s-eye view.",
+  2: "British Premier and Serie Italia — league tables only (round robin).",
+  3: "World Cup — group mini-tables and the knockout path when results are in.",
+};
+
+function abbrevCompetition(competition: string): string {
+  switch (competition) {
+    case "EuroLeague":
+      return "EL";
+    case "EuroBlox Playoffs":
+      return "Playoffs";
+    case "British Premier":
+      return "BP";
+    case "Serie Italia":
+      return "SI";
+    default:
+      return competition.length > 16
+        ? `${competition.slice(0, 14)}…`
+        : competition;
+  }
+}
+
+function groupCompetitionsBySeason(
+  pairs: { season: number; competition: string }[],
+): Map<number, string[]> {
+  const map = new Map<number, string[]>();
+  for (const { season, competition } of pairs) {
+    if (!map.has(season)) map.set(season, []);
+    map.get(season)!.push(competition);
+  }
+  for (const [, list] of map) {
+    list.sort((a, b) => a.localeCompare(b));
+  }
+  return map;
+}
+
+export async function TournamentsArchive() {
+  const bundle = await getSiteStatsBundle();
+  const pairs = competitionKeysWithResults(bundle.allMatches);
+  const bySeason = groupCompetitionsBySeason(pairs);
+  const seasonsToShow = [1, 2, 3].filter((s) => (bySeason.get(s)?.length ?? 0) > 0);
+
+  return (
+    <>
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
+            League data
+          </p>
+          <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl">
+            Tournaments
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">
+            Season structure at a glance: league tables where they exist and
+            knockout rails for cups and the World Cup — compact layout so you
+            can scan how each campaign played out.
+          </p>
+        </div>
+        <Badge
+          variant="outline"
+          className="border-white/15 bg-white/5 text-white/80"
+        >
+          {pairs.length} competition
+          {pairs.length === 1 ? "" : "s"} ·{" "}
+          {bundle.fixtureCounts.played} results
+        </Badge>
+      </section>
+
+      {seasonsToShow.length === 0 ? (
+        <p className="text-sm text-white/55">
+          No competition results in the archive yet.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-12">
+          {seasonsToShow.map((season) => (
+            <section key={season} className="flex flex-col gap-6">
+              <div className="border-b border-white/10 pb-3">
+                <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                  Season {season}
+                </h2>
+                <p className="mt-1 max-w-3xl text-xs leading-relaxed text-white/55 sm:text-sm">
+                  {SEASON_INTRO[season] ??
+                    "Tables and knockout stages from recorded matches."}
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-6">
+                {(bySeason.get(season) ?? []).map((competition) => (
+                  <CompetitionBlock
+                    key={`${season}-${competition}`}
+                    season={season}
+                    competition={competition}
+                    allMatches={bundle.allMatches}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function CompetitionBlock({
+  season,
+  competition,
+  allMatches,
+}: {
+  season: number;
+  competition: string;
+  allMatches: MatchRecord[];
+}) {
+  const standings = computeGroupStandings(allMatches, season, competition);
+  const rounds = buildKnockoutRounds(allMatches, season, competition);
+
+  if (standings.length === 0 && rounds.length === 0) return null;
+
+  return (
+    <Card className="gap-0 border-white/10 bg-white/[0.03] py-0">
+      <CardHeader className="border-b border-white/10 px-4 py-3 sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-base font-semibold text-white sm:text-lg">
+            {competition}
+          </h3>
+          <Badge
+            variant="outline"
+            className="border-white/15 text-[10px] text-white/65"
+          >
+            S{season} · {abbrevCompetition(competition)}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-5 px-3 py-4 sm:px-5">
+        {standings.length > 0 ? (
+          <div>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+              Table
+            </p>
+            <StandingsMini rows={standings} />
+          </div>
+        ) : null}
+        {rounds.length > 0 ? (
+          <div>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+              Knockout
+            </p>
+            <KnockoutOverview rounds={rounds} />
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function StandingsMini({ rows }: { rows: StandingRow[] }) {
+  return (
+    <div className="overflow-x-auto rounded-lg border border-white/10 bg-black/20">
+      <table className="w-full min-w-[420px] border-collapse text-[10px] sm:text-xs">
+        <thead>
+          <tr className="border-b border-white/10 text-left text-[9px] font-semibold uppercase tracking-wider text-white/45 sm:text-[10px]">
+            <th className="px-2 py-1.5 sm:px-3 sm:py-2">#</th>
+            <th className="px-2 py-1.5 sm:px-3 sm:py-2">Team</th>
+            <th className="px-1 py-1.5 tabular-nums sm:py-2">P</th>
+            <th className="px-1 py-1.5 tabular-nums sm:py-2">W</th>
+            <th className="px-1 py-1.5 tabular-nums sm:py-2">D</th>
+            <th className="px-1 py-1.5 tabular-nums sm:py-2">L</th>
+            <th className="px-1 py-1.5 tabular-nums sm:py-2">GF</th>
+            <th className="px-1 py-1.5 tabular-nums sm:py-2">GA</th>
+            <th className="px-1 py-1.5 tabular-nums sm:py-2">GD</th>
+            <th className="px-2 py-1.5 font-bold tabular-nums sm:py-2">Pts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => {
+            return (
+              <tr
+                key={r.team}
+                className="border-b border-white/5 last:border-0 hover:bg-white/[0.04]"
+              >
+                <td className="px-2 py-1 tabular-nums text-white/50 sm:px-3 sm:py-1.5">
+                  {i + 1}
+                </td>
+                <td className="max-w-[140px] px-2 py-1 sm:max-w-[200px] sm:px-3 sm:py-1.5">
+                  {r.slug ? (
+                    <Link
+                      href={`/teams/${encodeURIComponent(r.slug)}`}
+                      className="truncate font-medium text-white underline decoration-white/25 underline-offset-2 hover:decoration-white/60"
+                    >
+                      {r.team}
+                    </Link>
+                  ) : (
+                    <span className="truncate font-medium text-white/90">
+                      {r.team}
+                    </span>
+                  )}
+                </td>
+                <td className="px-1 py-1 tabular-nums text-white/75 sm:py-1.5">
+                  {r.played}
+                </td>
+                <td className="px-1 py-1 tabular-nums text-white/75 sm:py-1.5">
+                  {r.won}
+                </td>
+                <td className="px-1 py-1 tabular-nums text-white/75 sm:py-1.5">
+                  {r.drawn}
+                </td>
+                <td className="px-1 py-1 tabular-nums text-white/75 sm:py-1.5">
+                  {r.lost}
+                </td>
+                <td className="px-1 py-1 tabular-nums text-white/75 sm:py-1.5">
+                  {r.gf}
+                </td>
+                <td className="px-1 py-1 tabular-nums text-white/75 sm:py-1.5">
+                  {r.ga}
+                </td>
+                <td className="px-1 py-1 tabular-nums text-white/75 sm:py-1.5">
+                  {r.gd > 0 ? `+${r.gd}` : r.gd}
+                </td>
+                <td className="px-2 py-1 font-bold tabular-nums text-white sm:py-1.5">
+                  {r.points}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function KnockoutOverview({
+  rounds,
+}: {
+  rounds: { stage: string; matches: MatchRecord[] }[];
+}) {
+  return (
+    <div className="-mx-1 overflow-x-auto pb-1">
+      <div className="flex min-h-[120px] w-max origin-top gap-2 px-1 sm:scale-[0.95] sm:gap-3">
+        {rounds.map((round) => (
+          <div
+            key={round.stage}
+            className="flex w-[148px] shrink-0 flex-col gap-1.5 sm:w-[160px]"
+          >
+            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/50">
+              {round.stage}
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {round.matches.map((m) => (
+                <KnockoutTile key={m.id} match={m} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function KnockoutTile({ match }: { match: MatchRecord }) {
+  const draw = match.homeScore === match.awayScore;
+  const homeW = match.homeScore > match.awayScore;
+  const awayW = match.awayScore > match.homeScore;
+
+  const inner = (
+    <div className="rounded-md border border-white/10 bg-black/25 px-2 py-1.5">
+      <div className="flex items-center justify-between gap-1 border-b border-white/5 pb-1">
+        <span
+          className={`min-w-0 flex-1 truncate text-left text-[10px] font-medium leading-tight sm:text-[11px] ${
+            draw ? "text-white/75" : homeW ? "text-white" : "text-white/55"
+          }`}
+        >
+          {match.homeTeam}
+        </span>
+        <span
+          className={`shrink-0 text-[11px] font-bold tabular-nums ${
+            draw ? "text-white/75" : homeW ? "text-white" : "text-white/55"
+          }`}
+        >
+          {match.homeScore}
+        </span>
+      </div>
+      <div className="flex items-center justify-between gap-1 pt-1">
+        <span
+          className={`min-w-0 flex-1 truncate text-left text-[10px] font-medium leading-tight sm:text-[11px] ${
+            draw ? "text-white/75" : awayW ? "text-white" : "text-white/55"
+          }`}
+        >
+          {match.awayTeam}
+        </span>
+        <span
+          className={`shrink-0 text-[11px] font-bold tabular-nums ${
+            draw ? "text-white/75" : awayW ? "text-white" : "text-white/55"
+          }`}
+        >
+          {match.awayScore}
+        </span>
+      </div>
+    </div>
+  );
+
+  if (match.id) {
+    return (
+      <Link
+        href={`/stats/matches/${encodeURIComponent(match.id)}`}
+        className="block outline-none transition hover:opacity-95 focus-visible:ring-2 focus-visible:ring-white/35"
+      >
+        {inner}
+      </Link>
+    );
+  }
+
+  return inner;
+}

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { teams as catalogTeams } from "@/app/teams/teams-data";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { fillManagerNamesFromSeed } from "@/lib/team-season-manager-fallback";
 
@@ -47,9 +48,35 @@ export async function loadTeams(supabase: SupabaseClient): Promise<TeamRow[]> {
     ...(r as TeamRow),
     seasons: normalizeSeasonsColumn((r as { seasons?: unknown }).seasons),
   }));
-  return rows.filter((r): r is TeamRow & { slug: string } =>
-    Boolean(r.slug?.trim()),
-  ) as TeamRow[];
+  const fromDb = rows.filter((r) => Boolean(r.slug?.trim())) as TeamRow[];
+
+  /** Same idea as site `getTeamsCatalog`: DB can lag behind repo nations (S3). */
+  const bySlug = new Map<string, TeamRow>();
+  for (const t of fromDb) {
+    const s = t.slug!.trim();
+    bySlug.set(s, { ...t, slug: s });
+  }
+  for (const t of catalogTeams) {
+    const s = t.slug?.trim();
+    if (!s) continue;
+    const existing = bySlug.get(s);
+    if (existing) {
+      const noSeasons = !existing.seasons?.length;
+      if (noSeasons && t.seasons?.length) {
+        bySlug.set(s, { ...existing, seasons: [...t.seasons] });
+      }
+      continue;
+    }
+    bySlug.set(s, {
+      name: t.name,
+      slug: s,
+      logo_url: t.logo?.trim() || null,
+      abbreviation: t.short?.trim() || null,
+      seasons: t.seasons?.length ? [...t.seasons] : null,
+    });
+  }
+
+  return [...bySlug.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export type ResolvedTeam = {

@@ -68,14 +68,21 @@ export default async function StatsPage() {
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">
               All-time leaders from every recorded match. Open a player for
-              full history; switch to{" "}
+              full history;               switch to{" "}
               <Link
                 href="/stats/matches"
                 className="font-semibold text-white underline decoration-white/35 underline-offset-4 hover:decoration-white/70"
               >
                 All matches
               </Link>{" "}
-              for the fixture archive.
+              or{" "}
+              <Link
+                href="/stats/tournaments"
+                className="font-semibold text-white underline decoration-white/35 underline-offset-4 hover:decoration-white/70"
+              >
+                Tournaments
+              </Link>{" "}
+              for tables and knockout overviews.
             </p>
           </div>
           <Badge
@@ -105,7 +112,7 @@ export default async function StatsPage() {
           />
         </section>
 
-        <section>
+        <section className="grid gap-4 sm:grid-cols-2">
           <Link href="/stats/matches" className="block">
             <Card className="gap-0 py-0 transition hover:bg-white/[0.07] hover:ring-1 hover:ring-white/15">
               <CardContent className="flex flex-col gap-3 px-5 py-6 sm:flex-row sm:items-center sm:justify-between">
@@ -120,6 +127,27 @@ export default async function StatsPage() {
                     {bundle.fixtureCounts.played} played ·{" "}
                     {bundle.fixtureCounts.total} slots ·{" "}
                     {bundle.fixtureCounts.missing} missing data
+                  </p>
+                </div>
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/55">
+                  Open →
+                </span>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/stats/tournaments" className="block">
+            <Card className="gap-0 py-0 transition hover:bg-white/[0.07] hover:ring-1 hover:ring-white/15">
+              <CardContent className="flex flex-col gap-3 px-5 py-6 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/50">
+                    Structure
+                  </p>
+                  <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
+                    Tournaments
+                  </h2>
+                  <p className="mt-1 max-w-xl text-sm text-white/60">
+                    League tables and knockout rails — S1 EuroLeague + playoffs,
+                    S2 domestic tables, S3 World Cup path.
                   </p>
                 </div>
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/55">
