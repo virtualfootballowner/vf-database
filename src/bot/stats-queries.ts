@@ -13,17 +13,40 @@ export type TeamRow = {
   slug: string | null;
   logo_url: string | null;
   abbreviation: string | null;
+  /** Catalog seasons for this team (e.g. `[3]` for WC-only nations). */
+  seasons?: number[] | null;
 };
+
+function normalizeSeasonsColumn(raw: unknown): number[] | null {
+  if (!Array.isArray(raw)) return null;
+  const nums = raw
+    .map((x) => Number(x))
+    .filter((n) => Number.isFinite(n)) as number[];
+  return nums.length ? nums : null;
+}
+
+/** WC / Season‑3 national rows in DB use `seasons = {3}` only (no league seasons). */
+export function isSeason3ExclusiveNationTeam(t: {
+  seasons?: number[] | null;
+}): boolean {
+  const s = t.seasons;
+  if (!s?.length) return false;
+  return s.every((x) => x === 3);
+}
 
 export async function loadTeams(supabase: SupabaseClient): Promise<TeamRow[]> {
   const { data, error } = await supabase
     .from("teams")
-    .select("name, slug, logo_url, abbreviation")
+    .select("name, slug, logo_url, abbreviation, seasons")
     .not("slug", "is", null)
     .order("name", { ascending: true });
 
   if (error) throw error;
-  return (data ?? []).filter((r): r is TeamRow & { slug: string } =>
+  const rows = (data ?? []).map((r) => ({
+    ...(r as TeamRow),
+    seasons: normalizeSeasonsColumn((r as { seasons?: unknown }).seasons),
+  }));
+  return rows.filter((r): r is TeamRow & { slug: string } =>
     Boolean(r.slug?.trim()),
   ) as TeamRow[];
 }
@@ -69,11 +92,39 @@ export function filterTeamsForAutocomplete(
   focused: string,
 ): { name: string; slug: string }[] {
   const q = focused.trim().toLowerCase();
-  const list = teams
-    .map((t) => ({ name: t.name, slug: (t.slug ?? "").trim() }))
+  const enriched = teams
+    .map((t) => ({
+      name: t.name,
+      slug: (t.slug ?? "").trim(),
+      seasons: t.seasons ?? null,
+    }))
     .filter((t) => t.slug.length > 0);
 
-  if (!q) return list.slice(0, 25);
+  const list = enriched.map(({ name, slug }) => ({ name, slug }));
+
+  if (!q) {
+    // Discord allows at most 25 choices. Alphabetical-only hides WC nations behind many clubs.
+    const nationals = enriched
+      .filter((t) => isSeason3ExclusiveNationTeam(t))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const clubs = enriched
+      .filter((t) => !isSeason3ExclusiveNationTeam(t))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const maxNationHead = 12;
+    const nHead = nationals.slice(0, maxNationHead);
+    const cHead = clubs.slice(0, 25 - nHead.length);
+    const out = [...nHead, ...cHead];
+    if (out.length < 25) {
+      const used = new Set(out.map((x) => x.slug));
+      for (const t of [...nationals.slice(nHead.length), ...clubs.slice(cHead.length)]) {
+        if (out.length >= 25) break;
+        if (used.has(t.slug)) continue;
+        used.add(t.slug);
+        out.push(t);
+      }
+    }
+    return out.slice(0, 25).map(({ name, slug }) => ({ name, slug }));
+  }
 
   const scored = list
     .map((t) => {
