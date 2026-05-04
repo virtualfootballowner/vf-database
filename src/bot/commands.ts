@@ -711,12 +711,12 @@ function renderSquadBucketLines(rows: SquadEntry[]): string {
   return rows
     .map((row) => {
       const pos = (row.position ?? "").trim();
-      const posTag = pos ? ` \`${pos}\`` : "";
-      const apps =
+      const posChip = pos ? `\`${pos.padStart(3, " ")}\`` : "`   `";
+      const appsLabel =
         row.games != null && row.games > 0
           ? ` · **${row.games}** ${row.games === 1 ? "app" : "apps"}`
-          : "";
-      return `• **${row.roblox_username}**${posTag}${apps}`;
+          : " · *no apps yet*";
+      return `${posChip}  **${row.roblox_username}**${appsLabel}`;
     })
     .join("\n");
 }
@@ -788,47 +788,29 @@ async function handleTeam(
     embed.addFields({
       name: "Manager",
       value: managerName?.trim() ? managerName.trim() : "—",
-      inline: true,
+      inline: false,
     });
 
-    if (record && record.matches_played > 0) {
-      embed.addFields(
-        {
-          name: "📋 Played",
-          value: `**${record.matches_played}**`,
-          inline: true,
-        },
-        {
-          name: "✅ Wins",
-          value: `**${record.wins}**`,
-          inline: true,
-        },
-        {
-          name: "🤝 Draws",
-          value: `**${record.draws}**`,
-          inline: true,
-        },
-        {
-          name: "❌ Losses",
-          value: `**${record.losses}**`,
-          inline: true,
-        },
-        {
-          name: "📈 League points",
-          value: `**${record.wins * 3 + record.draws}** earned · **${record.matches_played * 3}** max *(3 pts win, 1 draw)*`,
-          inline: false,
-        },
-      );
-    } else {
-      embed.addFields({
-        name: "📊 Season record",
+    const played = record?.matches_played ?? 0;
+    const wins = record?.wins ?? 0;
+    const draws = record?.draws ?? 0;
+    const losses = record?.losses ?? 0;
+    const points = wins * 3 + draws;
+    const maxPoints = played * 3;
+    embed.addFields(
+      { name: "📋 Played", value: `**${played}**`, inline: true },
+      { name: "✅ Wins", value: `**${wins}**`, inline: true },
+      { name: "🤝 Draws", value: `**${draws}**`, inline: true },
+      { name: "❌ Losses", value: `**${losses}**`, inline: true },
+      {
+        name: "📈 League points",
         value:
-          record && record.matches_played === 0
-            ? "*No completed matches in record yet.*"
-            : `_No row in **team_season_records** for **S${season}**._`,
+          played > 0
+            ? `**${points}** earned · **${maxPoints}** max *(3 pts win, 1 draw)*`
+            : "*No completed matches yet — record will fill in once games are played.*",
         inline: false,
-      });
-    }
+      },
+    );
 
     if (honors.length > 0) {
       embed.addFields({
@@ -838,13 +820,14 @@ async function handleTeam(
       });
     }
 
+    const squadHeaderName = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+    const squadHeaderValue =
+      squad.length === 0
+        ? `## 👥 Squad · Season ${season}\n_No players registered for this season yet._`
+        : `## 👥 Squad · Season ${season}\n**${squad.length}** ${squad.length === 1 ? "player" : "players"} on the sheet`;
     embed.addFields({
-      name: "\u200B",
-      value: `**Squad** · ${
-        squad.length === 0
-          ? "_No players registered for this season yet._"
-          : `**${squad.length}** registered`
-      }`,
+      name: squadHeaderName,
+      value: squadHeaderValue,
       inline: false,
     });
 
@@ -855,7 +838,7 @@ async function handleTeam(
         const lines = renderSquadBucketLines(bucket.rows);
         if (lines.length <= 1024) {
           embed.addFields({
-            name: `${bucket.label} · ${bucket.rows.length}`,
+            name: `${bucket.label}  ·  ${bucket.rows.length}`,
             value: lines,
             inline: false,
           });
@@ -874,7 +857,7 @@ async function handleTeam(
             ? `${candidate}\n*…and ${overflow} more.*`.slice(0, 1024)
             : candidate;
         embed.addFields({
-          name: `${bucket.label} · ${bucket.rows.length}`,
+          name: `${bucket.label}  ·  ${bucket.rows.length}`,
           value,
           inline: false,
         });
