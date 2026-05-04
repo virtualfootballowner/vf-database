@@ -1,23 +1,25 @@
 import Link from "next/link";
 
+type SiteNavKey = "tournament" | "stats" | "teams" | "players";
+
 type SiteNavProps = {
-  active?: "home" | "stats" | "teams" | "players";
+  /** Highlighted link. Omit on the home page (logo is the home link). */
+  active?: SiteNavKey;
 };
 
-const links: { href: string; label: string; key: SiteNavProps["active"] }[] = [
-  { href: "/", label: "Home", key: "home" },
+const links: { href: string; label: string; key: SiteNavKey }[] = [
+  { href: "/tournament", label: "Tournament", key: "tournament" },
   { href: "/stats", label: "Stats", key: "stats" },
   { href: "/teams", label: "Teams", key: "teams" },
   { href: "/players", label: "Players", key: "players" },
 ];
 
-export function SiteNav({ active = "home" }: SiteNavProps) {
+export function SiteNav({ active }: SiteNavProps) {
   return (
     <header className="glass sticky top-4 z-40 mx-auto flex w-fit items-center gap-3 rounded-full px-4 py-2">
-      <Link href="/" className="flex items-center">
+      <Link href="/" className="flex items-center" aria-label="VF League home">
         <span
           className="font-display text-2xl leading-none tracking-[0.08em] text-white drop-shadow-[0_2px_12px_rgba(8,54,150,0.6)]"
-          aria-label="VF League"
         >
           VF
         </span>

@@ -6,7 +6,7 @@ export default function Home() {
   return (
     <main className="relative min-h-screen w-full overflow-hidden text-white">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-5 pb-16 pt-6 sm:px-8 sm:pt-10">
-        <SiteNav active="home" />
+        <SiteNav />
 
         <section className="relative grid items-center gap-4 pt-12 sm:pt-20 lg:grid-cols-[1.15fr_0.85fr] lg:gap-2 lg:pt-24">
           <div className="relative">

@@ -13,7 +13,7 @@ export default function PrivacyPage() {
   return (
     <main className="relative min-h-screen w-full text-white">
       <div className="mx-auto w-full max-w-3xl px-5 py-8 sm:px-8">
-        <SiteNav active="home" />
+        <SiteNav />
         <article className="mt-10 space-y-6 text-sm leading-relaxed text-white/85">
           <h1 className="text-3xl font-semibold tracking-tight text-white">
             Privacy Policy
