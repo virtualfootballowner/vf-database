@@ -18,7 +18,8 @@ import {
   createBotSupabase,
   findPlayerByDiscordId,
   listPlayerRosterTeamsForSeason,
-  resolveManagerTeamSlugForSeason,
+  loadTeams,
+  resolveTeamForSlashCommand,
 } from "@/bot/stats-queries";
 
 export const CONTRACT_BTN_APPROVE = "vfl:con:a:";
@@ -92,6 +93,7 @@ export async function handleContractCommand(
     return;
   }
 
+  const teamRaw = interaction.options.getString("team", true);
   const signeeUser = interaction.options.getUser("player", true);
   const positionRaw = interaction.options.getString("position", true);
   const roleRaw = interaction.options.getString("role", true);
@@ -116,24 +118,20 @@ export async function handleContractCommand(
 
   try {
     const supabase = createBotSupabase();
-    const teamRes = await resolveManagerTeamSlugForSeason(
+    const teamRows = await loadTeams(supabase);
+    const resolvedTeam = await resolveTeamForSlashCommand(
       supabase,
-      interaction.user.id,
-      activeSeason,
+      teamRows,
+      teamRaw,
     );
-
-    if (!teamRes.ok) {
-      const msg =
-        teamRes.reason === "no_player"
-          ? "No VF **players** row is linked to your Discord account."
-          : teamRes.reason === "no_username"
-            ? "Your player record has no **Roblox username** on file."
-            : teamRes.reason === "ambiguous"
-              ? "You are listed as manager for **more than one** team this season in the database. Ask staff to fix `team_season_managers`."
-              : `You are not listed as a **team manager** for **S${activeSeason}** in the database (see \`team_season_managers\`). Ask staff to use \`/appoint\` if this is wrong.`;
-      await interaction.editReply({ content: msg });
+    if (!resolvedTeam) {
+      await interaction.editReply({
+        content:
+          "Could not resolve that club. Use the **team** autocomplete or the exact slug.",
+      });
       return;
     }
+    const teamRes = { ok: true as const, teamSlug: resolvedTeam.slug };
 
     const signeeProfile = await findPlayerByDiscordId(supabase, signeeUser.id);
     if (!signeeProfile) {

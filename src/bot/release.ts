@@ -20,7 +20,8 @@ import {
   createBotSupabase,
   findPlayerByDiscordId,
   listPlayerRosterTeamsForSeason,
-  resolveManagerTeamSlugForSeason,
+  loadTeams,
+  resolveTeamForSlashCommand,
 } from "@/bot/stats-queries";
 
 export const RELEASE_BTN_APPROVE = "vfl:rel:a:";
@@ -122,6 +123,7 @@ export async function handleReleaseCommand(
     return;
   }
 
+  const teamRaw = interaction.options.getString("team", true);
   const targetUser = interaction.options.getUser("player", true);
   const reasonRaw = interaction.options.getString("reason");
   const reason =
@@ -141,24 +143,20 @@ export async function handleReleaseCommand(
 
   try {
     const supabase = createBotSupabase();
-    const teamRes = await resolveManagerTeamSlugForSeason(
+    const teamRows = await loadTeams(supabase);
+    const resolvedTeam = await resolveTeamForSlashCommand(
       supabase,
-      interaction.user.id,
-      activeSeason,
+      teamRows,
+      teamRaw,
     );
-
-    if (!teamRes.ok) {
-      const msg =
-        teamRes.reason === "no_player"
-          ? "No VF **players** row is linked to your Discord account."
-          : teamRes.reason === "no_username"
-            ? "Your player record has no **Roblox username** on file."
-            : teamRes.reason === "ambiguous"
-              ? "You are listed as manager for **more than one** team this season. Ask staff to fix `team_season_managers`."
-              : `You are not listed as a **team manager** for **S${activeSeason}** in the database. Ask staff to use \`/appoint\` if this is wrong.`;
-      await interaction.editReply({ content: msg });
+    if (!resolvedTeam) {
+      await interaction.editReply({
+        content:
+          "Could not resolve that club. Use the **team** autocomplete or the exact slug.",
+      });
       return;
     }
+    const teamRes = { ok: true as const, teamSlug: resolvedTeam.slug };
 
     const targetProfile = await findPlayerByDiscordId(supabase, targetUser.id);
     if (!targetProfile) {

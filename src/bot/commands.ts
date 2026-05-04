@@ -62,6 +62,33 @@ function formatCommandError(err: unknown): string {
   return "unknown error";
 }
 
+/**
+ * Verified-only gate for read commands like `/team` and `/player`. Anyone in the
+ * server who completed Roblox-Discord verification (and therefore has the
+ * verified role) may use them; everyone else gets a friendly nudge.
+ */
+async function requireVerifiedRole(
+  interaction: ChatInputCommandInteraction,
+): Promise<boolean> {
+  if (!interaction.guild || !interaction.member) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Use this command inside the server.",
+    });
+    return false;
+  }
+  const member = interaction.member as GuildMember;
+  if (!member.roles.cache.has(env.DISCORD_ROVER_VERIFIED_ROLE_ID)) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content:
+        "You need to verify on the website first. Run `/postverify` in the verify channel for the link.",
+    });
+    return false;
+  }
+  return true;
+}
+
 /** Crest/logo for Discord embeds (DB often stores `/file.png` — absolute + path-encoded). */
 function absoluteSiteAssetUrl(
   pathOrUrl: string | null | undefined,
@@ -235,6 +262,13 @@ export const slashCommandDefinitions = [
     .setDescription(
       "Offer a roster contract for the active season (club manager role only)",
     )
+    .addStringOption((opt) =>
+      opt
+        .setName("team")
+        .setDescription("Club you’re signing for — pick from suggestions")
+        .setRequired(true)
+        .setAutocomplete(true),
+    )
     .addUserOption((opt) =>
       opt
         .setName("player")
@@ -261,6 +295,13 @@ export const slashCommandDefinitions = [
     .setName("release")
     .setDescription(
       "Request to remove a player from your roster (staff approves in review channel)",
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("team")
+        .setDescription("Club to release from — pick from suggestions")
+        .setRequired(true)
+        .setAutocomplete(true),
     )
     .addUserOption((opt) =>
       opt
@@ -298,6 +339,13 @@ export const slashCommandDefinitions = [
     )
     .addStringOption((opt) =>
       opt
+        .setName("team")
+        .setDescription("Club you’re posting for — pick from suggestions")
+        .setRequired(true)
+        .setAutocomplete(true),
+    )
+    .addStringOption((opt) =>
+      opt
         .setName("time")
         .setDescription("When you want to play (e.g. \"Tonight 8pm EST\")")
         .setRequired(true)
@@ -316,6 +364,13 @@ export const slashCommandDefinitions = [
     .setName("scouting")
     .setDescription(
       "Post a scouting trial in the scouting channel (club managers)",
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("team")
+        .setDescription("Club you’re recruiting for — pick from suggestions")
+        .setRequired(true)
+        .setAutocomplete(true),
     )
     .addStringOption((opt) =>
       opt
@@ -393,11 +448,15 @@ export async function handleSlashCommand(
 export async function handleAutocomplete(
   interaction: AutocompleteInteraction,
 ): Promise<void> {
-  if (
-    interaction.commandName !== "team" &&
-    interaction.commandName !== "appoint"
-  )
-    return;
+  const teamAutocompleteCommands = new Set([
+    "team",
+    "appoint",
+    "contract",
+    "release",
+    "friendly",
+    "scouting",
+  ]);
+  if (!teamAutocompleteCommands.has(interaction.commandName)) return;
 
   const focused = interaction.options.getFocused(true);
   if (focused.name !== "team") return;
@@ -421,6 +480,7 @@ export async function handleAutocomplete(
 async function handlePlayer(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
+  if (!(await requireVerifiedRole(interaction))) return;
   const member = interaction.options.getUser("member");
   const usernameOpt = interaction.options.getString("roblox_username");
 
@@ -664,6 +724,7 @@ function renderSquadBucketLines(rows: SquadEntry[]): string {
 async function handleTeam(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
+  if (!(await requireVerifiedRole(interaction))) return;
   const teamRaw = interaction.options.getString("team", true);
   const season = interaction.options.getInteger("season", true);
 

@@ -4,6 +4,7 @@ import {
   MessageFlags,
   type ChatInputCommandInteraction,
   type Client,
+  type GuildMember,
   type GuildTextBasedChannel,
 } from "discord.js";
 
@@ -13,7 +14,7 @@ import {
   createBotSupabase,
   findPlayerByDiscordId,
   loadTeams,
-  resolveManagerTeamSlugForSeason,
+  resolveTeamForSlashCommand,
   type TeamRow,
 } from "@/bot/stats-queries";
 import { getRobloxHeadshotsForBot } from "@/lib/roblox";
@@ -208,40 +209,58 @@ export async function handleFreeAgent(
   });
 }
 
-async function ensureManagerTeam(
+/**
+ * Gate club-manager marketplace commands on the Discord role alone — anyone with the
+ * configured manager role can use them. We avoid the `team_season_managers` lookup so
+ * managers who haven't been formally appointed in the DB can still post (they pick the
+ * team via autocomplete on the command).
+ */
+function ensureManagerRole(
+  interaction: ChatInputCommandInteraction,
+): boolean {
+  if (!interaction.member) return false;
+  const member = interaction.member as GuildMember;
+  return member.roles.cache.has(env.DISCORD_TEAM_MANAGER_ROLE_ID);
+}
+
+async function resolveTeamFromOption(
   interaction: ChatInputCommandInteraction,
   supabase: SupabaseClient,
-): Promise<{ ok: true; teamSlug: string } | null> {
-  const activeSeason = env.VF_ACTIVE_ROSTER_SEASON;
-  const result = await resolveManagerTeamSlugForSeason(
-    supabase,
-    interaction.user.id,
-    activeSeason,
-  );
-  if (result.ok) return { ok: true, teamSlug: result.teamSlug };
-
-  const why =
-    result.reason === "no_player"
-      ? "You need a verified VF profile linked to your Discord."
-      : result.reason === "no_username"
-        ? "Your VF player record has no Roblox username on file."
-        : result.reason === "ambiguous"
-          ? "You manage more than one team this season — staff need to fix `team_season_managers`."
-          : `You aren’t listed as a manager for **S${activeSeason}**. Ask staff to /appoint you.`;
-
-  await interaction.editReply({ content: why });
-  return null;
+): Promise<{ slug: string; name: string; logo: string | null } | null> {
+  const teamRaw = interaction.options.getString("team", true);
+  const teams = await loadTeams(supabase);
+  const resolved = await resolveTeamForSlashCommand(supabase, teams, teamRaw);
+  if (!resolved) {
+    await interaction.editReply({
+      content:
+        "Could not resolve that club. Use **team** suggestions or type the exact slug.",
+    });
+    return null;
+  }
+  return {
+    slug: resolved.slug,
+    name: resolved.name,
+    logo: resolved.logo_url,
+  };
 }
 
 export async function handleFriendly(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
+  if (!ensureManagerRole(interaction)) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content:
+        "You need the **club manager** role to post in the friendly finder.",
+    });
+    return;
+  }
   const time = interaction.options.getString("time", true).trim().slice(0, 200);
   const notes = interaction.options.getString("notes")?.trim().slice(0, 500) ?? null;
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const supabase = createBotSupabase();
-  const team = await ensureManagerTeam(interaction, supabase);
+  const team = await resolveTeamFromOption(interaction, supabase);
   if (!team) return;
 
   const channel = await resolveSendableChannel(
@@ -256,10 +275,10 @@ export async function handleFriendly(
   }
 
   const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
-  const teamUrl = `${siteBase}/teams/${encodeURIComponent(team.teamSlug)}?season=${env.VF_ACTIVE_ROSTER_SEASON}`;
+  const teamUrl = `${siteBase}/teams/${encodeURIComponent(team.slug)}?season=${env.VF_ACTIVE_ROSTER_SEASON}`;
   const { name: teamLabel, logoUrl } = await resolveTeamForEmbed(
     supabase,
-    team.teamSlug,
+    team.slug,
     siteBase,
   );
 
@@ -309,13 +328,21 @@ export async function handleFriendly(
 export async function handleScouting(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
+  if (!ensureManagerRole(interaction)) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content:
+        "You need the **club manager** role to post a scouting trial.",
+    });
+    return;
+  }
   const position = interaction.options.getString("position", true);
   const count = interaction.options.getInteger("count", true);
   const notes = interaction.options.getString("notes")?.trim().slice(0, 500) ?? null;
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const supabase = createBotSupabase();
-  const team = await ensureManagerTeam(interaction, supabase);
+  const team = await resolveTeamFromOption(interaction, supabase);
   if (!team) return;
 
   const channel = await resolveSendableChannel(
@@ -330,10 +357,10 @@ export async function handleScouting(
   }
 
   const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
-  const teamUrl = `${siteBase}/teams/${encodeURIComponent(team.teamSlug)}?season=${env.VF_ACTIVE_ROSTER_SEASON}`;
+  const teamUrl = `${siteBase}/teams/${encodeURIComponent(team.slug)}?season=${env.VF_ACTIVE_ROSTER_SEASON}`;
   const { name: teamLabel, logoUrl } = await resolveTeamForEmbed(
     supabase,
-    team.teamSlug,
+    team.slug,
     siteBase,
   );
 
