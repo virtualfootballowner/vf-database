@@ -923,6 +923,7 @@ async function handleBacklog(
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const members = await interaction.guild.members.fetch();
+  const guildId = interaction.guild.id;
 
   const pending = Array.from(
     members
@@ -934,18 +935,46 @@ async function handleBacklog(
       .values(),
   ).sort((a, b) => (a.joinedTimestamp ?? 0) - (b.joinedTimestamp ?? 0));
 
-  if (pending.length === 0) {
+  const supabase = createBotSupabase();
+  const { data: releaseRows, error: releaseErr } = await supabase
+    .from("roster_release_requests")
+    .select(
+      "id, guild_id, channel_id, message_id, requester_discord_id, target_discord_id, team_slug, season, created_at, players:player_id(roblox_username)",
+    )
+    .eq("guild_id", guildId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: true })
+    .limit(50);
+  if (releaseErr) {
+    console.error("backlog release fetch:", releaseErr);
+  }
+  const releases = (releaseRows ?? []) as Array<{
+    id: string;
+    guild_id: string;
+    channel_id: string | null;
+    message_id: string | null;
+    requester_discord_id: string;
+    target_discord_id: string;
+    team_slug: string;
+    season: number;
+    created_at: string | null;
+    players: { roblox_username: string | null } | null;
+  }>;
+
+  if (pending.length === 0 && releases.length === 0) {
     const embed = new EmbedBuilder()
       .setColor(0x10b981)
       .setTitle("✅ Backlog")
-      .setDescription("No pending whitelist requests. All clear.");
+      .setDescription(
+        "No pending whitelist requests **and** no pending release requests. All clear.",
+      );
     await interaction.editReply({ embeds: [embed] });
     return;
   }
 
   const cardLinks = await collectReviewCardLinks(interaction);
 
-  const lines = pending.map((member, idx) => {
+  const whitelistLines = pending.map((member, idx) => {
     const nick = member.nickname ? ` · nick \`${member.nickname}\`` : "";
     const joined = member.joinedTimestamp
       ? ` · joined <t:${Math.floor(member.joinedTimestamp / 1000)}:R>`
@@ -955,18 +984,59 @@ async function handleBacklog(
     return `**${idx + 1}.** ${member} (\`${member.user.username}\`)${nick}${joined}${cardLink}`;
   });
 
-  const visible = lines.slice(0, 25).join("\n");
-  const overflow =
-    pending.length > 25
-      ? `\n\n…and **${pending.length - 25}** more.`
+  const teamNames = await buildTeamNameBySlug(supabase);
+  const releaseLines = releases.map((row, idx) => {
+    const created = row.created_at
+      ? ` · <t:${Math.floor(new Date(row.created_at).getTime() / 1000)}:R>`
       : "";
+    const cardUrl =
+      row.message_id && row.channel_id
+        ? `https://discord.com/channels/${guildId}/${row.channel_id}/${row.message_id}`
+        : null;
+    const cardLink = cardUrl ? ` · [📩 review card](${cardUrl})` : "";
+    const teamLabel = teamNames.get(row.team_slug) ?? row.team_slug;
+    const playerName = row.players?.roblox_username ?? row.target_discord_id;
+    return (
+      `**${idx + 1}.** \`${playerName}\` · ${teamLabel} (\`${row.team_slug}\`) · S${row.season}` +
+      ` · req <@${row.requester_discord_id}>${created}${cardLink}`
+    );
+  });
+
+  const sections: string[] = [];
+  if (pending.length > 0) {
+    const visible = whitelistLines.slice(0, 25).join("\n");
+    const overflow =
+      pending.length > 25 ? `\n…and **${pending.length - 25}** more.` : "";
+    sections.push(
+      `**🛂 Whitelist · ${pending.length} pending**\n${visible}${overflow}`,
+    );
+  }
+  if (releases.length > 0) {
+    const visible = releaseLines.slice(0, 25).join("\n");
+    const overflow =
+      releases.length > 25 ? `\n…and **${releases.length - 25}** more.` : "";
+    sections.push(
+      `**📤 Release requests · ${releases.length} pending**\n${visible}${overflow}`,
+    );
+  }
+
+  const totals = [
+    pending.length > 0
+      ? `${pending.length} whitelist`
+      : null,
+    releases.length > 0
+      ? `${releases.length} release${releases.length === 1 ? "" : "s"}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const embed = new EmbedBuilder()
     .setColor(0x083696)
-    .setTitle(`📋 Backlog · ${pending.length} pending`)
-    .setDescription(`${visible}${overflow}`)
+    .setTitle(`📋 Backlog · ${totals}`)
+    .setDescription(sections.join("\n\n"))
     .setFooter({
-      text: "Tap a review card link to approve or deny that player.",
+      text: "Tap a review card link to approve or deny.",
     })
     .setTimestamp(new Date());
 
