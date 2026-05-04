@@ -39,8 +39,15 @@ export async function GET(request: Request) {
   }
 
   const exchanged = await exchangeDiscordCode(env, code);
-  if (!exchanged) {
-    return NextResponse.redirect(new URL("/verify/done?err=discord_token", request.url));
+  if ("failure" in exchanged) {
+    const { stage, status, errorCode, errorDescription } = exchanged.failure;
+    const target = new URL("/verify/done", request.url);
+    target.searchParams.set("err", "discord_token");
+    target.searchParams.set("stage", stage);
+    if (status != null) target.searchParams.set("st", String(status));
+    if (errorCode) target.searchParams.set("ec", errorCode);
+    if (errorDescription) target.searchParams.set("ed", errorDescription);
+    return NextResponse.redirect(target);
   }
 
   const { verifier, challenge } = generatePkcePair();

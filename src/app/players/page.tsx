@@ -4,6 +4,9 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 import { PlayersList, type PlayerRow } from "./players-list";
 
+/** Always render fresh: new players appear immediately after staff approval, no redeploy needed. */
+export const dynamic = "force-dynamic";
+
 type VerifiedPlayerRow = PlayerRow & { roblox_user_id: string };
 
 function isVerifiedPlayerRow(p: PlayerRow): p is VerifiedPlayerRow {

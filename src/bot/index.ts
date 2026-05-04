@@ -62,6 +62,27 @@ const client = new Client({
   ],
 });
 
+/** OAuth2 URL for this application’s bot user (use when the token sees zero guilds or the env guild id). */
+function oauthBotInviteUrl(clientId: string): string {
+  const perms = [
+    PermissionFlagsBits.ViewChannel,
+    PermissionFlagsBits.SendMessages,
+    PermissionFlagsBits.EmbedLinks,
+    PermissionFlagsBits.AttachFiles,
+    PermissionFlagsBits.ReadMessageHistory,
+    PermissionFlagsBits.ManageRoles,
+    PermissionFlagsBits.ManageGuild,
+    PermissionFlagsBits.KickMembers,
+    PermissionFlagsBits.BanMembers,
+  ].reduce<bigint>((a, b) => a | BigInt(b), BigInt(0));
+  const q = new URLSearchParams({
+    client_id: clientId,
+    permissions: perms.toString(),
+    scope: "bot applications.commands",
+  });
+  return `https://discord.com/oauth2/authorize?${q}`;
+}
+
 async function runBackfill() {
   const guild = await client.guilds.fetch(env.DISCORD_GUILD_ID);
   const members = await guild.members.fetch();
@@ -86,6 +107,19 @@ async function runBackfill() {
 
 client.once(Events.ClientReady, async (readyClient) => {
   console.log(`Discord bot online as ${readyClient.user.tag}`);
+  const guildSummaries = [...readyClient.guilds.cache.values()]
+    .map((g) => `${g.name} (${g.id})`)
+    .sort((a, b) => a.localeCompare(b));
+  console.log(
+    `Guilds visible to this token (${readyClient.guilds.cache.size}): ${guildSummaries.join("; ") || "(none)"}`,
+  );
+  console.log(`DISCORD_GUILD_ID from env: ${env.DISCORD_GUILD_ID}`);
+  if (!readyClient.guilds.cache.has(env.DISCORD_GUILD_ID)) {
+    console.log(
+      "This token cannot use DISCORD_GUILD_ID — wrong server id, or this Discord app is not installed in that server.",
+    );
+    console.log(`Install / re-invite this app: ${oauthBotInviteUrl(readyClient.user.id)}`);
+  }
   logMemberOutgoingStartup();
 
   try {

@@ -40,6 +40,11 @@ import {
   CONTRACT_ROLE_CHOICES,
   handleContractCommand,
 } from "@/bot/contracts";
+import {
+  handleFreeAgent,
+  handleFriendly,
+  handleScouting,
+} from "@/bot/marketplace";
 import { handleReleaseCommand } from "@/bot/release";
 
 function formatCommandError(err: unknown): string {
@@ -291,6 +296,70 @@ export const slashCommandDefinitions = [
         .setMaxLength(500),
     )
     .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("freeagent")
+    .setDescription(
+      "Post yourself in the free‑agent channel (one post per 6 hours)",
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("position")
+        .setDescription("Position you want to play")
+        .setRequired(true)
+        .addChoices(...CONTRACT_POSITION_CHOICES),
+    )
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("friendly")
+    .setDescription(
+      "Post a friendly request in the friendly‑finder channel (club managers)",
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("time")
+        .setDescription("When you want to play (e.g. \"Tonight 8pm EST\")")
+        .setRequired(true)
+        .setMaxLength(200),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("notes")
+        .setDescription("Optional context (format, server, restrictions)")
+        .setRequired(false)
+        .setMaxLength(500),
+    )
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("scouting")
+    .setDescription(
+      "Post a scouting trial in the scouting channel (club managers)",
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("position")
+        .setDescription("Position you’re recruiting for")
+        .setRequired(true)
+        .addChoices(...CONTRACT_POSITION_CHOICES),
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("count")
+        .setDescription("How many slots are open")
+        .setRequired(true)
+        .setMinValue(1)
+        .setMaxValue(11),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("notes")
+        .setDescription("Optional context (style, requirements, trial info)")
+        .setRequired(false)
+        .setMaxLength(500),
+    )
+    .toJSON(),
 ];
 
 export async function handleSlashCommand(
@@ -326,6 +395,15 @@ export async function handleSlashCommand(
       return;
     case "release":
       await handleReleaseCommand(interaction);
+      return;
+    case "freeagent":
+      await handleFreeAgent(interaction);
+      return;
+    case "friendly":
+      await handleFriendly(interaction);
+      return;
+    case "scouting":
+      await handleScouting(interaction);
       return;
     default:
       await interaction.reply({
@@ -781,9 +859,11 @@ async function handlePostVerifyCard(
     return;
   }
 
+  /** Defer first: Discord invalidates the interaction if the first ack takes ~3s+ (10062). */
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
   if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
-    await interaction.reply({
-      flags: MessageFlags.Ephemeral,
+    await interaction.editReply({
       content: "You need **Manage Server** to post the verification card.",
     });
     return;
@@ -810,12 +890,15 @@ async function handlePostVerifyCard(
       .setURL(verifyUrl),
   );
 
-  await interaction.reply({
-    flags: MessageFlags.Ephemeral,
-    content: "Posted.",
-  });
-
-  await interaction.channel.send({ embeds: [embed], components: [row] });
+  try {
+    await interaction.channel.send({ embeds: [embed], components: [row] });
+    await interaction.editReply({ content: "Posted." });
+  } catch (err) {
+    console.error("/postverify: failed to post card:", err);
+    await interaction.editReply({
+      content: "Could not post the verification card in this channel (check bot Send Messages / Embed Links).",
+    });
+  }
 }
 
 async function handleBacklog(

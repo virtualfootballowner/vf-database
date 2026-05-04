@@ -15,10 +15,19 @@ export function discordAuthorizeUrl(
   return u.toString();
 }
 
+export type DiscordExchangeFailure = {
+  stage: "token" | "userinfo" | "no_token" | "no_user_id";
+  status?: number;
+  /** Discord OAuth error code, e.g. invalid_client / invalid_grant / invalid_redirect_uri. */
+  errorCode?: string;
+  /** Truncated error description from Discord (safe to show in URL). */
+  errorDescription?: string;
+};
+
 export async function exchangeDiscordCode(
   env: VerifyEnv,
   code: string,
-): Promise<{ discordUserId: string } | null> {
+): Promise<{ discordUserId: string } | { failure: DiscordExchangeFailure }> {
   const redirectUri = `${verifyPublicBaseUrl(env)}/api/verify/discord/callback`;
   const body = new URLSearchParams({
     client_id: env.DISCORD_CLIENT_ID,
@@ -33,16 +42,45 @@ export async function exchangeDiscordCode(
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
   });
-  if (!tokenRes.ok) return null;
+  if (!tokenRes.ok) {
+    const errBody = await tokenRes.text().catch(() => "<no body>");
+    console.error(
+      `[verify] Discord token exchange failed: ${tokenRes.status} ${tokenRes.statusText} client_id=${env.DISCORD_CLIENT_ID} redirect_uri=${redirectUri} body=${errBody}`,
+    );
+    let parsed: { error?: string; error_description?: string } = {};
+    try {
+      parsed = JSON.parse(errBody);
+    } catch {}
+    return {
+      failure: {
+        stage: "token",
+        status: tokenRes.status,
+        errorCode: parsed.error,
+        errorDescription: parsed.error_description?.slice(0, 200),
+      },
+    };
+  }
 
   const tokenJson = (await tokenRes.json()) as { access_token?: string };
-  if (!tokenJson.access_token) return null;
+  if (!tokenJson.access_token) {
+    console.error("[verify] Discord token exchange returned no access_token");
+    return { failure: { stage: "no_token" } };
+  }
 
   const meRes = await fetch("https://discord.com/api/users/@me", {
     headers: { Authorization: `Bearer ${tokenJson.access_token}` },
   });
-  if (!meRes.ok) return null;
+  if (!meRes.ok) {
+    const errBody = await meRes.text().catch(() => "<no body>");
+    console.error(
+      `[verify] Discord /users/@me failed: ${meRes.status} ${meRes.statusText} body=${errBody}`,
+    );
+    return { failure: { stage: "userinfo", status: meRes.status } };
+  }
   const me = (await meRes.json()) as { id?: string };
-  if (!me.id) return null;
+  if (!me.id) {
+    console.error("[verify] Discord /users/@me returned no id");
+    return { failure: { stage: "no_user_id" } };
+  }
   return { discordUserId: me.id };
 }

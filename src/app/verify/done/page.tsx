@@ -61,7 +61,16 @@ const MESSAGES: Record<string, { title: string; body: string }> = {
   },
 };
 
-type Props = { searchParams: Promise<{ ok?: string; err?: string }> };
+type Props = {
+  searchParams: Promise<{
+    ok?: string;
+    err?: string;
+    stage?: string;
+    st?: string;
+    ec?: string;
+    ed?: string;
+  }>;
+};
 
 export default async function VerifyDonePage({ searchParams }: Props) {
   const sp = await searchParams;
@@ -74,6 +83,13 @@ export default async function VerifyDonePage({ searchParams }: Props) {
         body: "Go back and try again, or ask staff for help.",
       };
 
+  const debugBits = [
+    sp.stage ? `stage=${sp.stage}` : null,
+    sp.st ? `status=${sp.st}` : null,
+    sp.ec ? `error=${sp.ec}` : null,
+    sp.ed ? `description=${sp.ed}` : null,
+  ].filter(Boolean) as string[];
+
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col justify-center gap-6 px-6 py-16">
       <h1
@@ -84,6 +100,11 @@ export default async function VerifyDonePage({ searchParams }: Props) {
       <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap">
         {preset.body}
       </p>
+      {!ok && debugBits.length > 0 ? (
+        <pre className="border-destructive/40 bg-destructive/5 text-muted-foreground overflow-auto rounded-md border p-3 font-mono text-xs leading-relaxed">
+          {debugBits.join("\n")}
+        </pre>
+      ) : null}
       <Link
         href="/verify"
         className="text-primary text-sm font-medium underline underline-offset-4"
