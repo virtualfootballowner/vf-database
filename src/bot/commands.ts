@@ -948,7 +948,7 @@ async function handleBacklog(
   if (releaseErr) {
     console.error("backlog release fetch:", releaseErr);
   }
-  const releases = (releaseRows ?? []) as Array<{
+  type ReleaseBacklogRow = {
     id: string;
     guild_id: string;
     channel_id: string | null;
@@ -958,8 +958,10 @@ async function handleBacklog(
     team_slug: string;
     season: number;
     created_at: string | null;
-    players: { roblox_username: string | null } | null;
-  }>;
+    /** Supabase typegen returns embedded FK joins as an array even for many-to-one. */
+    players: { roblox_username: string | null }[] | null;
+  };
+  const releases = (releaseRows ?? []) as unknown as ReleaseBacklogRow[];
 
   if (pending.length === 0 && releases.length === 0) {
     const embed = new EmbedBuilder()
@@ -995,7 +997,8 @@ async function handleBacklog(
         : null;
     const cardLink = cardUrl ? ` · [📩 review card](${cardUrl})` : "";
     const teamLabel = teamNames.get(row.team_slug) ?? row.team_slug;
-    const playerName = row.players?.roblox_username ?? row.target_discord_id;
+    const playerName =
+      row.players?.[0]?.roblox_username ?? row.target_discord_id;
     return (
       `**${idx + 1}.** \`${playerName}\` · ${teamLabel} (\`${row.team_slug}\`) · S${row.season}` +
       ` · req <@${row.requester_discord_id}>${created}${cardLink}`
