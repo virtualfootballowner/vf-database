@@ -124,6 +124,19 @@ client.once(Events.ClientReady, async (readyClient) => {
 
   try {
     const guild = await client.guilds.fetch(env.DISCORD_GUILD_ID);
+    if (process.env.DISCORD_FORCE_RESET_COMMANDS === "1") {
+      const existing = await guild.commands.fetch();
+      console.log(
+        `[reset] Deleting ${existing.size} existing slash command${existing.size === 1 ? "" : "s"} to wipe stale guild integration overrides…`,
+      );
+      for (const cmd of existing.values()) {
+        try {
+          await cmd.delete();
+        } catch (e) {
+          console.error(`[reset] Failed to delete /${cmd.name}:`, e);
+        }
+      }
+    }
     await guild.commands.set(slashCommandDefinitions);
     console.log(
       `Registered ${slashCommandDefinitions.length} slash command${
