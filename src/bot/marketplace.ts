@@ -8,12 +8,13 @@ import {
 } from "discord.js";
 
 import { env } from "@/bot/config";
-import { fetchTeamLogoUrl } from "@/bot/site-assets";
+import { absoluteSiteAssetUrl, fetchTeamLogoUrl } from "@/bot/site-assets";
 import {
-  buildTeamNameBySlug,
   createBotSupabase,
   findPlayerByDiscordId,
+  loadTeams,
   resolveManagerTeamSlugForSeason,
+  type TeamRow,
 } from "@/bot/stats-queries";
 import { getRobloxHeadshotsForBot } from "@/lib/roblox";
 
@@ -85,6 +86,32 @@ async function resolveSendableChannel(
   return channel as GuildTextBasedChannel;
 }
 
+/**
+ * Look up a team's display name and logo with the same catalog fallback the
+ * site uses (some clubs/nations only live in the in-repo catalog, not the DB).
+ */
+async function resolveTeamForEmbed(
+  supabase: SupabaseClient,
+  teamSlug: string,
+  siteBase: string,
+): Promise<{ name: string; logoUrl: string | null }> {
+  const [dbLogo, teams] = await Promise.all([
+    fetchTeamLogoUrl(supabase, teamSlug, siteBase),
+    loadTeams(supabase),
+  ]);
+  const fromCatalog: TeamRow | undefined = teams.find(
+    (t) => t.slug?.trim() === teamSlug,
+  );
+  const name = fromCatalog?.name ?? teamSlug;
+  const logoUrl =
+    dbLogo ?? absoluteSiteAssetUrl(fromCatalog?.logo_url ?? null, siteBase);
+  return { name, logoUrl };
+}
+
+const COLOR_FREE_AGENT = 0x10b981;
+const COLOR_FRIENDLY = 0x083696;
+const COLOR_SCOUTING = 0xb45309;
+
 export async function handleFreeAgent(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
@@ -133,23 +160,26 @@ export async function handleFreeAgent(
 
   const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
   const profileUrl = `${siteBase}/players/${encodeURIComponent(profile.roblox_username)}`;
+  const robloxProfile = `https://www.roblox.com/users/${profile.roblox_user_id}/profile`;
+
+  const description = [
+    `### Available now`,
+    `**${interaction.user}** is open to offers — DM to make one.`,
+    "",
+    `> **Position** · **${position}**`,
+    `> **Roblox** · [${profile.roblox_username}](${robloxProfile})`,
+    `> **VFL profile** · [open](${profileUrl})`,
+  ].join("\n");
 
   const embed = new EmbedBuilder()
-    .setColor(0x10b981)
-    .setAuthor({ name: "Free agent", url: profileUrl })
+    .setColor(COLOR_FREE_AGENT)
+    .setAuthor({ name: "Free agent · VF League", url: profileUrl })
     .setTitle(profile.roblox_username)
     .setURL(profileUrl)
-    .setDescription(`${interaction.user} is **available**.`)
-    .addFields(
-      { name: "Position", value: `**${position}**`, inline: true },
-      { name: "Discord", value: `${interaction.user}`, inline: true },
-      {
-        name: "Profile",
-        value: `[${profile.roblox_username}](${profileUrl})`,
-        inline: false,
-      },
-    )
-    .setFooter({ text: `Cooldown · ${FREE_AGENT_COOLDOWN_HOURS}h between posts` })
+    .setDescription(description)
+    .setFooter({
+      text: `One free-agent post every ${FREE_AGENT_COOLDOWN_HOURS}h · VFL`,
+    })
     .setTimestamp(new Date());
 
   if (headshot) embed.setThumbnail(headshot);
@@ -225,37 +255,39 @@ export async function handleFriendly(
     return;
   }
 
-  const teamNames = await buildTeamNameBySlug(supabase);
   const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
-  const teamLabel = teamNames.get(team.teamSlug) ?? team.teamSlug;
   const teamUrl = `${siteBase}/teams/${encodeURIComponent(team.teamSlug)}?season=${env.VF_ACTIVE_ROSTER_SEASON}`;
-  const logoUrl = await fetchTeamLogoUrl(supabase, team.teamSlug, siteBase);
+  const { name: teamLabel, logoUrl } = await resolveTeamForEmbed(
+    supabase,
+    team.teamSlug,
+    siteBase,
+  );
+
+  const description = [
+    `### Looking for a friendly`,
+    `${interaction.user} wants to play — DM to lock it in.`,
+    "",
+    `> **When** · **${time}**`,
+    `> **Team** · [${teamLabel}](${teamUrl})`,
+    notes ? `> **Notes** · ${notes}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const embed = new EmbedBuilder()
-    .setColor(0x083696)
+    .setColor(COLOR_FRIENDLY)
     .setAuthor({
-      name: teamLabel,
+      name: `${teamLabel} · VF League`,
       iconURL: logoUrl ?? undefined,
       url: teamUrl,
     })
     .setTitle("Friendly request")
-    .setDescription(
-      `${interaction.user} wants a friendly. DM to set it up.`,
-    )
-    .addFields(
-      { name: "Time", value: `**${time}**`, inline: false },
-      { name: "Manager", value: `${interaction.user}`, inline: true },
-      {
-        name: "Team",
-        value: `[${teamLabel}](${teamUrl})\n\`${team.teamSlug}\``,
-        inline: true,
-      },
-    )
-    .setFooter({ text: `Season ${env.VF_ACTIVE_ROSTER_SEASON} · VF League` })
+    .setURL(teamUrl)
+    .setDescription(description)
+    .setFooter({ text: `Season ${env.VF_ACTIVE_ROSTER_SEASON} · VFL · Friendly finder` })
     .setTimestamp(new Date());
 
   if (logoUrl) embed.setThumbnail(logoUrl);
-  if (notes) embed.addFields({ name: "Notes", value: notes, inline: false });
 
   let posted;
   try {
@@ -297,38 +329,41 @@ export async function handleScouting(
     return;
   }
 
-  const teamNames = await buildTeamNameBySlug(supabase);
   const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
-  const teamLabel = teamNames.get(team.teamSlug) ?? team.teamSlug;
   const teamUrl = `${siteBase}/teams/${encodeURIComponent(team.teamSlug)}?season=${env.VF_ACTIVE_ROSTER_SEASON}`;
-  const logoUrl = await fetchTeamLogoUrl(supabase, team.teamSlug, siteBase);
+  const { name: teamLabel, logoUrl } = await resolveTeamForEmbed(
+    supabase,
+    team.teamSlug,
+    siteBase,
+  );
+
+  const slotsLabel = count === 1 ? "slot" : "slots";
+  const description = [
+    `### Recruiting · ${count} ${slotsLabel} open`,
+    `${interaction.user} is signing **${position}** for ${teamLabel} — DM to trial.`,
+    "",
+    `> **Position** · **${position}**`,
+    `> **Slots** · **${count}**`,
+    `> **Team** · [${teamLabel}](${teamUrl})`,
+    notes ? `> **Notes** · ${notes}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const embed = new EmbedBuilder()
-    .setColor(0xb45309)
+    .setColor(COLOR_SCOUTING)
     .setAuthor({
-      name: teamLabel,
+      name: `${teamLabel} · VF League`,
       iconURL: logoUrl ?? undefined,
       url: teamUrl,
     })
     .setTitle("Scouting · open trial")
-    .setDescription(
-      `${interaction.user} is recruiting. DM to apply.`,
-    )
-    .addFields(
-      { name: "Position", value: `**${position}**`, inline: true },
-      { name: "Slots", value: `**${count}**`, inline: true },
-      {
-        name: "Team",
-        value: `[${teamLabel}](${teamUrl})\n\`${team.teamSlug}\``,
-        inline: false,
-      },
-      { name: "Manager", value: `${interaction.user}`, inline: false },
-    )
-    .setFooter({ text: `Season ${env.VF_ACTIVE_ROSTER_SEASON} · VF League` })
+    .setURL(teamUrl)
+    .setDescription(description)
+    .setFooter({ text: `Season ${env.VF_ACTIVE_ROSTER_SEASON} · VFL · Scouting` })
     .setTimestamp(new Date());
 
   if (logoUrl) embed.setThumbnail(logoUrl);
-  if (notes) embed.addFields({ name: "Notes", value: notes, inline: false });
 
   let posted;
   try {
