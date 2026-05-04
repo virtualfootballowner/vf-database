@@ -203,26 +203,6 @@ export const slashCommandDefinitions = [
     .toJSON(),
 
   new SlashCommandBuilder()
-    .setName("squad")
-    .setDescription("Squad sheet: registered roster for a club and season")
-    .addStringOption((opt) =>
-      opt
-        .setName("team")
-        .setDescription("Club — pick from suggestions or type name/slug")
-        .setRequired(true)
-        .setAutocomplete(true),
-    )
-    .addIntegerOption((opt) =>
-      opt
-        .setName("season")
-        .setDescription("Season number (e.g. 1 or 2)")
-        .setRequired(true)
-        .setMinValue(1)
-        .setMaxValue(20),
-    )
-    .toJSON(),
-
-  new SlashCommandBuilder()
     .setName("appoint")
     .setDescription(
       "Appoint a club/nation manager for a season (Manage Server or owner).",
@@ -384,9 +364,6 @@ export async function handleSlashCommand(
     case "team":
       await handleTeam(interaction);
       return;
-    case "squad":
-      await handleSquad(interaction);
-      return;
     case "appoint":
       await handleAppoint(interaction);
       return;
@@ -418,7 +395,6 @@ export async function handleAutocomplete(
 ): Promise<void> {
   if (
     interaction.commandName !== "team" &&
-    interaction.commandName !== "squad" &&
     interaction.commandName !== "appoint"
   )
     return;
@@ -624,6 +600,67 @@ async function handlePlayer(
   }
 }
 
+type SquadEntry = {
+  roblox_username: string;
+  position: string | null;
+  games: number | null;
+};
+
+const SQUAD_POSITION_BUCKETS: ReadonlyArray<{
+  label: string;
+  match: (pos: string) => boolean;
+}> = [
+  { label: "🥅 Goalkeepers", match: (p) => p === "GK" },
+  { label: "🛡️ Defenders", match: (p) => ["CB", "WB", "RB", "LB", "DEF"].includes(p) },
+  { label: "⚙️ Midfielders", match: (p) => ["CDM", "CM", "CAM", "MID"].includes(p) },
+  { label: "⚡ Forwards", match: (p) => ["ST", "LW", "RW", "CF", "FWD"].includes(p) },
+];
+
+function bucketSquadByPosition(squad: SquadEntry[]): {
+  label: string;
+  rows: SquadEntry[];
+}[] {
+  const buckets = SQUAD_POSITION_BUCKETS.map((b) => ({
+    label: b.label,
+    rows: [] as SquadEntry[],
+    match: b.match,
+  }));
+  const other: SquadEntry[] = [];
+  for (const row of squad) {
+    const pos = (row.position ?? "").trim().toUpperCase();
+    const target = buckets.find((b) => pos && b.match(pos));
+    if (target) target.rows.push(row);
+    else other.push(row);
+  }
+  const sortRows = (rows: SquadEntry[]) =>
+    rows.sort((a, b) =>
+      a.roblox_username
+        .toLowerCase()
+        .localeCompare(b.roblox_username.toLowerCase()),
+    );
+  for (const b of buckets) sortRows(b.rows);
+  sortRows(other);
+  const out = buckets
+    .filter((b) => b.rows.length > 0)
+    .map((b) => ({ label: b.label, rows: b.rows }));
+  if (other.length > 0) out.push({ label: "❔ Unlisted", rows: other });
+  return out;
+}
+
+function renderSquadBucketLines(rows: SquadEntry[]): string {
+  return rows
+    .map((row) => {
+      const pos = (row.position ?? "").trim();
+      const posTag = pos ? ` \`${pos}\`` : "";
+      const apps =
+        row.games != null && row.games > 0
+          ? ` · **${row.games}** ${row.games === 1 ? "app" : "apps"}`
+          : "";
+      return `• **${row.roblox_username}**${posTag}${apps}`;
+    })
+    .join("\n");
+}
+
 async function handleTeam(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
@@ -650,10 +687,11 @@ async function handleTeam(
     const hostLabel = env.VFL_SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
     const crestUrl = absoluteSiteAssetUrl(resolved.logo_url, siteBase);
 
-    const [record, honors, managerName] = await Promise.all([
+    const [record, honors, managerName, squad] = await Promise.all([
       fetchTeamSeasonRecord(supabase, resolved.slug, season),
       fetchTeamSeasonHonors(supabase, resolved.slug, season),
       fetchTeamSeasonManagerName(supabase, resolved.slug, season),
+      fetchSquadForSeason(supabase, resolved.slug, season),
     ]);
 
     const metaLines = [
@@ -739,108 +777,61 @@ async function handleTeam(
       });
     }
 
+    embed.addFields({
+      name: "\u200B",
+      value: `**Squad** · ${
+        squad.length === 0
+          ? "_No players registered for this season yet._"
+          : `**${squad.length}** registered`
+      }`,
+      inline: false,
+    });
+
+    if (squad.length > 0) {
+      const buckets = bucketSquadByPosition(squad);
+      let truncated = false;
+      for (const bucket of buckets) {
+        const lines = renderSquadBucketLines(bucket.rows);
+        if (lines.length <= 1024) {
+          embed.addFields({
+            name: `${bucket.label} · ${bucket.rows.length}`,
+            value: lines,
+            inline: false,
+          });
+          continue;
+        }
+        let kept = bucket.rows.length;
+        let candidate = lines;
+        while (candidate.length > 1024 && kept > 1) {
+          kept -= 1;
+          candidate = renderSquadBucketLines(bucket.rows.slice(0, kept));
+        }
+        const overflow = bucket.rows.length - kept;
+        truncated = truncated || overflow > 0;
+        const value =
+          overflow > 0
+            ? `${candidate}\n*…and ${overflow} more.*`.slice(0, 1024)
+            : candidate;
+        embed.addFields({
+          name: `${bucket.label} · ${bucket.rows.length}`,
+          value,
+          inline: false,
+        });
+      }
+      if (truncated) {
+        embed.addFields({
+          name: "\u200B",
+          value: `Some buckets were trimmed — see the full sheet on the [team page](${siteTeam}).`,
+          inline: false,
+        });
+      }
+    }
+
     await interaction.editReply({ embeds: [embed] });
   } catch (err) {
     const msg = formatCommandError(err);
     console.error("/team failed:", err);
     await interaction.editReply({ content: `Could not load team: ${msg}` });
-  }
-}
-
-async function handleSquad(
-  interaction: ChatInputCommandInteraction,
-): Promise<void> {
-  const teamRaw = interaction.options.getString("team", true);
-  const season = interaction.options.getInteger("season", true);
-
-  await interaction.deferReply();
-
-  try {
-    const supabase = createBotSupabase();
-    const teamRows = await loadTeams(supabase);
-    const resolved = await resolveTeamForSlashCommand(supabase, teamRows, teamRaw);
-
-    if (!resolved) {
-      await interaction.editReply({
-        content:
-          "Could not resolve that club. Use **team** suggestions or the exact slug.",
-      });
-      return;
-    }
-
-    const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
-    const siteTeam = `${siteBase}/teams/${encodeURIComponent(resolved.slug)}`;
-    const hostLabel = env.VFL_SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
-    const crestUrl = absoluteSiteAssetUrl(resolved.logo_url, siteBase);
-
-    const squad = await fetchSquadForSeason(supabase, resolved.slug, season);
-
-    if (squad.length === 0) {
-      await interaction.editReply({
-        content: `No **player_team_seasons** roster for **${resolved.name}** in **S${season}**.`,
-      });
-      return;
-    }
-
-    const pad = (s: string, n: number) => {
-      const t = s.trim();
-      if (t.length >= n) return t.slice(0, n);
-      return t.padEnd(n, " ");
-    };
-    const header = `${pad("#", 4)}${pad("Player", 20)}${pad("Pos", 8)}Apps`;
-    const sep = "─".repeat(42);
-    const bodyLines = squad.map((row, i) => {
-      const pos = (row.position ?? "—").trim() || "—";
-      const apps =
-        row.games != null && row.games > 0 ? String(row.games) : "—";
-      return `${pad(String(i + 1), 4)}${pad(row.roblox_username, 20)}${pad(pos, 8)}${apps}`;
-    });
-    let rosterTable = [header, sep, ...bodyLines].join("\n");
-
-    const intro = [
-      `[Team page · ${hostLabel}](${siteTeam})`,
-      "",
-      `Season **${season}** · **${squad.length}** registered`,
-      "",
-      "> `player_team_seasons` · roster & apps when stored",
-      "",
-    ].join("\n");
-
-    const descPrefix = `${intro}\`\`\`\n`;
-    const descSuffix = `\n\`\`\``;
-    const maxRosterLen = 4096 - descPrefix.length - descSuffix.length;
-    if (rosterTable.length > maxRosterLen) {
-      const kept = Math.max(4, Math.floor(bodyLines.length * 0.7));
-      rosterTable = [header, sep, ...bodyLines.slice(0, kept)].join("\n");
-      rosterTable += `\n\n… **+${bodyLines.length - kept}** more — [open team page](${siteTeam})`;
-    }
-    if (rosterTable.length > maxRosterLen) {
-      rosterTable =
-        rosterTable.slice(0, Math.max(0, maxRosterLen - 32)).trimEnd() +
-        "\n…";
-    }
-
-    const embed = new EmbedBuilder()
-      .setColor(0x083696)
-      .setAuthor({
-        name: "VF League · Squad sheet",
-        url: siteTeam,
-      })
-      .setTitle(resolved.name)
-      .setURL(siteTeam)
-      .setDescription(descPrefix + rosterTable + descSuffix)
-      .setFooter({
-        text: "VF League Database · Crest from site when available",
-      })
-      .setTimestamp(new Date());
-
-    if (crestUrl) embed.setThumbnail(crestUrl);
-
-    await interaction.editReply({ embeds: [embed] });
-  } catch (err) {
-    const msg = formatCommandError(err);
-    console.error("/squad failed:", err);
-    await interaction.editReply({ content: `Could not load squad: ${msg}` });
   }
 }
 
