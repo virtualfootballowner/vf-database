@@ -27,6 +27,7 @@ export const CONTRACT_BTN_DENY = "vfl:con:d:";
 
 /** Slash-command choices (name shown in picker, value stored). */
 export const CONTRACT_POSITION_CHOICES = [
+  { name: "GK", value: "GK" },
   { name: "CB", value: "CB" },
   { name: "WB", value: "WB" },
   { name: "CDM", value: "CDM" },
