@@ -153,71 +153,84 @@ export async function handleHelp(
 }
 
 /* ------------------------------------------------------------------ */
-/*  /stats — all-time top scorers + assisters from match_events       */
+/*  /stats — all-time top scorers + assisters from players totals     */
+/*                                                                    */
+/*  Uses the canonical `players.goals_total` / `players.assists_total`*/
+/*  columns (the same numbers `/player` and the site show). Don't     */
+/*  aggregate from `match_events` here — career totals were partly    */
+/*  seeded directly into `players` and an event-level count would     */
+/*  under-report by a lot.                                            */
 /* ------------------------------------------------------------------ */
 
-type LeaderboardRow = {
-  player_id: string;
+type LeaderboardEntry = {
+  roblox_username: string;
   count: number;
 };
 
-async function aggregateLeaderboard(
+async function fetchTopByMetric(
   supabase: SupabaseClient,
-  eventType: "goal" | "assist",
-): Promise<LeaderboardRow[]> {
-  // We aggregate in JS — match_events has ~500 rows, well under any payload limit.
-  const { data, error } = await supabase
-    .from("match_events")
-    .select("player_id")
-    .eq("event_type", eventType)
-    .not("player_id", "is", null)
-    .limit(10000);
-  if (error) throw error;
-  const tally = new Map<string, number>();
-  for (const row of (data ?? []) as { player_id: string | null }[]) {
-    if (!row.player_id) continue;
-    tally.set(row.player_id, (tally.get(row.player_id) ?? 0) + 1);
-  }
-  return [...tally.entries()]
-    .map(([player_id, count]) => ({ player_id, count }))
-    .sort((a, b) => b.count - a.count);
-}
-
-async function fetchPlayerLabels(
-  supabase: SupabaseClient,
-  playerIds: string[],
-): Promise<Map<string, string>> {
-  if (playerIds.length === 0) return new Map();
+  metric: "goals_total" | "assists_total",
+  topN: number,
+): Promise<LeaderboardEntry[]> {
   const { data, error } = await supabase
     .from("players")
-    .select("id, roblox_username")
-    .in("id", playerIds);
+    .select(`roblox_username, ${metric}`)
+    .gt(metric, 0)
+    .order(metric, { ascending: false })
+    .order("roblox_username", { ascending: true })
+    .limit(topN);
   if (error) throw error;
-  const m = new Map<string, string>();
-  for (const row of (data ?? []) as { id: string; roblox_username: string | null }[]) {
-    if (row.roblox_username) m.set(row.id, row.roblox_username);
+  return (data ?? []).map((row) => {
+    const r = row as Record<string, unknown>;
+    return {
+      roblox_username: String(r.roblox_username ?? "Unknown"),
+      count: Number(r[metric] ?? 0),
+    };
+  });
+}
+
+async function fetchTotals(
+  supabase: SupabaseClient,
+): Promise<{ goals: number; assists: number }> {
+  const { data, error } = await supabase
+    .from("players")
+    .select("goals_total, assists_total")
+    .or("goals_total.gt.0,assists_total.gt.0")
+    .limit(5000);
+  if (error) throw error;
+  let g = 0;
+  let a = 0;
+  for (const row of (data ?? []) as {
+    goals_total: number | null;
+    assists_total: number | null;
+  }[]) {
+    g += row.goals_total ?? 0;
+    a += row.assists_total ?? 0;
   }
-  return m;
+  return { goals: g, assists: a };
 }
 
 function renderLeaderboard(
-  rows: LeaderboardRow[],
-  labels: Map<string, string>,
+  rows: LeaderboardEntry[],
   metricEmoji: string,
   metricLabel: string,
-  topN = 10,
 ): string {
   if (rows.length === 0) {
     return `*No ${metricLabel} on file yet.*`;
   }
-  const top = rows.slice(0, topN);
   const medal = (idx: number) =>
-    idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `\`${String(idx + 1).padStart(2, " ")}\``;
-  return top
-    .map((row, idx) => {
-      const name = labels.get(row.player_id) ?? "Unknown";
-      return `${medal(idx)}  **${name}** · ${metricEmoji} **${row.count}**`;
-    })
+    idx === 0
+      ? "🥇"
+      : idx === 1
+        ? "🥈"
+        : idx === 2
+          ? "🥉"
+          : `\`${String(idx + 1).padStart(2, " ")}\``;
+  return rows
+    .map(
+      (row, idx) =>
+        `${medal(idx)}  **${row.roblox_username}** · ${metricEmoji} **${row.count}**`,
+    )
     .join("\n");
 }
 
@@ -229,17 +242,11 @@ export async function handleStats(
 
   try {
     const supabase = createBotSupabase();
-    const [scorers, assisters] = await Promise.all([
-      aggregateLeaderboard(supabase, "goal"),
-      aggregateLeaderboard(supabase, "assist"),
+    const [scorers, assisters, totals] = await Promise.all([
+      fetchTopByMetric(supabase, "goals_total", 10),
+      fetchTopByMetric(supabase, "assists_total", 10),
+      fetchTotals(supabase),
     ]);
-    const ids = new Set<string>();
-    for (const r of scorers.slice(0, 10)) ids.add(r.player_id);
-    for (const r of assisters.slice(0, 10)) ids.add(r.player_id);
-    const labels = await fetchPlayerLabels(supabase, [...ids]);
-
-    const totalGoals = scorers.reduce((acc, r) => acc + r.count, 0);
-    const totalAssists = assisters.reduce((acc, r) => acc + r.count, 0);
 
     const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
     const hostLabel = env.VFL_SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
@@ -254,25 +261,25 @@ export async function handleStats(
       .setURL(`${siteBase}/players`)
       .setDescription(
         [
-          `Aggregated across **every** competition and season the bot has stats for.`,
-          `> **${totalGoals}** total goals · **${totalAssists}** total assists`,
+          `Aggregated across **every** competition and season on file.`,
+          `> **${totals.goals}** total goals · **${totals.assists}** total assists`,
           `[Browse all players on ${hostLabel}](${siteBase}/players)`,
         ].join("\n"),
       )
       .addFields(
         {
           name: "⚽ Top scorers",
-          value: renderLeaderboard(scorers, labels, "⚽", "goals").slice(0, 1024),
+          value: renderLeaderboard(scorers, "⚽", "goals").slice(0, 1024),
           inline: true,
         },
         {
           name: "🅰️ Top assisters",
-          value: renderLeaderboard(assisters, labels, "🅰️", "assists").slice(0, 1024),
+          value: renderLeaderboard(assisters, "🅰️", "assists").slice(0, 1024),
           inline: true,
         },
       )
       .setFooter({
-        text: "VF League Database · Updated as match events sync",
+        text: "VF League Database · Same totals as /player and the site",
       })
       .setTimestamp(new Date());
 
