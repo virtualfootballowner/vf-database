@@ -554,11 +554,13 @@ export async function fetchScrimmageMatchByCode(
   team1_score: number | null;
   team2_score: number | null;
   reported_by: string | null;
+  lobby_channel_id: string | null;
+  lobby_message_id: string | null;
 } | null> {
   const { data, error } = await supabase
     .from("scrimmage_matches")
     .select(
-      "id, match_code, status, team1_captain_id, team2_captain_id, team1_score, team2_score, reported_by",
+      "id, match_code, status, team1_captain_id, team2_captain_id, team1_score, team2_score, reported_by, lobby_channel_id, lobby_message_id",
     )
     .eq("match_code", matchCode)
     .maybeSingle();
@@ -572,6 +574,8 @@ export async function fetchScrimmageMatchByCode(
     team1_score: number | null;
     team2_score: number | null;
     reported_by: string | null;
+    lobby_channel_id: string | null;
+    lobby_message_id: string | null;
   } | null;
 }
 

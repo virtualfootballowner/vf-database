@@ -16,6 +16,7 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  Client,
   EmbedBuilder,
   MessageFlags,
   type ButtonInteraction,
@@ -43,6 +44,7 @@ import {
 
 const COLOR_LIVE = 0x16a34a;
 const COLOR_DISPUTE = 0xdc2626;
+const COLOR_NEUTRAL = 0x6b7280;
 
 export const CONFIRM_WINDOW_MS = 2 * 60 * 1000;
 export const SCR_BTN_CONFIRM_PREFIX = "vfl:scr:confirm:";
@@ -499,6 +501,34 @@ export async function handleScrimmageAdminResult(
     clearActiveLobby();
   }
 
+  // Replace the lobby card with the final result embed so the live
+  // roster doesn't linger after the override.
+  try {
+    const players = await fetchMatchPlayers(supabase, match.id);
+    const namesById = await fetchPlayerNamesByIds(
+      supabase,
+      players.map((p) => p.player_id),
+    );
+    await editLobbyCardToFinalState({
+      client: interaction.client,
+      channelId: match.lobby_channel_id,
+      messageId: match.lobby_message_id,
+      embed: renderResultEmbed({
+        note: `Admin override by <@${interaction.user.id}>.`,
+        team1Score,
+        team2Score,
+        players,
+        namesById,
+        team1Avg: result.team1Avg,
+        team2Avg: result.team2Avg,
+        team1Delta: result.team1Delta,
+        team2Delta: result.team2Delta,
+      }),
+    });
+  } catch (err) {
+    console.error("[scrimmage] admin-result card edit failed:", err);
+  }
+
   await interaction.editReply({
     content: `✅ Applied **${team1Score}-${team2Score}** to \`${matchCode}\`. T1 Δ ${signed(result.team1Delta)} · T2 Δ ${signed(result.team2Delta)}.`,
   });
@@ -571,6 +601,25 @@ export async function handleScrimmageVoid(
     clearActiveLobby();
   }
 
+  // Replace the lobby card so the live/draft/queue embed doesn't sit
+  // around forever after a void. Best-effort — failure isn't fatal.
+  await editLobbyCardToFinalState({
+    client: interaction.client,
+    channelId: match.lobby_channel_id,
+    messageId: match.lobby_message_id,
+    embed: new EmbedBuilder()
+      .setColor(COLOR_NEUTRAL)
+      .setTitle(`🛑 Scrimmage voided · ${matchCode}`)
+      .setDescription(
+        [
+          `Voided by <@${interaction.user.id}>.`,
+          "No ELO applied. Run **`/scrimmage start`** to open a fresh lobby.",
+        ].join("\n"),
+      )
+      .setFooter({ text: "VF FACEIT" })
+      .setTimestamp(new Date()),
+  });
+
   await interaction.editReply({
     content: `✅ Voided \`${matchCode}\` (was \`${match.status}\`). No ELO applied.`,
   });
@@ -582,6 +631,38 @@ export async function handleScrimmageVoid(
 
 function signed(n: number): string {
   return n >= 0 ? `+${n}` : `${n}`;
+}
+
+/**
+ * Edit the original `#scrimmage-lobby` card (queue/draft/ready/live) to a
+ * terminal embed. Used by /scrimmage void and /scrimmage admin-result so the
+ * old live roster doesn't linger after an admin action.
+ *
+ * Fully best-effort — if the channel is gone, the message is gone, or we
+ * lack edit perms, we just log and move on. The DB state is already canonical.
+ */
+async function editLobbyCardToFinalState(args: {
+  client: Client;
+  channelId: string | null;
+  messageId: string | null;
+  embed: EmbedBuilder;
+}): Promise<void> {
+  if (!args.channelId || !args.messageId) return;
+  try {
+    const channel = await args.client.channels.fetch(args.channelId);
+    if (!channel || !channel.isTextBased() || !("messages" in channel)) return;
+    const msg = await channel.messages
+      .fetch(args.messageId)
+      .catch(() => null);
+    if (!msg) return;
+    await msg.edit({
+      content: "",
+      embeds: [args.embed],
+      components: [],
+    });
+  } catch (err) {
+    console.error("[scrimmage] editLobbyCardToFinalState failed:", err);
+  }
 }
 
 /** Used by handlers.ts to surface the report-AFK stub. */
