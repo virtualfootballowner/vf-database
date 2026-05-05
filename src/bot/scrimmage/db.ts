@@ -121,32 +121,41 @@ export type LeaderboardEntry = {
 };
 
 /**
- * Top N by ELO, joined to `players.roblox_username` for display. Players who
+ * Top N by ELO, plus `players.roblox_username` for display. Players who
  * have never queued won't appear (they only show up after their first match
  * via `ensureScrimmageRating`).
+ *
+ * Implementation note: we used to do this with an embedded Supabase join
+ * (`players:player_id(roblox_username)`) but `scrimmage_ratings.player_id`
+ * is a `UNIQUE` FK, so Supabase returns the relation as an object, not an
+ * array. The previous code treated it as an array and silently fell back
+ * to "Unknown" for every row. A two-step fetch is unambiguous + cheap.
  */
 export async function fetchScrimmageLeaderboard(
   supabase: SupabaseClient,
   topN = 10,
 ): Promise<LeaderboardEntry[]> {
-  const { data, error } = await supabase
+  const { data: ratings, error } = await supabase
     .from("scrimmage_ratings")
     .select(
-      "player_id, elo, wins, losses, draws, games_played, peak_elo, players:player_id(roblox_username)",
+      "player_id, elo, wins, losses, draws, games_played, peak_elo",
     )
     .order("elo", { ascending: false })
     .order("games_played", { ascending: false })
     .limit(topN);
   if (error) throw error;
 
-  /** Supabase typegen returns embedded FK joins as an array even for many-to-one. */
-  type Row = Omit<LeaderboardEntry, "roblox_username"> & {
-    players: { roblox_username: string | null }[] | null;
-  };
-  return ((data ?? []) as unknown as Row[]).map((row) => ({
+  const rows = (ratings ?? []) as Omit<LeaderboardEntry, "roblox_username">[];
+  if (rows.length === 0) return [];
+
+  const names = await fetchPlayerNamesByIds(
+    supabase,
+    rows.map((r) => r.player_id),
+  );
+
+  return rows.map((row) => ({
     player_id: row.player_id,
-    roblox_username:
-      row.players?.[0]?.roblox_username ?? "Unknown",
+    roblox_username: names.get(row.player_id) ?? "Unknown",
     elo: row.elo,
     wins: row.wins,
     losses: row.losses,
