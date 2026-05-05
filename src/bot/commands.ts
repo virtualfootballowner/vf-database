@@ -53,6 +53,10 @@ import {
   handleStandings,
   handleStats,
 } from "@/bot/info";
+import {
+  handleScrimmageCommand,
+  scrimmageSlashCommand,
+} from "@/bot/scrimmage/commands";
 
 function formatCommandError(err: unknown): string {
   if (err instanceof Error && err.message.trim()) return err.message.trim();
@@ -449,6 +453,8 @@ export const slashCommandDefinitions = [
         .setMaxValue(20),
     )
     .toJSON(),
+
+  scrimmageSlashCommand,
 ];
 
 export async function handleSlashCommand(
@@ -502,6 +508,9 @@ export async function handleSlashCommand(
       return;
     case "standings":
       await handleStandings(interaction);
+      return;
+    case "scrimmage":
+      await handleScrimmageCommand(interaction);
       return;
     default:
       await interaction.reply({
