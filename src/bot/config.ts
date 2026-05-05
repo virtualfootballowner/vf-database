@@ -40,6 +40,23 @@ const envSchema = z.object({
     .transform((s) => s.trim()),
   /** Outgoing log: posts when members leave (ban / kick / voluntary). Optional — omit to disable. */
   DISCORD_MEMBER_OUTGOING_CHANNEL_ID: optionalOutgoingChannel,
+  /**
+   * Public channel where new joiners get a ping + verify card from the join gate.
+   * Replaces the old "DM every new joiner" flow that risked spam flags. If unset,
+   * the join gate runs silently — it still kicks unverified members at the deadline,
+   * but no notification is posted. Set this to your `#verify-here` channel.
+   */
+  DISCORD_VERIFY_CHANNEL_ID: optionalOutgoingChannel,
+  /**
+   * Global kill switch for ALL bot-initiated DMs (welcomes, approve/deny notices,
+   * kick/ban reasons). Channel posts and slash-command replies are unaffected.
+   * Set to "1" / "true" to disable; default is enabled (consequence-only DMs).
+   */
+  BOT_DM_DISABLED: z.preprocess((raw) => {
+    if (raw == null) return false;
+    const s = String(raw).trim().toLowerCase();
+    return s === "1" || s === "true" || s === "yes";
+  }, z.boolean()),
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   ROBLOX_API_BASE_URL: z.string().url().default("https://users.roblox.com"),
@@ -66,6 +83,8 @@ export const env = envSchema.parse({
   DISCORD_SYNC_LOG_CHANNEL_ID: process.env.DISCORD_SYNC_LOG_CHANNEL_ID,
   DISCORD_TEAM_MANAGER_ROLE_ID: process.env.DISCORD_TEAM_MANAGER_ROLE_ID,
   DISCORD_MEMBER_OUTGOING_CHANNEL_ID: process.env.DISCORD_MEMBER_OUTGOING_CHANNEL_ID,
+  DISCORD_VERIFY_CHANNEL_ID: process.env.DISCORD_VERIFY_CHANNEL_ID,
+  BOT_DM_DISABLED: process.env.BOT_DM_DISABLED,
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   ROBLOX_API_BASE_URL: process.env.ROBLOX_API_BASE_URL,

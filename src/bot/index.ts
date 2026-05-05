@@ -49,6 +49,7 @@ import {
   handleApprovedRoleAdded,
   handleRoverVerified,
 } from "@/bot/sync";
+import { safeSendDm } from "@/bot/dm";
 
 /** When staff uses the Approve button, we sync here; skip duplicate work if GuildMemberUpdate fires too. */
 const approvalSyncOwnedByButton = new Set<string>();
@@ -399,24 +400,26 @@ async function handleDenyClick(
     return;
   }
 
-  let dmDelivered = true;
-  try {
-    const denialEmbed = new EmbedBuilder()
-      .setColor(0xef4444)
-      .setTitle("❌ Application Not Approved")
-      .setDescription("Your VFL registration was not approved.")
-      .addFields({
-        name: "💬 Think this is a mistake?",
-        value:
-          "Reach out to a staff member in the VFL Discord and try again via the site’s **Click to verify** link.",
-      })
-      .setFooter({ text: "VFL Bot" })
-      .setTimestamp(new Date());
+  const denialEmbed = new EmbedBuilder()
+    .setColor(0xef4444)
+    .setTitle("❌ Application Not Approved")
+    .setDescription("Your VFL registration was not approved.")
+    .addFields({
+      name: "💬 Think this is a mistake?",
+      value:
+        "Reach out to a staff member in the VFL Discord and try again via the site's **Click to verify** link.",
+    })
+    .setFooter({
+      text: "VFL Bot · You're getting this DM because your VFL registration was reviewed by staff",
+    })
+    .setTimestamp(new Date());
 
-    await member.send({ embeds: [denialEmbed] });
-  } catch {
-    dmDelivered = false;
-  }
+  const dmResult = await safeSendDm(
+    member,
+    { embeds: [denialEmbed] },
+    "verify-denied",
+  );
+  const dmDelivered = dmResult.ok;
 
   let kicked = true;
   try {

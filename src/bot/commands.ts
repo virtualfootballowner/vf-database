@@ -53,6 +53,7 @@ import {
   handleStandings,
   handleStats,
 } from "@/bot/info";
+import { safeSendDm } from "@/bot/dm";
 
 function formatCommandError(err: unknown): string {
   if (err instanceof Error && err.message.trim()) return err.message.trim();
@@ -1212,18 +1213,15 @@ async function handleKick(
     return;
   }
 
-  let dmDelivered = true;
-  try {
-    const dm = new EmbedBuilder()
-      .setColor(0xef4444)
-      .setTitle("👢 You were kicked from VFL")
-      .setDescription(`**Reason**\n${reason}`)
-      .setFooter({ text: "VFL Bot" })
-      .setTimestamp(new Date());
-    await target.send({ embeds: [dm] });
-  } catch {
-    dmDelivered = false;
-  }
+  const dm = new EmbedBuilder()
+    .setColor(0xef4444)
+    .setTitle("👢 You were kicked from VFL")
+    .setDescription(`**Reason**\n${reason}`)
+    .setFooter({
+      text: "VFL Bot · You're getting this DM because a staff member kicked you from the VFL Discord",
+    })
+    .setTimestamp(new Date());
+  const kickDmResult = await safeSendDm(target, { embeds: [dm] }, "mod-kick");
 
   try {
     await target.kick(`Kicked by ${interaction.user.tag}: ${reason}`);
@@ -1235,17 +1233,22 @@ async function handleKick(
     return;
   }
 
+  const dmStatus =
+    kickDmResult.ok
+      ? "Delivered"
+      : kickDmResult.reason === "disabled"
+        ? "Skipped (BOT_DM_DISABLED)"
+        : kickDmResult.reason === "blocked"
+          ? "Not delivered (user blocks DMs)"
+          : "Not delivered";
+
   const result = new EmbedBuilder()
     .setColor(0xef4444)
     .setTitle("👢 Kicked")
     .setDescription(`**${user.tag}** has been kicked from the server.`)
     .addFields(
       { name: "Reason", value: reason, inline: false },
-      {
-        name: "DM",
-        value: dmDelivered ? "Delivered" : "Not delivered (user blocks DMs)",
-        inline: false,
-      },
+      { name: "DM", value: dmStatus, inline: false },
     )
     .setFooter({ text: `Kicked by ${interaction.user.tag}` })
     .setTimestamp(new Date());
@@ -1307,21 +1310,24 @@ async function handleBan(
     return;
   }
 
-  let dmDelivered = true;
+  let dmStatus = "Skipped (user not in server)";
   if (target) {
-    try {
-      const dm = new EmbedBuilder()
-        .setColor(0x991b1b)
-        .setTitle("🔨 You were banned from VFL")
-        .setDescription(`**Reason**\n${reason}`)
-        .setFooter({ text: "VFL Bot" })
-        .setTimestamp(new Date());
-      await target.send({ embeds: [dm] });
-    } catch {
-      dmDelivered = false;
-    }
-  } else {
-    dmDelivered = false;
+    const dm = new EmbedBuilder()
+      .setColor(0x991b1b)
+      .setTitle("🔨 You were banned from VFL")
+      .setDescription(`**Reason**\n${reason}`)
+      .setFooter({
+        text: "VFL Bot · You're getting this DM because a staff member banned you from the VFL Discord",
+      })
+      .setTimestamp(new Date());
+    const banDmResult = await safeSendDm(target, { embeds: [dm] }, "mod-ban");
+    dmStatus = banDmResult.ok
+      ? "Delivered"
+      : banDmResult.reason === "disabled"
+        ? "Skipped (BOT_DM_DISABLED)"
+        : banDmResult.reason === "blocked"
+          ? "Not delivered (user blocks DMs)"
+          : "Not delivered";
   }
 
   try {
@@ -1351,15 +1357,7 @@ async function handleBan(
             : "None",
         inline: true,
       },
-      {
-        name: "DM",
-        value: target
-          ? dmDelivered
-            ? "Delivered"
-            : "Not delivered (user blocks DMs)"
-          : "Skipped (user not in server)",
-        inline: true,
-      },
+      { name: "DM", value: dmStatus, inline: true },
     )
     .setFooter({ text: `Banned by ${interaction.user.tag}` })
     .setTimestamp(new Date());

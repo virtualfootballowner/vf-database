@@ -1,4 +1,9 @@
-import { Client, EmbedBuilder, type GuildMember } from "discord.js";
+import {
+  Client,
+  EmbedBuilder,
+  type GuildMember,
+  type GuildTextBasedChannel,
+} from "discord.js";
 
 import { env } from "@/bot/config";
 
@@ -53,7 +58,45 @@ function needsRoverGate(member: GuildMember): boolean {
 }
 
 /**
- * Instant DM + reminder before deadline + kick if verification not completed in time.
+ * Resolve the public verify channel where join-gate notifications get posted.
+ * Returns null when DISCORD_VERIFY_CHANNEL_ID is unset (silent gate mode) or
+ * when the channel can't be reached / isn't sendable.
+ */
+async function resolveVerifyChannel(
+  client: Client,
+): Promise<GuildTextBasedChannel | null> {
+  const channelId = env.DISCORD_VERIFY_CHANNEL_ID;
+  if (!channelId) return null;
+  let channel;
+  try {
+    channel = await client.channels.fetch(channelId);
+  } catch {
+    return null;
+  }
+  if (!channel || !channel.isTextBased()) return null;
+  if (!("isSendable" in channel) || !channel.isSendable()) return null;
+  return channel as GuildTextBasedChannel;
+}
+
+let verifyChannelMissingWarned = false;
+function warnMissingVerifyChannelOnce(): void {
+  if (verifyChannelMissingWarned) return;
+  verifyChannelMissingWarned = true;
+  console.warn(
+    "[join-gate] DISCORD_VERIFY_CHANNEL_ID is not set — new joiners will NOT receive any verify notification. " +
+      "Set it to your public verify channel id to ping joiners there. (Old behavior of DMing every joiner is permanently disabled to avoid Discord spam flags.)",
+  );
+}
+
+/**
+ * Public-channel join gate: pings the new member in the verify channel,
+ * sends one reminder ping near the deadline, and kicks if not verified in time.
+ *
+ * The previous version of this flow DM'd each new joiner up to 3 times. That
+ * pattern (bulk DMs to users who never interacted with the bot) is what
+ * caused the previous bot account to be flagged by Discord, so DMs have been
+ * removed entirely from this flow — every notification now goes to the
+ * public verify channel where the user can opt in by clicking through.
  */
 export async function handleMemberJoinVerifyGate(
   client: Client,
@@ -67,25 +110,34 @@ export async function handleMemberJoinVerifyGate(
   const rem = reminderLabel();
   const verifyUrl = `${env.VFL_SITE_URL.replace(/\/$/, "")}/verify`;
 
-  try {
+  const verifyChannel = await resolveVerifyChannel(client);
+  if (!verifyChannel) {
+    warnMissingVerifyChannelOnce();
+  } else {
     const embed = new EmbedBuilder()
       .setColor(0xf59e0b)
-      .setTitle(`⏱️ You have ${dl} to verify`)
+      .setTitle(`⏱️ ${dl} to verify`)
       .setDescription(
         `Welcome to **VFL**. Open **[Click to verify](${verifyUrl})** and sign in with **Discord**, then **Roblox**, within **${dl}** or you will be **removed** automatically.`,
       )
       .addFields({
         name: "What to do",
-        value: `Use the link above on the VFL website (works on mobile). You’ll get another DM with **${rem} left** if you’re not verified yet. If you’re stuck, open a ticket or ask staff — the timer does not pause.`,
+        value: `Use the link above on the VFL website (works on mobile). You'll get one more ping in this channel with **${rem} left** if you're not verified yet. If you're stuck, open a ticket or ask staff — the timer does not pause.`,
       })
-      .setFooter({ text: "VFL Bot" })
+      .setFooter({ text: "VFL Bot · Posted here so we don't have to DM you" })
       .setTimestamp();
-
-    await member.send({ embeds: [embed] });
-  } catch {
-    console.warn(
-      `[join-gate] Could not DM ${member.user.tag} (${member.id}) — DMs may be closed; kick timer still applies.`,
-    );
+    try {
+      await verifyChannel.send({
+        content: `${member} — heads up:`,
+        embeds: [embed],
+        allowedMentions: { users: [member.id] },
+      });
+    } catch (err) {
+      console.warn(
+        `[join-gate] Could not post welcome ping for ${member.user.tag} in verify channel:`,
+        err,
+      );
+    }
   }
 
   const userId = member.id;
@@ -99,6 +151,8 @@ export async function handleMemberJoinVerifyGate(
         if (!m) return;
         if (m.roles.cache.has(env.DISCORD_ROVER_VERIFIED_ROLE_ID)) return;
         if (m.roles.cache.has(env.DISCORD_APPROVED_ROLE_ID)) return;
+        const channel = await resolveVerifyChannel(client);
+        if (!channel) return;
         const remindEmbed = new EmbedBuilder()
           .setColor(0xea580c)
           .setTitle(`⏱️ ${rem} left to verify`)
@@ -110,12 +164,17 @@ export async function handleMemberJoinVerifyGate(
             value:
               "Complete Discord + Roblox sign-in on the site immediately. This is your last heads-up before an automatic kick.",
           })
-          .setFooter({ text: "VFL Bot" })
+          .setFooter({ text: "VFL Bot · Final reminder before auto-kick" })
           .setTimestamp();
-        await m.send({ embeds: [remindEmbed] });
-      } catch {
+        await channel.send({
+          content: `${m} — last call:`,
+          embeds: [remindEmbed],
+          allowedMentions: { users: [m.id] },
+        });
+      } catch (err) {
         console.warn(
-          `[join-gate] Could not send reminder DM to ${userId} (DMs closed or fetch failed).`,
+          `[join-gate] Could not post reminder for ${userId}:`,
+          err,
         );
       }
     })();
@@ -133,27 +192,8 @@ export async function handleMemberJoinVerifyGate(
         if (m.roles.cache.has(env.DISCORD_APPROVED_ROLE_ID)) return;
 
         const dlKick = deadlineLabel();
-        try {
-          const kickDm = new EmbedBuilder()
-            .setColor(0xdc2626)
-            .setTitle("You were removed from VFL")
-            .setDescription(
-              `You did not finish **[Click to verify](${verifyUrl})** within **${dlKick}** after joining, so you have been **removed** from the server.`,
-            )
-            .addFields({
-              name: "What’s next",
-              value:
-                "You can **rejoin** when you’re ready and verify right away on the site. If something blocked you (login, DMs, etc.), fix it first then try again.",
-            })
-            .setFooter({ text: "VFL Bot" })
-            .setTimestamp();
-          await m.send({ embeds: [kickDm] });
-        } catch {
-          console.warn(
-            `[join-gate] Could not send kick notice DM to ${userId} — kicking anyway.`,
-          );
-        }
-
+        // No DM at kick — the reason lives in the audit log and the user
+        // was already pinged twice in the verify channel before this point.
         await m.kick(
           `Website verify not completed within ${dlKick} — rejoin when ready.`,
         );

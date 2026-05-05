@@ -8,6 +8,7 @@ import {
 } from "discord.js";
 
 import { env } from "@/bot/config";
+import { safeSendDm } from "@/bot/dm";
 import { upsertVerifiedPlayer, PlayerIdentityCollisionError } from "@/lib/player-sync";
 import {
   extractRobloxUsername,
@@ -131,27 +132,25 @@ export async function handleRoverVerified(
     components: [components],
   });
 
-  try {
-    const welcomeEmbed = new EmbedBuilder()
-      .setColor(0x083696)
-      .setTitle("👋 Welcome to VFL")
-      .setDescription(
-        identity
-          ? `Hey **${identity.username}** — your Roblox verification has been received.`
-          : "Hey — your Roblox verification has been received.",
-      )
-      .addFields({
-        name: "📋 What happens next",
-        value:
-          "A staff member will review your registration shortly. You'll get another DM here once you've been ✅ approved or ❌ denied.",
-      })
-      .setFooter({ text: "VFL Bot" })
-      .setTimestamp(new Date());
+  const welcomeEmbed = new EmbedBuilder()
+    .setColor(0x083696)
+    .setTitle("👋 Welcome to VFL")
+    .setDescription(
+      identity
+        ? `Hey **${identity.username}** — your Roblox verification has been received.`
+        : "Hey — your Roblox verification has been received.",
+    )
+    .addFields({
+      name: "📋 What happens next",
+      value:
+        "A staff member will review your registration shortly. You'll get one more message here once you've been ✅ approved or ❌ denied.",
+    })
+    .setFooter({
+      text: "VFL Bot · You're getting this DM because you just completed verification on the VFL website",
+    })
+    .setTimestamp(new Date());
 
-    await member.send({ embeds: [welcomeEmbed] });
-  } catch {
-    // user has DMs disabled — not fatal, the staff card was posted regardless
-  }
+  await safeSendDm(member, { embeds: [welcomeEmbed] }, "verify-welcome");
 }
 
 export async function handleApprovedRoleAdded(
@@ -184,34 +183,32 @@ export async function handleApprovedRoleAdded(
   }
 
   if (options.sendDm) {
-    try {
-      const profileUrl = `${env.VFL_SITE_URL.replace(/\/$/, "")}/players/${encodeURIComponent(identity.username)}`;
+    const profileUrl = `${env.VFL_SITE_URL.replace(/\/$/, "")}/players/${encodeURIComponent(identity.username)}`;
 
-      const approvedEmbed = new EmbedBuilder()
-        .setColor(0x10b981)
-        .setTitle("🎉 You're approved!")
-        .setDescription(
-          `You now have full access to the VFL Discord and your profile is live at **[${env.VFL_SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "")}/players](${profileUrl})**.`,
-        )
-        .addFields(
-          {
-            name: "🎮 Roblox",
-            value: `[${identity.username}](https://www.roblox.com/users/${identity.userId}/profile)`,
-            inline: true,
-          },
-          {
-            name: "🌐 VFL Profile",
-            value: `[View on website](${profileUrl})`,
-            inline: true,
-          },
-        )
-        .setFooter({ text: "Good luck out there ⚽" })
-        .setTimestamp(new Date());
+    const approvedEmbed = new EmbedBuilder()
+      .setColor(0x10b981)
+      .setTitle("🎉 You're approved!")
+      .setDescription(
+        `You now have full access to the VFL Discord and your profile is live at **[${env.VFL_SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "")}/players](${profileUrl})**.`,
+      )
+      .addFields(
+        {
+          name: "🎮 Roblox",
+          value: `[${identity.username}](https://www.roblox.com/users/${identity.userId}/profile)`,
+          inline: true,
+        },
+        {
+          name: "🌐 VFL Profile",
+          value: `[View on website](${profileUrl})`,
+          inline: true,
+        },
+      )
+      .setFooter({
+        text: "VFL Bot · You're getting this DM because your VFL registration was approved",
+      })
+      .setTimestamp(new Date());
 
-      await member.send({ embeds: [approvedEmbed] });
-    } catch {
-      // user has DMs disabled — sync still happened, that's the important part
-    }
+    await safeSendDm(member, { embeds: [approvedEmbed] }, "verify-approved");
   }
 
   return true;
