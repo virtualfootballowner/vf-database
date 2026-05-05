@@ -5,14 +5,14 @@ import {
 } from "discord.js";
 
 import {
-  handleScrimmageAdminResultStub,
-  handleScrimmageCancelStub,
+  handleScrimmageAdminResult,
+  handleScrimmageCancel,
   handleScrimmageLeaderboard,
+  handleScrimmageReport,
   handleScrimmageReportAfkStub,
-  handleScrimmageReportStub,
-  handleScrimmageStartStub,
+  handleScrimmageStart,
   handleScrimmageStats,
-  handleScrimmageVoidStub,
+  handleScrimmageVoid,
 } from "@/bot/scrimmage/handlers";
 
 /**
@@ -34,18 +34,27 @@ export const scrimmageSlashCommand = new SlashCommandBuilder()
   .addSubcommand((sub) =>
     sub
       .setName("cancel")
-      .setDescription("Cancel the active lobby (host or admin only)"),
+      .setDescription("Cancel the active lobby (host only)"),
   )
   .addSubcommand((sub) =>
     sub
       .setName("report")
-      .setDescription("Report the result of a live scrimmage you're captain of")
-      .addStringOption((opt) =>
+      .setDescription("Report the result of your live scrimmage (captains only)")
+      .addIntegerOption((opt) =>
         opt
-          .setName("score")
-          .setDescription("Score as your-team\u2013their-team, e.g. \"4-2\"")
+          .setName("my-score")
+          .setDescription("Your team's score (0–99)")
           .setRequired(true)
-          .setMaxLength(11),
+          .setMinValue(0)
+          .setMaxValue(99),
+      )
+      .addIntegerOption((opt) =>
+        opt
+          .setName("opp-score")
+          .setDescription("Opposing team's score (0–99)")
+          .setRequired(true)
+          .setMinValue(0)
+          .setMaxValue(99),
       ),
   )
   .addSubcommand((sub) =>
@@ -81,26 +90,35 @@ export const scrimmageSlashCommand = new SlashCommandBuilder()
       .setDescription("Override a scrimmage result (admin only)")
       .addStringOption((opt) =>
         opt
-          .setName("match_code")
+          .setName("code")
           .setDescription("Match code, e.g. SCR-2026-0142")
           .setRequired(true)
           .setMaxLength(20),
       )
-      .addStringOption((opt) =>
+      .addIntegerOption((opt) =>
         opt
-          .setName("score")
-          .setDescription("Final score as team1\u2013team2, e.g. \"4-2\"")
+          .setName("team1-score")
+          .setDescription("Team 1 final score (0–99)")
           .setRequired(true)
-          .setMaxLength(11),
+          .setMinValue(0)
+          .setMaxValue(99),
+      )
+      .addIntegerOption((opt) =>
+        opt
+          .setName("team2-score")
+          .setDescription("Team 2 final score (0–99)")
+          .setRequired(true)
+          .setMinValue(0)
+          .setMaxValue(99),
       ),
   )
   .addSubcommand((sub) =>
     sub
       .setName("void")
-      .setDescription("Void a scrimmage (no ELO changes, marks cancelled)")
+      .setDescription("Void a scrimmage (no ELO changes, marks voided)")
       .addStringOption((opt) =>
         opt
-          .setName("match_code")
+          .setName("code")
           .setDescription("Match code, e.g. SCR-2026-0142")
           .setRequired(true)
           .setMaxLength(20),
@@ -114,13 +132,13 @@ export async function handleScrimmageCommand(
   const sub = interaction.options.getSubcommand();
   switch (sub) {
     case "start":
-      await handleScrimmageStartStub(interaction);
+      await handleScrimmageStart(interaction);
       return;
     case "cancel":
-      await handleScrimmageCancelStub(interaction);
+      await handleScrimmageCancel(interaction);
       return;
     case "report":
-      await handleScrimmageReportStub(interaction);
+      await handleScrimmageReport(interaction);
       return;
     case "report-afk":
       await handleScrimmageReportAfkStub(interaction);
@@ -132,10 +150,10 @@ export async function handleScrimmageCommand(
       await handleScrimmageLeaderboard(interaction);
       return;
     case "admin-result":
-      await handleScrimmageAdminResultStub(interaction);
+      await handleScrimmageAdminResult(interaction);
       return;
     case "void":
-      await handleScrimmageVoidStub(interaction);
+      await handleScrimmageVoid(interaction);
       return;
     default:
       await interaction.reply({

@@ -1,9 +1,7 @@
 import {
   EmbedBuilder,
   MessageFlags,
-  PermissionFlagsBits,
   type ChatInputCommandInteraction,
-  type GuildMember,
 } from "discord.js";
 
 import { env } from "@/bot/config";
@@ -16,6 +14,30 @@ import {
   type ScrimmageRatingRow,
 } from "@/bot/scrimmage/db";
 import { SCRIMMAGE_DEFAULT_ELO } from "@/bot/scrimmage/elo";
+import {
+  isScrimmageAdmin,
+  isWhitelistedForScrimmage,
+} from "@/bot/scrimmage/permissions";
+import {
+  handleScrimmageCancel,
+  handleScrimmageStart,
+} from "@/bot/scrimmage/queue";
+import {
+  handleScrimmageAdminResult,
+  handleScrimmageReport,
+  handleScrimmageVoid,
+} from "@/bot/scrimmage/result";
+
+/* Re-export for callers that imported these from `handlers` historically. */
+export {
+  isScrimmageAdmin,
+  isWhitelistedForScrimmage,
+  handleScrimmageStart,
+  handleScrimmageCancel,
+  handleScrimmageReport,
+  handleScrimmageAdminResult,
+  handleScrimmageVoid,
+};
 
 /**
  * Slash-command handlers for `/scrimmage <subcommand>`.
@@ -27,36 +49,6 @@ import { SCRIMMAGE_DEFAULT_ELO } from "@/bot/scrimmage/elo";
 
 const COLOR_BRAND = 0x083696;
 const COLOR_NEUTRAL = 0x6b7280;
-
-/* ------------------------------------------------------------------ */
-/*  Permission gates                                                  */
-/* ------------------------------------------------------------------ */
-
-/**
- * "Whitelisted" role per spec — that's the same role staff grant on approval
- * (`DISCORD_APPROVED_ROLE_ID`). Anyone with this role can queue + report.
- */
-export function isWhitelistedForScrimmage(
-  interaction: ChatInputCommandInteraction,
-): boolean {
-  if (!interaction.member) return false;
-  const member = interaction.member as GuildMember;
-  return member.roles.cache.has(env.DISCORD_APPROVED_ROLE_ID);
-}
-
-/**
- * Admin gate for `/scrimmage admin-result` and `/scrimmage void` — server
- * owner OR Administrator permission only (per AskQuestion answer).
- */
-export function isScrimmageAdmin(
-  interaction: ChatInputCommandInteraction,
-): boolean {
-  if (!interaction.guild) return false;
-  if (interaction.guild.ownerId === interaction.user.id) return true;
-  return Boolean(
-    interaction.memberPermissions?.has(PermissionFlagsBits.Administrator),
-  );
-}
 
 async function denyEphemeral(
   interaction: ChatInputCommandInteraction,
@@ -282,60 +274,14 @@ function renderLeaderboardEmbed(
 }
 
 /* ------------------------------------------------------------------ */
-/*  Stub handlers — full lobby flow lands in the next push            */
+/*  /scrimmage report-afk — placeholder for the v1.1 voting flow      */
 /* ------------------------------------------------------------------ */
 
-const STUB_NOTICE_PUBLIC =
-  "🚧 The interactive scrimmage lobby flow ships in the next update. **`/scrimmage stats`** and **`/scrimmage leaderboard`** work today; queue / draft / match reporting are coming soon.";
-
-export async function handleScrimmageStartStub(
-  interaction: ChatInputCommandInteraction,
-): Promise<void> {
-  if (!isWhitelistedForScrimmage(interaction)) {
-    await denyEphemeral(
-      interaction,
-      "You need the **Whitelisted** role to start a scrimmage.",
-    );
-    return;
-  }
-  await interaction.reply({
-    flags: MessageFlags.Ephemeral,
-    content: STUB_NOTICE_PUBLIC,
-  });
-}
-
-export async function handleScrimmageCancelStub(
-  interaction: ChatInputCommandInteraction,
-): Promise<void> {
-  if (!isWhitelistedForScrimmage(interaction)) {
-    await denyEphemeral(
-      interaction,
-      "You need the **Whitelisted** role to use this command.",
-    );
-    return;
-  }
-  await interaction.reply({
-    flags: MessageFlags.Ephemeral,
-    content: "There's no active lobby to cancel — lobby flow ships in the next update.",
-  });
-}
-
-export async function handleScrimmageReportStub(
-  interaction: ChatInputCommandInteraction,
-): Promise<void> {
-  if (!isWhitelistedForScrimmage(interaction)) {
-    await denyEphemeral(
-      interaction,
-      "You need the **Whitelisted** role to use this command.",
-    );
-    return;
-  }
-  await interaction.reply({
-    flags: MessageFlags.Ephemeral,
-    content: STUB_NOTICE_PUBLIC,
-  });
-}
-
+/**
+ * Mid-game AFK voting + escalating bans are deferred to v1.1. We still
+ * register the slash command so the UI is stable, but it just tells the
+ * caller the feature is coming.
+ */
 export async function handleScrimmageReportAfkStub(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
@@ -349,40 +295,6 @@ export async function handleScrimmageReportAfkStub(
   await interaction.reply({
     flags: MessageFlags.Ephemeral,
     content:
-      "🚧 Mid-game AFK voting + escalating bans land in v1.1, after the core lobby flow.",
-  });
-}
-
-export async function handleScrimmageAdminResultStub(
-  interaction: ChatInputCommandInteraction,
-): Promise<void> {
-  if (!isScrimmageAdmin(interaction)) {
-    await denyEphemeral(
-      interaction,
-      "You need **Administrator** (or be the server owner) to override scrimmage results.",
-    );
-    return;
-  }
-  await interaction.reply({
-    flags: MessageFlags.Ephemeral,
-    content:
-      "🚧 Admin overrides land alongside the match-reporting flow in the next update.",
-  });
-}
-
-export async function handleScrimmageVoidStub(
-  interaction: ChatInputCommandInteraction,
-): Promise<void> {
-  if (!isScrimmageAdmin(interaction)) {
-    await denyEphemeral(
-      interaction,
-      "You need **Administrator** (or be the server owner) to void a scrimmage.",
-    );
-    return;
-  }
-  await interaction.reply({
-    flags: MessageFlags.Ephemeral,
-    content:
-      "🚧 Voiding requires the lobby flow to be live — coming in the next update.",
+      "🚧 Mid-game AFK voting + escalating bans land in v1.1. Captains can already report no-shows during the **ready check** — that's the v1.0 enforcement point.",
   });
 }

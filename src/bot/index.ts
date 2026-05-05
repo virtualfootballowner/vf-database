@@ -30,6 +30,11 @@ import {
   handleReleaseStaffButton,
 } from "@/bot/release";
 import {
+  handleScrimmageButton,
+  handleScrimmageModal,
+  isScrimmageCustomId,
+} from "@/bot/scrimmage/interactions";
+import {
   handleAutocomplete,
   handleSlashCommand,
   slashCommandDefinitions,
@@ -251,8 +256,20 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
       return;
     }
 
+    if (interaction.isModalSubmit()) {
+      if (isScrimmageCustomId(interaction.customId)) {
+        await handleScrimmageModal(interaction);
+      }
+      return;
+    }
+
     if (!interaction.isButton()) return;
     const customId = interaction.customId;
+
+    if (isScrimmageCustomId(customId)) {
+      await handleScrimmageButton(interaction);
+      return;
+    }
 
     if (customId.startsWith(CONTRACT_BTN_APPROVE)) {
       await handleContractButton(
