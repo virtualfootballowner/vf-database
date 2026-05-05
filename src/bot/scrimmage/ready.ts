@@ -369,7 +369,7 @@ function renderLiveEmbed(lobby: ActiveLobby): EmbedBuilder {
         "**Match is live.** Play it out in Roblox.",
         "",
         `Either captain reports the result with **\`/scrimmage report <your-score> <opp-score>\`**.`,
-        `The other captain has **5 minutes** to confirm or dispute.`,
+        `The other captain has **2 minutes** to confirm or dispute.`,
       ].join("\n"),
     )
     .addFields(

@@ -3,10 +3,10 @@
  *
  * Flow:
  *   - Either captain runs `/scrimmage report <self> <opp>` after the match.
- *   - The other captain has 5 minutes to Confirm or Dispute.
+ *   - The other captain has 2 minutes to Confirm or Dispute.
  *     - Confirm → applyScrimmageResult (ELO updates) + status=completed
  *     - Dispute → status=disputed (admin handles via /scrimmage admin-result)
- *     - No reply in 5 min → auto-accept (treated like a confirm)
+ *     - No reply in 2 min → auto-accept (treated like a confirm)
  *   - Admin overrides:
  *     - `/scrimmage admin-result <code> <s1> <s2>` — overrides any state
  *     - `/scrimmage void <code>` — sets status=voided, no ELO change
@@ -44,7 +44,7 @@ import {
 const COLOR_LIVE = 0x16a34a;
 const COLOR_DISPUTE = 0xdc2626;
 
-export const CONFIRM_WINDOW_MS = 5 * 60 * 1000;
+export const CONFIRM_WINDOW_MS = 2 * 60 * 1000;
 export const SCR_BTN_CONFIRM_PREFIX = "vfl:scr:confirm:";
 export const SCR_BTN_DISPUTE_PREFIX = "vfl:scr:dispute:";
 
@@ -224,7 +224,7 @@ export async function handleScrimmageReport(
   });
 
   await interaction.editReply({
-    content: `✅ Result submitted (${team1Score}-${team2Score}). The opposing captain has 5 minutes to confirm — ${posted.url}`,
+    content: `✅ Result submitted (${team1Score}-${team2Score}). The opposing captain has 2 minutes to confirm — ${posted.url}`,
   });
 }
 
@@ -330,7 +330,7 @@ export async function handleDisputeButton(
 }
 
 /* ------------------------------------------------------------------ */
-/*  Auto-accept after 5 min                                           */
+/*  Auto-accept after 2 min                                           */
 /* ------------------------------------------------------------------ */
 
 async function onConfirmAutoAccept(matchId: string): Promise<void> {
@@ -338,7 +338,7 @@ async function onConfirmAutoAccept(matchId: string): Promise<void> {
   if (!pending) return;
   await finalizeConfirmation(pending, {
     confirmedByPlayerId: null,
-    note: "Auto-accepted after 5 minutes.",
+    note: "Auto-accepted after 2 minutes.",
   });
 }
 
