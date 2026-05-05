@@ -12,6 +12,7 @@ import { notFound } from "next/navigation";
 
 import { TeamCrest } from "@/app/teams/team-crest";
 import type { Team } from "@/app/teams/teams-data";
+import { PlayerScrimmageBlock } from "@/components/scrimmage/profile-block";
 import { SiteNav } from "@/components/site-nav";
 import { TrophyHonorIcon } from "@/components/trophy-honor-icon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -225,6 +226,11 @@ export default async function PlayerDetailPage({
             <StatTile label="Accolades" value={stats.accolades.length} />
           </div>
         </section>
+
+        <PlayerScrimmageBlock
+          playerId={player.id}
+          robloxUsername={player.roblox_username}
+        />
 
         <section className="flex flex-col gap-4">
           <div>

@@ -1,6 +1,11 @@
 import Link from "next/link";
 
-type SiteNavKey = "tournament" | "stats" | "teams" | "players";
+type SiteNavKey =
+  | "tournament"
+  | "stats"
+  | "teams"
+  | "players"
+  | "scrimmages";
 
 type SiteNavProps = {
   /** Highlighted link. Omit on the home page (logo is the home link). */
@@ -12,6 +17,7 @@ const links: { href: string; label: string; key: SiteNavKey }[] = [
   { href: "/stats", label: "Stats", key: "stats" },
   { href: "/teams", label: "Teams", key: "teams" },
   { href: "/players", label: "Players", key: "players" },
+  { href: "/scrimmages", label: "Scrimmages", key: "scrimmages" },
 ];
 
 export function SiteNav({ active }: SiteNavProps) {
