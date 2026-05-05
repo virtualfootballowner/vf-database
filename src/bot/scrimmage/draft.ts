@@ -122,12 +122,83 @@ export async function startDraft(lobby: ActiveLobby): Promise<void> {
     introCountdownDeadline: Date.now() + POST_QUEUE_DELAY_MS,
   });
 
+  // Solicited DMs to both captains: they joined the queue voluntarily
+  // and were auto-promoted to captain by ELO. They get a private heads-up
+  // that they're now responsible for (a) picking and (b) reminding their
+  // team to ready up after the draft. We swallow DM failures — the
+  // captains are also @mentioned in the lobby card.
+  void notifyCaptains(lobby).catch((err) =>
+    console.error("[scrimmage] notifyCaptains failed:", err),
+  );
+
   // Schedule the first pick after the intro delay
   lobby.timers.queueExpire = setTimeout(() => {
     void beginNextPick(lobby).catch((err) =>
       console.error("[scrimmage] beginNextPick failed:", err),
     );
   }, POST_QUEUE_DELAY_MS);
+}
+
+/**
+ * Send each captain a solicited DM telling them their team number,
+ * their two responsibilities, and a deep link back to the lobby card.
+ *
+ * Consent comes from the user having joined the queue (a deliberate
+ * action) and then being auto-selected as captain. This fits Discord's
+ * "no unsolicited DMs" rule the same way the contract-offer DM does.
+ */
+async function notifyCaptains(lobby: ActiveLobby): Promise<void> {
+  const c1 = lobby.captain1;
+  const c2 = lobby.captain2;
+  if (!c1 || !c2) return;
+
+  const guildId = lobby.channel.guildId ?? lobby.channel.guild?.id;
+  const lobbyUrl = guildId
+    ? `https://discord.com/channels/${guildId}/${lobby.channel.id}/${lobby.messageId}`
+    : null;
+
+  await Promise.all([
+    sendCaptainDm(lobby, c1, 1, lobbyUrl),
+    sendCaptainDm(lobby, c2, 2, lobbyUrl),
+  ]);
+}
+
+async function sendCaptainDm(
+  lobby: ActiveLobby,
+  captain: DraftedPlayer,
+  teamNumber: 1 | 2,
+  lobbyUrl: string | null,
+): Promise<void> {
+  try {
+    const user = await lobby.channel.client.users.fetch(captain.discordId);
+    const embed = new EmbedBuilder()
+      .setColor(COLOR_BRAND)
+      .setTitle(`👑 You're the captain of Team ${teamNumber}`)
+      .setDescription(
+        [
+          `Match · **${lobby.matchCode}**`,
+          `You were auto-selected because you've got the highest ELO in this queue. Here's what you owe the team:`,
+          "",
+          `**1 · Pick your squad in the draft.**`,
+          `When the timer flips to your name, click a player button. You've got **30 seconds per pick**; if you ghost the timer, the bot auto-picks the highest available ELO for you.`,
+          "",
+          `**2 · Get your team ready.**`,
+          `After the draft, ping your team in the channel and tell them to hit the **✅ Ready up** button. They've got **5 minutes** — anyone who no-shows takes **−15 ELO** and the match cancels if either side falls below 8 ready players.`,
+          "",
+          lobbyUrl
+            ? `**[Open the lobby →](${lobbyUrl})**`
+            : "Head to the **#scrimmage-lobby** channel to find the card.",
+        ].join("\n"),
+      )
+      .setFooter({
+        text: "VF FACEIT · You only get DMs from us about your scrimmages and registration.",
+      })
+      .setTimestamp(new Date());
+    await user.send({ embeds: [embed] });
+  } catch {
+    // Captain has DMs closed. They're @mentioned in the lobby card and
+    // will see the draft buttons there — not fatal.
+  }
 }
 
 /* ------------------------------------------------------------------ */
