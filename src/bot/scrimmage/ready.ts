@@ -41,7 +41,7 @@ const COLOR_BRAND = 0x083696;
 const COLOR_LIVE = 0x16a34a;
 const COLOR_WARN = 0xf59e0b;
 
-export const READY_CHECK_DURATION_MS = 60 * 1000;
+export const READY_CHECK_DURATION_MS = 5 * 60 * 1000;
 export const NO_SHOW_PENALTY = -15;
 export const MIN_TEAM_SIZE = 8;
 export const SCR_BTN_READY = "vfl:scr:ready";
