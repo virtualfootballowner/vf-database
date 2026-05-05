@@ -1,12 +1,15 @@
 /**
- * Single dispatch surface for every scrimmage button + modal interaction.
- * Called from `src/bot/index.ts` so `index.ts` doesn't grow a huge prefix
- * ladder for the FACEIT system.
+ * Single dispatch surface for every scrimmage button + select-menu
+ * interaction. Called from `src/bot/index.ts` so `index.ts` doesn't grow
+ * a huge prefix ladder for the FACEIT system.
  *
  * All scrimmage custom IDs use the `vfl:scr:` namespace.
  */
 
-import type { ButtonInteraction, ModalSubmitInteraction } from "discord.js";
+import type {
+  ButtonInteraction,
+  StringSelectMenuInteraction,
+} from "discord.js";
 
 import { handlePickButton, SCR_BTN_PICK_PREFIX } from "@/bot/scrimmage/draft";
 import {
@@ -16,12 +19,10 @@ import {
   SCR_BTN_DISPUTE_PREFIX,
 } from "@/bot/scrimmage/result";
 import {
-  handleJoinButton,
+  handleJoinSelect,
   handleLeaveButton,
-  handlePositionModal,
-  SCR_BTN_JOIN,
   SCR_BTN_LEAVE,
-  SCR_MODAL_POSITION,
+  SCR_SELECT_JOIN,
 } from "@/bot/scrimmage/queue";
 import { handleReadyButton, SCR_BTN_READY } from "@/bot/scrimmage/ready";
 
@@ -41,10 +42,6 @@ export async function handleScrimmageButton(
   const id = interaction.customId;
   if (!isScrimmageCustomId(id)) return false;
 
-  if (id === SCR_BTN_JOIN) {
-    await handleJoinButton(interaction);
-    return true;
-  }
   if (id === SCR_BTN_LEAVE) {
     await handleLeaveButton(interaction);
     return true;
@@ -73,17 +70,18 @@ export async function handleScrimmageButton(
 }
 
 /**
- * Dispatch a modal submit whose customId starts with `vfl:scr:`. Returns
- * `true` if matched. Currently only the position modal is in use.
+ * Dispatch a string-select-menu interaction whose customId starts with
+ * `vfl:scr:`. Returns `true` if matched. Currently only the position
+ * picker on the queue card uses this surface.
  */
-export async function handleScrimmageModal(
-  interaction: ModalSubmitInteraction,
+export async function handleScrimmageSelect(
+  interaction: StringSelectMenuInteraction,
 ): Promise<boolean> {
   const id = interaction.customId;
   if (!isScrimmageCustomId(id)) return false;
 
-  if (id === SCR_MODAL_POSITION) {
-    await handlePositionModal(interaction);
+  if (id === SCR_SELECT_JOIN) {
+    await handleJoinSelect(interaction);
     return true;
   }
 

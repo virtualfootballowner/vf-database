@@ -31,7 +31,7 @@ import {
 } from "@/bot/release";
 import {
   handleScrimmageButton,
-  handleScrimmageModal,
+  handleScrimmageSelect,
   isScrimmageCustomId,
 } from "@/bot/scrimmage/interactions";
 import {
@@ -256,9 +256,9 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
       return;
     }
 
-    if (interaction.isModalSubmit()) {
+    if (interaction.isStringSelectMenu()) {
       if (isScrimmageCustomId(interaction.customId)) {
-        await handleScrimmageModal(interaction);
+        await handleScrimmageSelect(interaction);
       }
       return;
     }

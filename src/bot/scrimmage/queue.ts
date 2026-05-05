@@ -3,13 +3,17 @@
  *
  * Lifecycle:
  *  - `/scrimmage start` posts the lobby card in #scrimmage-lobby and seeds
- *    a `scrimmage_matches` row (status=queuing). The host auto-joins.
- *  - JOIN button → opens a position modal → submitting it adds the player
- *    to the in-memory queue (we don't write `scrimmage_players` yet because
- *    the table requires team ∈ {1,2}).
+ *    a `scrimmage_matches` row (status=queuing). The host does NOT auto-join
+ *    — they pick their position from the dropdown like everyone else.
+ *  - Position dropdown → adds the player to the in-memory queue (the
+ *    `scrimmage_players` table requires team ∈ {1,2} so we can't write
+ *    rows yet — happens at draft time).
  *  - LEAVE button → removes from queue.
- *  - 5-min auto-progress: if 16+ players, hand off to draft.startDraft.
- *    Otherwise cancel the lobby.
+ *  - Position quotas:
+ *      Min (must be met at draft start): 1 GK, 2 CB, 2 CM, 2 ST.
+ *      Max (rejected on join): see SCRIMMAGE_POSITION_MAX below.
+ *  - 5-min auto-progress: if 16+ players AND min quotas met, hand off to
+ *    draft.startDraft. Otherwise cancel with a helpful reason.
  *  - `/scrimmage cancel` (host only) — clears state immediately.
  *
  * Card edits are rare — we only re-render on JOIN/LEAVE. The deadline
@@ -23,13 +27,11 @@ import {
   ButtonStyle,
   EmbedBuilder,
   MessageFlags,
-  ModalBuilder,
+  StringSelectMenuBuilder,
   TextChannel,
-  TextInputBuilder,
-  TextInputStyle,
-  type ButtonInteraction,
   type ChatInputCommandInteraction,
-  type ModalSubmitInteraction,
+  type StringSelectMenuInteraction,
+  type ButtonInteraction,
 } from "discord.js";
 
 import { env } from "@/bot/config";
@@ -61,10 +63,55 @@ export const MAX_PLAYERS = 20;
 
 const COLOR_BRAND = 0x083696;
 
-export const SCR_BTN_JOIN = "vfl:scr:join";
 export const SCR_BTN_LEAVE = "vfl:scr:leave";
-export const SCR_MODAL_POSITION = "vfl:scr:posmod";
-export const SCR_MODAL_INPUT = "vfl:scr:posinput";
+export const SCR_SELECT_JOIN = "vfl:scr:joinpos";
+
+/**
+ * Fixed position list shown in the join dropdown. Keep this short — it's
+ * a single Discord StringSelect with a 25-option ceiling, but more options
+ * = decision fatigue. Six covers the common 8v8 footy roles.
+ */
+export const SCRIMMAGE_POSITIONS = [
+  { code: "GK", label: "Goalkeeper", emoji: "🧤" },
+  { code: "CB", label: "Center Back", emoji: "🛡️" },
+  { code: "FB", label: "Fullback (LB / RB)", emoji: "🪜" },
+  { code: "CM", label: "Center Mid", emoji: "🎯" },
+  { code: "CAM", label: "Attacking Mid", emoji: "🪄" },
+  { code: "ST", label: "Striker", emoji: "⚽" },
+] as const;
+
+export type ScrimmagePositionCode = (typeof SCRIMMAGE_POSITIONS)[number]["code"];
+
+const POSITION_CODE_SET = new Set<ScrimmagePositionCode>(
+  SCRIMMAGE_POSITIONS.map((p) => p.code),
+);
+
+/**
+ * Minimum number of each position the queue must hold when the timer ends
+ * for the draft to proceed. Anything not listed = no minimum.
+ */
+export const SCRIMMAGE_POSITION_MIN: Record<ScrimmagePositionCode, number> = {
+  GK: 1,
+  CB: 2,
+  FB: 0,
+  CM: 2,
+  CAM: 0,
+  ST: 2,
+};
+
+/**
+ * Maximum number of each position that can be queued at once. Click on a
+ * full position is rejected with an ephemeral notice. Tuned for a 16-20
+ * man roster — leaves headroom on the flex positions, caps the rest.
+ */
+export const SCRIMMAGE_POSITION_MAX: Record<ScrimmagePositionCode, number> = {
+  GK: 4,
+  CB: 8,
+  FB: 6,
+  CM: 8,
+  CAM: 6,
+  ST: 4,
+};
 
 /* ------------------------------------------------------------------ */
 /*  /scrimmage start                                                  */
@@ -99,7 +146,6 @@ export async function handleScrimmageStart(
     return;
   }
 
-  // Singleton check
   if (getActiveLobby()) {
     await interaction.reply({
       flags: MessageFlags.Ephemeral,
@@ -111,8 +157,6 @@ export async function handleScrimmageStart(
 
   const supabase = createBotSupabase();
 
-  // Belt-and-braces — also check the DB in case in-memory state got nuked but
-  // an old match row is still in a non-terminal status.
   try {
     const dbActive = await fetchActiveScrimmageMatch(supabase);
     if (dbActive) {
@@ -185,18 +229,9 @@ export async function handleScrimmageStart(
     return;
   }
 
-  // Seed in-memory lobby with the host already queued (the spec implies the
-  // host auto-joins; they can /leave if they don't want to play).
-  const hostRating = await ensureScrimmageRating(supabase, hostPlayerId);
-  const hostQueued: QueuedPlayer = {
-    discordId: interaction.user.id,
-    playerId: hostPlayerId,
-    robloxUsername: hostUsername,
-    preferredPosition: "—",
-    elo: hostRating.elo,
-    joinedAt: Date.now(),
-  };
-
+  // Host does not auto-queue — they have to pick their position from the
+  // dropdown like everyone else. Cleaner and avoids the empty "—" position
+  // that broke quota math previously.
   const lobby: ActiveLobby = {
     matchId: matchRow.id,
     matchCode: matchRow.matchCode,
@@ -206,7 +241,7 @@ export async function handleScrimmageStart(
     channel: lobbyChannel,
     messageId: "", // filled below
     phase: "queuing",
-    queue: [hostQueued],
+    queue: [],
     queueDeadline: Date.now() + QUEUE_DURATION_MS,
     team1: [],
     team2: [],
@@ -219,13 +254,12 @@ export async function handleScrimmageStart(
     timers: {},
   };
 
-  // Post the queue card
   let posted;
   try {
     posted = await lobbyChannel.send({
       content: "@here **Scrimmage queue is open!**",
       embeds: [renderQueueEmbed(lobby)],
-      components: [renderQueueButtons()],
+      components: renderQueueComponents(),
     });
   } catch (err) {
     console.error("[scrimmage] lobby card send failed:", err);
@@ -233,7 +267,6 @@ export async function handleScrimmageStart(
       content:
         "❌ Couldn’t post the lobby card. Make sure I have **Send Messages** + **Embed Links** in the lobby channel.",
     });
-    // Best-effort cleanup — the match row is orphaned. We mark it cancelled.
     await safeMarkCancelled(matchRow.id, "lobby-card-send-failed");
     return;
   }
@@ -247,7 +280,6 @@ export async function handleScrimmageStart(
     console.error("[scrimmage] setScrimmageMatchMessageId failed:", err);
   }
 
-  // 5-minute auto-progress / auto-cancel timer
   lobby.timers.queueExpire = setTimeout(() => {
     void onQueueExpire(lobby.matchId).catch((err) =>
       console.error("[scrimmage] onQueueExpire failed:", err),
@@ -260,11 +292,11 @@ export async function handleScrimmageStart(
 }
 
 /* ------------------------------------------------------------------ */
-/*  JOIN button → modal                                               */
+/*  Position select → queue join                                      */
 /* ------------------------------------------------------------------ */
 
-export async function handleJoinButton(
-  interaction: ButtonInteraction,
+export async function handleJoinSelect(
+  interaction: StringSelectMenuInteraction,
 ): Promise<void> {
   const lobby = getActiveLobby();
   if (!lobby || lobby.phase !== "queuing") {
@@ -275,24 +307,17 @@ export async function handleJoinButton(
     return;
   }
 
-  if (lobby.queue.length >= MAX_PLAYERS) {
+  const raw = interaction.values[0];
+  if (!raw || !POSITION_CODE_SET.has(raw as ScrimmagePositionCode)) {
     await interaction.reply({
       flags: MessageFlags.Ephemeral,
-      content: `Queue is full (${MAX_PLAYERS}/${MAX_PLAYERS}). The draft starts at the deadline.`,
+      content: "Pick a valid position from the dropdown.",
     });
     return;
   }
+  const position = raw as ScrimmagePositionCode;
 
-  if (lobby.queue.some((p) => p.discordId === interaction.user.id)) {
-    await interaction.reply({
-      flags: MessageFlags.Ephemeral,
-      content: "You’re already in the queue.",
-    });
-    return;
-  }
-
-  // Enforce whitelist on the JOIN click too — non-whitelisted users shouldn't
-  // be able to just push the button in #scrimmage-lobby.
+  // Whitelist gate — same one the slash command enforces.
   const member = interaction.member;
   const hasRole =
     !!member &&
@@ -309,45 +334,11 @@ export async function handleJoinButton(
     return;
   }
 
-  // Show position modal — actual queue insert happens on submit.
-  const modal = new ModalBuilder()
-    .setCustomId(SCR_MODAL_POSITION)
-    .setTitle("Join scrimmage queue")
-    .addComponents(
-      new ActionRowBuilder<TextInputBuilder>().addComponents(
-        new TextInputBuilder()
-          .setCustomId(SCR_MODAL_INPUT)
-          .setLabel("Preferred position (e.g. ST, CB, GK)")
-          .setStyle(TextInputStyle.Short)
-          .setRequired(true)
-          .setMinLength(1)
-          .setMaxLength(20),
-      ),
-    );
-
-  await interaction.showModal(modal);
-}
-
-/* ------------------------------------------------------------------ */
-/*  Position modal submit                                             */
-/* ------------------------------------------------------------------ */
-
-export async function handlePositionModal(
-  interaction: ModalSubmitInteraction,
-): Promise<void> {
-  const lobby = getActiveLobby();
-  if (!lobby || lobby.phase !== "queuing") {
-    await interaction.reply({
-      flags: MessageFlags.Ephemeral,
-      content: "The queue closed before your submission landed.",
-    });
-    return;
-  }
-
   if (lobby.queue.some((p) => p.discordId === interaction.user.id)) {
     await interaction.reply({
       flags: MessageFlags.Ephemeral,
-      content: "You’re already in the queue.",
+      content:
+        "You’re already in the queue. Click **Leave Queue** first if you want to change position.",
     });
     return;
   }
@@ -355,16 +346,23 @@ export async function handlePositionModal(
   if (lobby.queue.length >= MAX_PLAYERS) {
     await interaction.reply({
       flags: MessageFlags.Ephemeral,
-      content: "Queue filled up just before your submission.",
+      content: `Queue is full (${MAX_PLAYERS}/${MAX_PLAYERS}).`,
     });
     return;
   }
 
-  const positionRaw = interaction.fields
-    .getTextInputValue(SCR_MODAL_INPUT)
-    .trim()
-    .toUpperCase();
-  const position = positionRaw.length > 20 ? positionRaw.slice(0, 20) : positionRaw;
+  // Per-position cap
+  const inPos = lobby.queue.filter(
+    (p) => p.preferredPosition === position,
+  ).length;
+  const cap = SCRIMMAGE_POSITION_MAX[position];
+  if (inPos >= cap) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: `**${position}** is full (${inPos}/${cap}). Pick a different position.`,
+    });
+    return;
+  }
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -390,7 +388,6 @@ export async function handlePositionModal(
 
   const rating = await ensureScrimmageRating(supabase, playerId);
 
-  // Banned check — the spec mentions this; we already store ban_until.
   if (rating.ban_until) {
     const ts = new Date(rating.ban_until).getTime();
     if (!Number.isNaN(ts) && ts > Date.now()) {
@@ -470,8 +467,6 @@ export async function handleScrimmageCancel(
     return;
   }
 
-  // Host or admin can cancel during queue/draft/ready_check.
-  // Once `live`, only an admin can cancel via `/scrimmage void`.
   const isHost = lobby.hostDiscordId === interaction.user.id;
   if (!isHost) {
     await interaction.reply({
@@ -512,8 +507,19 @@ async function onQueueExpire(matchId: string): Promise<void> {
     return;
   }
 
-  // Cap at MAX_PLAYERS — spec says 16-20, anything past 20 doesn't fit
-  // the snake-draft layout. Trim by joinedAt order.
+  // Position-quota check — must hit every minimum or we cancel.
+  const missing = unmetPositionMinimums(lobby);
+  if (missing.length > 0) {
+    const summary = missing
+      .map((m) => `${m.position} (have ${m.have}/${m.need})`)
+      .join(", ");
+    await cancelLobby(
+      lobby,
+      `position requirements not met — ${summary}`,
+    );
+    return;
+  }
+
   if (lobby.queue.length > MAX_PLAYERS) {
     lobby.queue.sort((a, b) => a.joinedAt - b.joinedAt);
     lobby.queue = lobby.queue.slice(0, MAX_PLAYERS);
@@ -529,6 +535,19 @@ async function onQueueExpire(matchId: string): Promise<void> {
 /*  Helpers                                                           */
 /* ------------------------------------------------------------------ */
 
+function unmetPositionMinimums(
+  lobby: ActiveLobby,
+): { position: ScrimmagePositionCode; need: number; have: number }[] {
+  const out: { position: ScrimmagePositionCode; need: number; have: number }[] = [];
+  for (const p of SCRIMMAGE_POSITIONS) {
+    const need = SCRIMMAGE_POSITION_MIN[p.code];
+    if (need <= 0) continue;
+    const have = lobby.queue.filter((q) => q.preferredPosition === p.code).length;
+    if (have < need) out.push({ position: p.code, need, have });
+  }
+  return out;
+}
+
 async function safeMarkCancelled(matchId: string, reason: string): Promise<void> {
   console.warn(`[scrimmage] marking ${matchId} cancelled: ${reason}`);
   try {
@@ -542,7 +561,6 @@ async function safeMarkCancelled(matchId: string, reason: string): Promise<void>
   }
 }
 
-/** Re-render the lobby card with the current queue state. */
 async function editLobbyCard(lobby: ActiveLobby): Promise<void> {
   try {
     const msg = await lobby.channel.messages
@@ -551,7 +569,7 @@ async function editLobbyCard(lobby: ActiveLobby): Promise<void> {
     if (!msg) return;
     await msg.edit({
       embeds: [renderQueueEmbed(lobby)],
-      components: [renderQueueButtons()],
+      components: renderQueueComponents(),
     });
   } catch (err) {
     console.error("[scrimmage] editLobbyCard failed:", err);
@@ -562,26 +580,40 @@ async function editLobbyCard(lobby: ActiveLobby): Promise<void> {
 /*  Renderers                                                         */
 /* ------------------------------------------------------------------ */
 
-export function renderQueueButtons(): ActionRowBuilder<ButtonBuilder> {
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(SCR_BTN_JOIN)
-      .setLabel("Join Queue")
-      .setStyle(ButtonStyle.Success)
-      .setEmoji("✅"),
-    new ButtonBuilder()
-      .setCustomId(SCR_BTN_LEAVE)
-      .setLabel("Leave Queue")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji("🚪"),
-  );
+export function renderQueueComponents(): (
+  | ActionRowBuilder<StringSelectMenuBuilder>
+  | ActionRowBuilder<ButtonBuilder>
+)[] {
+  const select = new StringSelectMenuBuilder()
+    .setCustomId(SCR_SELECT_JOIN)
+    .setPlaceholder("Join queue — choose your position")
+    .setMinValues(1)
+    .setMaxValues(1)
+    .addOptions(
+      SCRIMMAGE_POSITIONS.map((p) => ({
+        label: `${p.code} · ${p.label}`,
+        value: p.code,
+        emoji: p.emoji,
+      })),
+    );
+
+  const leave = new ButtonBuilder()
+    .setCustomId(SCR_BTN_LEAVE)
+    .setLabel("Leave Queue")
+    .setStyle(ButtonStyle.Secondary)
+    .setEmoji("🚪");
+
+  return [
+    new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select),
+    new ActionRowBuilder<ButtonBuilder>().addComponents(leave),
+  ];
 }
 
 function renderQueueEmbed(lobby: ActiveLobby): EmbedBuilder {
   const deadlineUnix = Math.floor(lobby.queueDeadline / 1000);
   const queueList =
     lobby.queue.length === 0
-      ? "_No players yet — be the first to join._"
+      ? "_No players yet — pick your position from the dropdown to join._"
       : lobby.queue
           .map((p, i) => {
             const num = String(i + 1).padStart(2, " ");
@@ -589,6 +621,21 @@ function renderQueueEmbed(lobby: ActiveLobby): EmbedBuilder {
             return `\`${num}\`  **${p.robloxUsername}** · ${p.preferredPosition} · 📈 ${p.elo}${tag}`;
           })
           .join("\n");
+
+  // Per-position summary: "GK 0/1 ⏳ · CB 1/2 ⏳ · ...".
+  // Min ✓/⏳ shown for required positions; flex ones show count + cap.
+  const positionSummary = SCRIMMAGE_POSITIONS.map((p) => {
+    const have = lobby.queue.filter(
+      (q) => q.preferredPosition === p.code,
+    ).length;
+    const min = SCRIMMAGE_POSITION_MIN[p.code];
+    const max = SCRIMMAGE_POSITION_MAX[p.code];
+    if (min > 0) {
+      const status = have >= min ? "✅" : "⏳";
+      return `${status} **${p.code}** ${have}/${min} *(cap ${max})*`;
+    }
+    return `**${p.code}** ${have} *(cap ${max})*`;
+  }).join(" · ");
 
   return new EmbedBuilder()
     .setColor(COLOR_BRAND)
@@ -598,16 +645,21 @@ function renderQueueEmbed(lobby: ActiveLobby): EmbedBuilder {
         `**Host** · <@${lobby.hostDiscordId}>`,
         `**Closes** · <t:${deadlineUnix}:R> · <t:${deadlineUnix}:t>`,
         "",
-        `Click **Join Queue** to drop in. We need **${MIN_PLAYERS}–${MAX_PLAYERS}** players for the draft.`,
+        `Pick a position from the dropdown to join. We need **${MIN_PLAYERS}–${MAX_PLAYERS}** players, and the queue must hit the position minimums (1 GK · 2 CB · 2 CM · 2 ST) by the deadline or it cancels.`,
       ].join("\n"),
     )
-    .addFields({
-      name: `🪪 Players (${lobby.queue.length}/${MAX_PLAYERS})`,
-      value: queueList,
-    })
+    .addFields(
+      {
+        name: `🪪 Players (${lobby.queue.length}/${MAX_PLAYERS})`,
+        value: queueList,
+      },
+      {
+        name: "📋 Positions",
+        value: positionSummary,
+      },
+    )
     .setFooter({
-      text: "VF FACEIT · You can leave anytime before the queue closes.",
+      text: "VF FACEIT · Pick a position to join · Leave anytime before the deadline.",
     })
     .setTimestamp(new Date());
 }
-
