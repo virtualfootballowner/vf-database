@@ -241,6 +241,45 @@ export async function handleContractCommand(
         channel_id: interaction.channelId ?? null,
       })
       .eq("id", offerId);
+
+    /**
+     * Solicited DM — heads-up to the signee with a deep link back to the
+     * in-channel offer card (the only place the Approve / Deny buttons live).
+     * Consent comes from the user having completed website verification; this
+     * fits Discord's "no unsolicited DMs" rule. We swallow failures because
+     * closed DMs aren't fatal — the @mention in-channel still pings them.
+     */
+    try {
+      const dmEmbed = new EmbedBuilder()
+        .setColor(0x083696)
+        .setAuthor({
+          name: `${teamLabel} · VF League`,
+          iconURL: logoUrl ?? undefined,
+          url: teamUrl,
+        })
+        .setTitle("📄 Contract offer")
+        .setDescription(
+          [
+            `You’ve been offered a roster spot on **${teamLabel}** for **Season ${activeSeason}**.`,
+            "",
+            `> **Position** · **${positionRaw}**`,
+            `> **Role** · **${roleRaw}**`,
+            `> **Manager** · ${interaction.user}`,
+            "",
+            `**[Open the offer to approve or deny →](${reply.url})**`,
+            "",
+            "_Only you can use the buttons on the offer card._",
+          ].join("\n"),
+        )
+        .setThumbnail(logoUrl ?? null)
+        .setFooter({
+          text: "VFL · You only get DMs from us about contracts and your registration.",
+        })
+        .setTimestamp(new Date());
+      await signeeUser.send({ embeds: [dmEmbed] });
+    } catch {
+      // signee has DMs closed — the in-channel mention still notifies them
+    }
   } catch (err) {
     console.error("/contract failed:", err);
     await interaction.editReply({
