@@ -46,6 +46,13 @@ import {
   handleScouting,
 } from "@/bot/marketplace";
 import { handleReleaseCommand } from "@/bot/release";
+import {
+  handleCompetitionAutocomplete,
+  handleFixtures,
+  handleHelp,
+  handleStandings,
+  handleStats,
+} from "@/bot/info";
 
 function formatCommandError(err: unknown): string {
   if (err instanceof Error && err.message.trim()) return err.message.trim();
@@ -66,9 +73,6 @@ function formatCommandError(err: unknown): string {
  * Verified-only gate for read commands like `/team` and `/player`. Anyone in the
  * server who completed Roblox-Discord verification (and therefore has the
  * verified role) may use them; everyone else gets a friendly nudge.
- *
- * Bypasses: server admins (Manage Guild) and the team-manager role. Staff
- * shouldn't need to walk through the website verify flow to read club info.
  */
 async function requireVerifiedRole(
   interaction: ChatInputCommandInteraction,
@@ -81,26 +85,15 @@ async function requireVerifiedRole(
     return false;
   }
   const member = interaction.member as GuildMember;
-  const isAdmin = Boolean(
-    interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ||
-      interaction.memberPermissions?.has(PermissionFlagsBits.Administrator),
-  );
-  const hasVerified = member.roles.cache.has(env.DISCORD_ROVER_VERIFIED_ROLE_ID);
-  const hasApproved = member.roles.cache.has(env.DISCORD_APPROVED_ROLE_ID);
-  const hasManager = member.roles.cache.has(env.DISCORD_TEAM_MANAGER_ROLE_ID);
-  if (isAdmin || hasVerified || hasApproved || hasManager) return true;
-  const ownedRoleIds = [...member.roles.cache.keys()].join(", ");
-  console.log(
-    `[gate] Denied /${interaction.commandName} for ${interaction.user.tag} (${interaction.user.id}). ` +
-      `Required one of [verified=${env.DISCORD_ROVER_VERIFIED_ROLE_ID}, approved=${env.DISCORD_APPROVED_ROLE_ID}, manager=${env.DISCORD_TEAM_MANAGER_ROLE_ID}]. ` +
-      `User has [${ownedRoleIds}].`,
-  );
-  await interaction.reply({
-    flags: MessageFlags.Ephemeral,
-    content:
-      "You need to verify on the website first. Run `/postverify` in the verify channel for the link.",
-  });
-  return false;
+  if (!member.roles.cache.has(env.DISCORD_ROVER_VERIFIED_ROLE_ID)) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content:
+        "You need to verify on the website first. Run `/postverify` in the verify channel for the link.",
+    });
+    return false;
+  }
+  return true;
 }
 
 /** Crest/logo for Discord embeds (DB often stores `/file.png` — absolute + path-encoded). */
@@ -409,6 +402,53 @@ export const slashCommandDefinitions = [
         .setMaxLength(500),
     )
     .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("help")
+    .setDescription(
+      "Post the VFL bot command index in this channel (stays permanently)",
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("stats")
+    .setDescription(
+      "All-time top scorers and assisters across every competition",
+    )
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("fixtures")
+    .setDescription("Last 5 results and next 5 fixtures for a club")
+    .addStringOption((opt) =>
+      opt
+        .setName("team")
+        .setDescription("Club — pick from suggestions or type name/slug")
+        .setRequired(true)
+        .setAutocomplete(true),
+    )
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("standings")
+    .setDescription("League table for a competition + season")
+    .addStringOption((opt) =>
+      opt
+        .setName("competition")
+        .setDescription("Competition (e.g. EuroLeague, World Cup)")
+        .setRequired(true)
+        .setAutocomplete(true),
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("season")
+        .setDescription("Season number (e.g. 1, 2, 3)")
+        .setRequired(true)
+        .setMinValue(1)
+        .setMaxValue(20),
+    )
+    .toJSON(),
 ];
 
 export async function handleSlashCommand(
@@ -451,6 +491,18 @@ export async function handleSlashCommand(
     case "scouting":
       await handleScouting(interaction);
       return;
+    case "help":
+      await handleHelp(interaction);
+      return;
+    case "stats":
+      await handleStats(interaction);
+      return;
+    case "fixtures":
+      await handleFixtures(interaction);
+      return;
+    case "standings":
+      await handleStandings(interaction);
+      return;
     default:
       await interaction.reply({
         flags: MessageFlags.Ephemeral,
@@ -462,6 +514,12 @@ export async function handleSlashCommand(
 export async function handleAutocomplete(
   interaction: AutocompleteInteraction,
 ): Promise<void> {
+  // /standings — competition autocomplete is its own thing.
+  if (interaction.commandName === "standings") {
+    await handleCompetitionAutocomplete(interaction);
+    return;
+  }
+
   const teamAutocompleteCommands = new Set([
     "team",
     "appoint",
@@ -469,6 +527,7 @@ export async function handleAutocomplete(
     "release",
     "friendly",
     "scouting",
+    "fixtures",
   ]);
   if (!teamAutocompleteCommands.has(interaction.commandName)) return;
 
