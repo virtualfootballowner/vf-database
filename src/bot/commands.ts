@@ -66,6 +66,9 @@ function formatCommandError(err: unknown): string {
  * Verified-only gate for read commands like `/team` and `/player`. Anyone in the
  * server who completed Roblox-Discord verification (and therefore has the
  * verified role) may use them; everyone else gets a friendly nudge.
+ *
+ * Bypasses: server admins (Manage Guild) and the team-manager role. Staff
+ * shouldn't need to walk through the website verify flow to read club info.
  */
 async function requireVerifiedRole(
   interaction: ChatInputCommandInteraction,
@@ -78,15 +81,26 @@ async function requireVerifiedRole(
     return false;
   }
   const member = interaction.member as GuildMember;
-  if (!member.roles.cache.has(env.DISCORD_ROVER_VERIFIED_ROLE_ID)) {
-    await interaction.reply({
-      flags: MessageFlags.Ephemeral,
-      content:
-        "You need to verify on the website first. Run `/postverify` in the verify channel for the link.",
-    });
-    return false;
-  }
-  return true;
+  const isAdmin = Boolean(
+    interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ||
+      interaction.memberPermissions?.has(PermissionFlagsBits.Administrator),
+  );
+  const hasVerified = member.roles.cache.has(env.DISCORD_ROVER_VERIFIED_ROLE_ID);
+  const hasApproved = member.roles.cache.has(env.DISCORD_APPROVED_ROLE_ID);
+  const hasManager = member.roles.cache.has(env.DISCORD_TEAM_MANAGER_ROLE_ID);
+  if (isAdmin || hasVerified || hasApproved || hasManager) return true;
+  const ownedRoleIds = [...member.roles.cache.keys()].join(", ");
+  console.log(
+    `[gate] Denied /${interaction.commandName} for ${interaction.user.tag} (${interaction.user.id}). ` +
+      `Required one of [verified=${env.DISCORD_ROVER_VERIFIED_ROLE_ID}, approved=${env.DISCORD_APPROVED_ROLE_ID}, manager=${env.DISCORD_TEAM_MANAGER_ROLE_ID}]. ` +
+      `User has [${ownedRoleIds}].`,
+  );
+  await interaction.reply({
+    flags: MessageFlags.Ephemeral,
+    content:
+      "You need to verify on the website first. Run `/postverify` in the verify channel for the link.",
+  });
+  return false;
 }
 
 /** Crest/logo for Discord embeds (DB often stores `/file.png` — absolute + path-encoded). */
