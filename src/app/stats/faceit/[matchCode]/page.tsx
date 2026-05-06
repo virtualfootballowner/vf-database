@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ScrimmageEventTimeline } from "@/components/scrimmage/event-timeline";
 import { SiteNav } from "@/components/site-nav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -214,6 +215,11 @@ export default async function FaceitMatchPage({
             </div>
           </Card>
         ) : null}
+
+        <ScrimmageEventTimeline
+          matchId={match.id}
+          isLive={match.status === "live"}
+        />
 
         <section className="grid gap-4 lg:grid-cols-2">
           <RosterCard

@@ -72,6 +72,35 @@ export type ScrimmageMatchPlayer = {
   eloChange: number | null;
 };
 
+export type ScrimmageMatchSummary = {
+  matchCode: string;
+  status: string;
+  team1Score: number | null;
+  team2Score: number | null;
+  team1CaptainName: string | null;
+  team2CaptainName: string | null;
+  playerCount: number | null;
+  /** Best wall-clock to display: result_confirmed_at → match_started_at → queue_started_at. */
+  playedAt: string;
+  /** True iff there's at least one match.start event for this match. */
+  isLinkedToRoblox: boolean;
+};
+
+export type ScrimmageEvent = {
+  id: string;
+  matchId: string;
+  playerId: string | null;
+  robloxUserId: string;
+  /** Resolved roblox_username when player_id matched a `players` row, else null. */
+  robloxUsername: string | null;
+  /** Team (1 or 2) for the actor, when their player_id is in the roster. */
+  team: 1 | 2 | null;
+  eventType: string;
+  minute: number | null;
+  details: Record<string, unknown>;
+  occurredAt: string;
+};
+
 export type ScrimmageMatchDetail = {
   id: string;
   matchCode: string;
@@ -519,6 +548,169 @@ export async function getScrimmageMatchByCode(
     team1: sortRoster(1),
     team2: sortRoster(2),
   };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Recents (live + completed) for the FACEIT landing page             */
+/* ------------------------------------------------------------------ */
+
+const RECENTS_STATUSES = [
+  "live",
+  "pending_confirmation",
+  "completed",
+  "voided",
+] as const;
+
+export async function getRecentScrimmageMatches(
+  limit = 6,
+): Promise<ScrimmageMatchSummary[]> {
+  const supabase = createSupabaseServerClient();
+
+  // Pull from a slightly larger pool so live/pending bubble to the top
+  // even when there are lots of completed matches.
+  const { data, error } = await supabase
+    .from("scrimmage_matches")
+    .select(
+      "id, match_code, status, team1_score, team2_score, player_count, team1_captain_id, team2_captain_id, queue_started_at, match_started_at, result_confirmed_at",
+    )
+    .in("status", RECENTS_STATUSES as unknown as string[])
+    .order("queue_started_at", { ascending: false })
+    .limit(Math.max(limit * 2, 12));
+  if (error || !data) return [];
+
+  type Row = {
+    id: string;
+    match_code: string;
+    status: string;
+    team1_score: number | null;
+    team2_score: number | null;
+    player_count: number | null;
+    team1_captain_id: string | null;
+    team2_captain_id: string | null;
+    queue_started_at: string | null;
+    match_started_at: string | null;
+    result_confirmed_at: string | null;
+  };
+  const rows = data as Row[];
+  if (rows.length === 0) return [];
+
+  // Sort: live + pending first, then by latest activity desc.
+  const statusRank = (s: string): number => {
+    if (s === "live") return 0;
+    if (s === "pending_confirmation") return 1;
+    if (s === "completed") return 2;
+    return 3;
+  };
+  rows.sort((a, b) => {
+    const sr = statusRank(a.status) - statusRank(b.status);
+    if (sr !== 0) return sr;
+    const ta = a.result_confirmed_at ?? a.match_started_at ?? a.queue_started_at ?? "";
+    const tb = b.result_confirmed_at ?? b.match_started_at ?? b.queue_started_at ?? "";
+    return tb.localeCompare(ta);
+  });
+  const sliced = rows.slice(0, limit);
+
+  // Resolve captain names + check which matches are linked to Roblox.
+  const captainIds = new Set<string>();
+  for (const r of sliced) {
+    if (r.team1_captain_id) captainIds.add(r.team1_captain_id);
+    if (r.team2_captain_id) captainIds.add(r.team2_captain_id);
+  }
+  const namesById = await fetchPlayerNamesByIds(supabase, [...captainIds]);
+
+  // Find which of these matches have at least one match_start event.
+  const matchIds = sliced.map((r) => r.id);
+  const linkedMatchIds = new Set<string>();
+  if (matchIds.length > 0) {
+    const { data: linkRows } = await supabase
+      .from("scrimmage_match_events")
+      .select("match_id")
+      .in("match_id", matchIds)
+      .eq("event_type", "match_start");
+    for (const row of (linkRows ?? []) as { match_id: string }[]) {
+      linkedMatchIds.add(row.match_id);
+    }
+  }
+
+  return sliced.map((r) => ({
+    matchCode: r.match_code,
+    status: r.status,
+    team1Score: r.team1_score,
+    team2Score: r.team2_score,
+    team1CaptainName:
+      (r.team1_captain_id && namesById.get(r.team1_captain_id)) ?? null,
+    team2CaptainName:
+      (r.team2_captain_id && namesById.get(r.team2_captain_id)) ?? null,
+    playerCount: r.player_count,
+    playedAt:
+      r.result_confirmed_at ??
+      r.match_started_at ??
+      r.queue_started_at ??
+      new Date(0).toISOString(),
+    isLinkedToRoblox: linkedMatchIds.has(r.id),
+  }));
+}
+
+/* ------------------------------------------------------------------ */
+/*  In-game events for a single match                                  */
+/* ------------------------------------------------------------------ */
+
+export async function getScrimmageMatchEvents(
+  matchId: string,
+): Promise<ScrimmageEvent[]> {
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("scrimmage_match_events")
+    .select(
+      "id, match_id, player_id, roblox_user_id, event_type, minute, details, occurred_at, created_at",
+    )
+    .eq("match_id", matchId)
+    .order("occurred_at", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true });
+  if (error || !data) return [];
+
+  type Row = {
+    id: string;
+    match_id: string;
+    player_id: string | null;
+    roblox_user_id: string;
+    event_type: string;
+    minute: number | null;
+    details: Record<string, unknown> | null;
+    occurred_at: string | null;
+    created_at: string;
+  };
+  const rows = data as Row[];
+  if (rows.length === 0) return [];
+
+  // Pull team + name for any rostered player that fired an event.
+  const playerIds = [...new Set(rows.map((r) => r.player_id).filter(Boolean) as string[])];
+  let namesById = new Map<string, string>();
+  const teamByPlayer = new Map<string, 1 | 2>();
+  if (playerIds.length > 0) {
+    namesById = await fetchPlayerNamesByIds(supabase, playerIds);
+    const { data: rosterRows } = await supabase
+      .from("scrimmage_players")
+      .select("player_id, team")
+      .eq("match_id", matchId)
+      .in("player_id", playerIds);
+    for (const r of (rosterRows ?? []) as { player_id: string; team: 1 | 2 }[]) {
+      teamByPlayer.set(r.player_id, r.team);
+    }
+  }
+
+  return rows.map((r) => ({
+    id: r.id,
+    matchId: r.match_id,
+    playerId: r.player_id,
+    robloxUserId: r.roblox_user_id,
+    robloxUsername: r.player_id ? (namesById.get(r.player_id) ?? null) : null,
+    team: r.player_id ? (teamByPlayer.get(r.player_id) ?? null) : null,
+    eventType: r.event_type,
+    minute: r.minute,
+    details: (r.details ?? {}) as Record<string, unknown>,
+    occurredAt: r.occurred_at ?? r.created_at,
+  }));
 }
 
 /* ------------------------------------------------------------------ */

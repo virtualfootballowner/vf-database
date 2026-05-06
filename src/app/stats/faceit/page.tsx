@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { LeaderboardSearch } from "@/components/scrimmage/leaderboard-search";
+import { ScrimmageRecents } from "@/components/scrimmage/recents";
 import { SiteNav } from "@/components/site-nav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -142,7 +143,19 @@ export default async function FaceitLeaderboardPage({
           </Badge>
         </section>
 
-        <LeaderboardSearch initialQuery={q ?? ""} />
+        <ScrimmageRecents limit={6} />
+
+        <section className="flex flex-col gap-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
+              Standings
+            </p>
+            <h2 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
+              Leaderboard
+            </h2>
+          </div>
+          <LeaderboardSearch initialQuery={q ?? ""} />
+        </section>
 
         {rows.length === 0 ? (
           <Card className="py-12">
