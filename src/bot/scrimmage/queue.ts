@@ -251,6 +251,7 @@ export async function handleScrimmageStart(
     draftPool: [],
     readyDeadline: 0,
     liveStartedAt: null,
+    robloxJoinLink: null,
     timers: {},
   };
 
@@ -479,7 +480,7 @@ export async function handleScrimmageCancel(
     await interaction.reply({
       flags: MessageFlags.Ephemeral,
       content:
-        "Match is already live — use **`/scrimmage report`** when it ends or have an admin **`/scrimmage void`** it.",
+        "Match is already live — it auto-finalizes when the host runs `:fulltime` in Roblox. If it's stuck, ask an admin to **`/scrimmage void <code>`**.",
     });
     return;
   }

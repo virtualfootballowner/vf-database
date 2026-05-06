@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
+import { autoFinalizeScrimmage } from "@/lib/scrimmage/auto-finalize";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 /**
@@ -120,7 +121,7 @@ export async function POST(req: Request): Promise<Response> {
   const supabase = createSupabaseServerClient();
   const matchByCode = new Map<
     string,
-    { id: string; status: string }
+    { id: string; matchCode: string; status: string }
   >();
   if (matchCodes.length > 0) {
     const { data, error } = await supabase
@@ -136,7 +137,11 @@ export async function POST(req: Request): Promise<Response> {
       match_code: string;
       status: string;
     }[]) {
-      matchByCode.set(row.match_code, { id: row.id, status: row.status });
+      matchByCode.set(row.match_code, {
+        id: row.id,
+        matchCode: row.match_code,
+        status: row.status,
+      });
     }
   }
 
@@ -266,7 +271,7 @@ export async function POST(req: Request): Promise<Response> {
         .from("scrimmage_matches")
         .update(patch)
         .eq("id", match.id);
-    } else if (eventType === "match_end") {
+    } else if (eventType === "match_end" || eventType === "fulltime") {
       await supabase
         .from("scrimmage_matches")
         .update({
@@ -286,10 +291,50 @@ export async function POST(req: Request): Promise<Response> {
     });
   }
 
+  // ----------------------------------------------------------------
+  // Auto-finalization step.
+  //
+  // Any match that received a `match_end` (or `fulltime`) event in this
+  // batch is now eligible for auto-finalize. We do this AFTER all events
+  // have been inserted so the goal counter sees every assist/goal/etc.
+  // submitted in the same batch.
+  //
+  // Only one finalize per match per batch. A match that's already
+  // `completed` from a prior request short-circuits inside autoFinalize.
+  // ----------------------------------------------------------------
+  const finalizingCodes = new Set<string>();
+  for (const ev of events) {
+    const t = (ev.type ?? "").trim();
+    if (t === "match_end" || t === "fulltime") {
+      const code = (ev.match_code ?? "").trim();
+      if (code) finalizingCodes.add(code);
+    }
+  }
+  const finalizeSummaries: Record<string, unknown>[] = [];
+  for (const code of finalizingCodes) {
+    const match = matchByCode.get(code);
+    if (!match) continue;
+    try {
+      const out = await autoFinalizeScrimmage(supabase, {
+        matchId: match.id,
+        matchCode: match.matchCode,
+      });
+      finalizeSummaries.push({ match_code: code, ...out });
+    } catch (err) {
+      console.error(`[scrim-ingest] auto-finalize failed for ${code}:`, err);
+      finalizeSummaries.push({
+        match_code: code,
+        ok: false,
+        reason: err instanceof Error ? err.message : "auto-finalize crashed",
+      });
+    }
+  }
+
   return NextResponse.json({
     received: events.length,
     processed,
     results,
+    finalized: finalizeSummaries,
   });
 }
 

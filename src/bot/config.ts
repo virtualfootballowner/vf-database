@@ -47,6 +47,17 @@ const envSchema = z.object({
    * without it.
    */
   DISCORD_SCRIMMAGE_LOBBY_CHANNEL_ID: optionalOutgoingChannel,
+  /**
+   * Roblox `placeId` of the VF "lobby" experience players land in when
+   * they click the join link from #scrimmage-lobby. The lobby place is
+   * responsible for verify-player + reserving + teleporting to the
+   * actual game's reserved server. Optional — when unset the bot still
+   * announces the live match but skips the join URL.
+   *
+   * See docs/roblox-private-server-architecture.md for the full Lua
+   * lobby contract.
+   */
+  VF_ROBLOX_LOBBY_PLACE_ID: optionalOutgoingChannel,
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   ROBLOX_API_BASE_URL: z.string().url().default("https://users.roblox.com"),
@@ -74,6 +85,7 @@ export const env = envSchema.parse({
   DISCORD_TEAM_MANAGER_ROLE_ID: process.env.DISCORD_TEAM_MANAGER_ROLE_ID,
   DISCORD_MEMBER_OUTGOING_CHANNEL_ID: process.env.DISCORD_MEMBER_OUTGOING_CHANNEL_ID,
   DISCORD_SCRIMMAGE_LOBBY_CHANNEL_ID: process.env.DISCORD_SCRIMMAGE_LOBBY_CHANNEL_ID,
+  VF_ROBLOX_LOBBY_PLACE_ID: process.env.VF_ROBLOX_LOBBY_PLACE_ID,
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   ROBLOX_API_BASE_URL: process.env.ROBLOX_API_BASE_URL,

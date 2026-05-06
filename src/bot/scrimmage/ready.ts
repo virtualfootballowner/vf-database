@@ -22,6 +22,7 @@ import {
   type ButtonInteraction,
 } from "discord.js";
 
+import { env } from "@/bot/config";
 import { createBotSupabase } from "@/bot/stats-queries";
 import {
   applyNoShowPenalty,
@@ -231,6 +232,17 @@ async function goLive(lobby: ActiveLobby): Promise<void> {
   lobby.phase = "live";
   lobby.liveStartedAt = Date.now();
 
+  // Construct the deep link that takes players into the VF lobby place.
+  // The lobby Lua reads LaunchData = match_code, calls verify-player to
+  // grab roles + the reserved server code, then teleports the player
+  // straight to the right private server.
+  // See docs/roblox-private-server-architecture.md.
+  const lobbyPlaceId = env.VF_ROBLOX_LOBBY_PLACE_ID;
+  const joinLink = lobbyPlaceId
+    ? `https://www.roblox.com/games/start?placeId=${encodeURIComponent(lobbyPlaceId)}&launchData=${encodeURIComponent(lobby.matchCode)}`
+    : null;
+  lobby.robloxJoinLink = joinLink;
+
   try {
     await updateScrimmageMatchStatus(
       createBotSupabase(),
@@ -238,6 +250,7 @@ async function goLive(lobby: ActiveLobby): Promise<void> {
       "live",
       {
         match_started_at: new Date().toISOString(),
+        roblox_join_link: joinLink,
       },
     );
   } catch (err) {
@@ -250,7 +263,9 @@ async function goLive(lobby: ActiveLobby): Promise<void> {
       .catch(() => null);
     if (msg) {
       await msg.edit({
-        content: "",
+        content: joinLink
+          ? `🎮 **Private server is up — click below to join.**\n${joinLink}`
+          : "",
         embeds: [renderLiveEmbed(lobby)],
         components: [],
       });
@@ -262,7 +277,8 @@ async function goLive(lobby: ActiveLobby): Promise<void> {
   // Note: we keep the in-memory lobby alive while the match is live so
   // future-pings / re-entry could find it. A bot restart loses it; the
   // canonical data lives in scrimmage_matches + scrimmage_players, and
-  // /scrimmage report works purely from the DB.
+  // auto-finalization from Roblox match_end events works purely from
+  // the DB without needing the in-memory lobby.
 }
 
 /* ------------------------------------------------------------------ */
@@ -361,17 +377,25 @@ function renderLiveEmbed(lobby: ActiveLobby): EmbedBuilder {
   const c1 = lobby.captain1!;
   const c2 = lobby.captain2!;
 
+  const description = [
+    "**Match is live.** Play it out in Roblox.",
+    "",
+    lobby.robloxJoinLink
+      ? `🎮 **Click to join:** ${lobby.robloxJoinLink}`
+      : "🎮 No lobby placeId configured — join manually using match code below.",
+    `🔑 **Match code:** \`${lobby.matchCode}\``,
+    "",
+    `Captains **${c1.robloxUsername}** and **${c2.robloxUsername}** are granted in-game **moderator** automatically.`,
+    "",
+    `Run **\`:fulltime\`** in Roblox to end the match — final score, scorers and ELO updates post here automatically.`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
   return new EmbedBuilder()
     .setColor(COLOR_BRAND)
     .setTitle(`🟢 VF FACEIT · LIVE · ${lobby.matchCode}`)
-    .setDescription(
-      [
-        "**Match is live.** Play it out in Roblox.",
-        "",
-        `Either captain reports the result with **\`/scrimmage report <your-score> <opp-score>\`**.`,
-        `The other captain has **2 minutes** to confirm or dispute.`,
-      ].join("\n"),
-    )
+    .setDescription(description)
     .addFields(
       {
         name: `🅰 Team 1 · ${c1.robloxUsername}`,
@@ -385,7 +409,7 @@ function renderLiveEmbed(lobby: ActiveLobby): EmbedBuilder {
       },
     )
     .setFooter({
-      text: "VF FACEIT · Confirm → ELO updates apply · Dispute → admin review.",
+      text: "VF FACEIT · Auto-finalizes from Roblox match events.",
     })
     .setTimestamp(new Date());
 }

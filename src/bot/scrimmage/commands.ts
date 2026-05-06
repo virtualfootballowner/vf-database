@@ -5,10 +5,8 @@ import {
 } from "discord.js";
 
 import {
-  handleScrimmageAdminResult,
   handleScrimmageCancel,
   handleScrimmageLeaderboard,
-  handleScrimmageReport,
   handleScrimmageReportAfkStub,
   handleScrimmageStart,
   handleScrimmageStats,
@@ -18,10 +16,11 @@ import {
 /**
  * `/scrimmage` slash command — FACEIT-style pickup matches with ELO.
  *
- * One top-level command with subcommands so we don't pollute the global
- * command picker with eight `/scrimmage-*` entries. Subcommand-level
- * permissions aren't supported by Discord, so admin gating happens inside
- * each handler.
+ * Manual scoring (/scrimmage report, /scrimmage admin-result) is removed.
+ * Final scores come from the Roblox event ingestion pipeline — when the
+ * host runs `:fulltime` in-game, the API auto-tallies goal events,
+ * applies ELO, and edits the lobby card to a result embed. The only
+ * remaining admin action is `/scrimmage void` for stuck matches.
  */
 export const scrimmageSlashCommand = new SlashCommandBuilder()
   .setName("scrimmage")
@@ -35,27 +34,6 @@ export const scrimmageSlashCommand = new SlashCommandBuilder()
     sub
       .setName("cancel")
       .setDescription("Cancel the active lobby (host only)"),
-  )
-  .addSubcommand((sub) =>
-    sub
-      .setName("report")
-      .setDescription("Report the result of your live scrimmage (captains only)")
-      .addIntegerOption((opt) =>
-        opt
-          .setName("my-score")
-          .setDescription("Your team's score (0–99)")
-          .setRequired(true)
-          .setMinValue(0)
-          .setMaxValue(99),
-      )
-      .addIntegerOption((opt) =>
-        opt
-          .setName("opp-score")
-          .setDescription("Opposing team's score (0–99)")
-          .setRequired(true)
-          .setMinValue(0)
-          .setMaxValue(99),
-      ),
   )
   .addSubcommand((sub) =>
     sub
@@ -86,36 +64,8 @@ export const scrimmageSlashCommand = new SlashCommandBuilder()
   )
   .addSubcommand((sub) =>
     sub
-      .setName("admin-result")
-      .setDescription("Override a scrimmage result (admin only)")
-      .addStringOption((opt) =>
-        opt
-          .setName("code")
-          .setDescription("Match code, e.g. SCR-2026-0142")
-          .setRequired(true)
-          .setMaxLength(20),
-      )
-      .addIntegerOption((opt) =>
-        opt
-          .setName("team1-score")
-          .setDescription("Team 1 final score (0–99)")
-          .setRequired(true)
-          .setMinValue(0)
-          .setMaxValue(99),
-      )
-      .addIntegerOption((opt) =>
-        opt
-          .setName("team2-score")
-          .setDescription("Team 2 final score (0–99)")
-          .setRequired(true)
-          .setMinValue(0)
-          .setMaxValue(99),
-      ),
-  )
-  .addSubcommand((sub) =>
-    sub
       .setName("void")
-      .setDescription("Void a scrimmage (no ELO changes, marks voided)")
+      .setDescription("Void a stuck scrimmage (admin only — no ELO changes)")
       .addStringOption((opt) =>
         opt
           .setName("code")
@@ -137,9 +87,6 @@ export async function handleScrimmageCommand(
     case "cancel":
       await handleScrimmageCancel(interaction);
       return;
-    case "report":
-      await handleScrimmageReport(interaction);
-      return;
     case "report-afk":
       await handleScrimmageReportAfkStub(interaction);
       return;
@@ -148,9 +95,6 @@ export async function handleScrimmageCommand(
       return;
     case "leaderboard":
       await handleScrimmageLeaderboard(interaction);
-      return;
-    case "admin-result":
-      await handleScrimmageAdminResult(interaction);
       return;
     case "void":
       await handleScrimmageVoid(interaction);

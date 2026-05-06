@@ -13,12 +13,6 @@ import type {
 
 import { handlePickButton, SCR_BTN_PICK_PREFIX } from "@/bot/scrimmage/draft";
 import {
-  handleConfirmButton,
-  handleDisputeButton,
-  SCR_BTN_CONFIRM_PREFIX,
-  SCR_BTN_DISPUTE_PREFIX,
-} from "@/bot/scrimmage/result";
-import {
   handleJoinSelect,
   handleLeaveButton,
   SCR_BTN_LEAVE,
@@ -55,14 +49,17 @@ export async function handleScrimmageButton(
     await handlePickButton(interaction, pickedDiscordId);
     return true;
   }
-  if (id.startsWith(SCR_BTN_CONFIRM_PREFIX)) {
-    const matchId = id.slice(SCR_BTN_CONFIRM_PREFIX.length);
-    await handleConfirmButton(interaction, matchId);
-    return true;
-  }
-  if (id.startsWith(SCR_BTN_DISPUTE_PREFIX)) {
-    const matchId = id.slice(SCR_BTN_DISPUTE_PREFIX.length);
-    await handleDisputeButton(interaction, matchId);
+
+  // Old confirm/dispute buttons (vfl:scr:confirm:* / vfl:scr:dispute:*)
+  // are dead code as of the auto-finalize migration. We swallow them
+  // silently with an ephemeral so old lobby cards don't error out if
+  // someone reads back a stale message.
+  if (id.startsWith("vfl:scr:confirm:") || id.startsWith("vfl:scr:dispute:")) {
+    await interaction.reply({
+      flags: 1 << 6,
+      content:
+        "Manual result confirmation has been removed — scrimmages auto-finalize from Roblox match events now.",
+    });
     return true;
   }
 

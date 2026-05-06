@@ -89,6 +89,9 @@ export type ActiveLobby = {
 
   /** Set when match goes live. */
   liveStartedAt: number | null;
+  /** Roblox deep-link the bot posts in #scrimmage-lobby once the
+   *  ready check passes. Null if `VF_ROBLOX_LOBBY_PLACE_ID` is unset. */
+  robloxJoinLink: string | null;
 
   /** All running timers — cleared on cancel/transition. */
   timers: {

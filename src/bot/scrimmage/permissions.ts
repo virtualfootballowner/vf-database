@@ -26,8 +26,9 @@ export function isWhitelistedForScrimmage(
 }
 
 /**
- * Admin gate for `/scrimmage admin-result` and `/scrimmage void` — server
- * owner OR Administrator permission only.
+ * Admin gate for `/scrimmage void` — server owner OR Administrator
+ * permission only. The auto-finalization pipeline does not need an
+ * admin command path; the game is the source of truth.
  */
 export function isScrimmageAdmin(
   interaction: ChatInputCommandInteraction,

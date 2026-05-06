@@ -22,11 +22,7 @@ import {
   handleScrimmageCancel,
   handleScrimmageStart,
 } from "@/bot/scrimmage/queue";
-import {
-  handleScrimmageAdminResult,
-  handleScrimmageReport,
-  handleScrimmageVoid,
-} from "@/bot/scrimmage/result";
+import { handleScrimmageVoid } from "@/bot/scrimmage/result";
 
 /* Re-export for callers that imported these from `handlers` historically. */
 export {
@@ -34,8 +30,6 @@ export {
   isWhitelistedForScrimmage,
   handleScrimmageStart,
   handleScrimmageCancel,
-  handleScrimmageReport,
-  handleScrimmageAdminResult,
   handleScrimmageVoid,
 };
 
