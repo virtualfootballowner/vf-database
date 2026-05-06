@@ -173,6 +173,44 @@ export function buildKnockoutRounds(
   return rounds;
 }
 
+export type CompetitionChampion = {
+  team: string;
+  slug: string | null;
+  /** "knockout" → won a Final; "league" → topped the standings. */
+  source: "knockout" | "league";
+};
+
+/**
+ * Determine the champion of a (season, competition).
+ *
+ * Knockout final winner takes precedence over league standings — handles
+ * cup competitions and World-Cup-style mixed formats. Falls back to the
+ * top of the standings for league-only competitions, or returns null when
+ * the final hasn't produced a clear winner and there are no standings.
+ */
+export function getCompetitionChampion(
+  standings: StandingRow[],
+  rounds: KnockoutRound[],
+): CompetitionChampion | null {
+  const finalRound = rounds.find((r) => r.stage.trim().toLowerCase() === "final");
+  if (finalRound && finalRound.matches.length === 1) {
+    const m = finalRound.matches[0]!;
+    if (m.homeScore !== m.awayScore) {
+      const homeWon = m.homeScore > m.awayScore;
+      return {
+        team: homeWon ? m.homeTeam : m.awayTeam,
+        slug: homeWon ? m.homeSlug : m.awaySlug,
+        source: "knockout",
+      };
+    }
+  }
+  if (standings.length > 0) {
+    const top = standings[0]!;
+    return { team: top.team, slug: top.slug, source: "league" };
+  }
+  return null;
+}
+
 /** Distinct (season, competition) pairs that have at least one played match. */
 export function competitionKeysWithResults(
   allMatches: MatchRecord[],
