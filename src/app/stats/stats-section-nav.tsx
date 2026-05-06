@@ -7,17 +7,34 @@ const tabs: { href: string; label: string }[] = [
   { href: "/stats", label: "Leaders" },
   { href: "/stats/matches", label: "All matches" },
   { href: "/stats/tournaments", label: "Tournaments" },
+  { href: "/stats/faceit", label: "FACEIT" },
 ];
 
 export function StatsSectionNav() {
   const pathname = usePathname();
-  const leadersActive = pathname === "/stats" || pathname === "/stats/";
-  const matchesActive =
-    pathname === "/stats/matches" ||
-    /^\/stats\/matches\/.+/.test(pathname);
-  const tournamentsActive =
-    pathname === "/stats/tournaments" ||
-    pathname === "/stats/tournaments/";
+
+  const isActive = (href: string): boolean => {
+    if (href === "/stats") return pathname === "/stats" || pathname === "/stats/";
+    if (href === "/stats/matches") {
+      return (
+        pathname === "/stats/matches" ||
+        /^\/stats\/matches\/.+/.test(pathname)
+      );
+    }
+    if (href === "/stats/tournaments") {
+      return (
+        pathname === "/stats/tournaments" ||
+        pathname === "/stats/tournaments/"
+      );
+    }
+    if (href === "/stats/faceit") {
+      return (
+        pathname === "/stats/faceit" ||
+        /^\/stats\/faceit\/.+/.test(pathname)
+      );
+    }
+    return false;
+  };
 
   return (
     <nav
@@ -25,12 +42,7 @@ export function StatsSectionNav() {
       className="inline-flex flex-wrap gap-1 rounded-full border border-white/10 bg-white/5 p-1"
     >
       {tabs.map((tab) => {
-        const active =
-          tab.href === "/stats"
-            ? leadersActive
-            : tab.href === "/stats/matches"
-              ? matchesActive
-              : tournamentsActive;
+        const active = isActive(tab.href);
         return (
           <Link
             key={tab.href}

@@ -47,7 +47,7 @@ function signed(n: number | null): string {
 
 /**
  * One row in the player's recent / full scrimmage history. Click-through
- * to /scrimmages/<matchCode>.
+ * to /stats/faceit/<matchCode>.
  */
 export function ScrimmageMatchRow({
   match,
@@ -75,7 +75,7 @@ export function ScrimmageMatchRow({
 
   return (
     <Link
-      href={`/scrimmages/${encodeURIComponent(match.matchCode)}`}
+      href={`/stats/faceit/${encodeURIComponent(match.matchCode)}`}
       className="block rounded-xl outline-none transition focus-visible:ring-2 focus-visible:ring-white/40"
     >
       <Card className="gap-0 py-0 transition hover:bg-white/[0.07] hover:ring-white/25">

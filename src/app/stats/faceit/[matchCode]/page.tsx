@@ -21,6 +21,8 @@ import {
 } from "@/lib/scrimmage/queries";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
+import { StatsSectionNav } from "../../stats-section-nav";
+
 export const dynamic = "force-dynamic";
 
 type PageParams = { matchCode: string };
@@ -33,8 +35,8 @@ export async function generateMetadata({
   const { matchCode } = await params;
   const decoded = decodeURIComponent(matchCode);
   return {
-    title: `${decoded} · Scrimmage · VF League Database`,
-    description: `Match report for VF scrimmage ${decoded}.`,
+    title: `${decoded} · FACEIT Match · VF League Database`,
+    description: `Match report for VF FACEIT scrimmage ${decoded}.`,
   };
 }
 
@@ -117,7 +119,7 @@ async function lookupRobloxIds(
   return out;
 }
 
-export default async function ScrimmageMatchPage({
+export default async function FaceitMatchPage({
   params,
 }: {
   params: Promise<PageParams>;
@@ -148,29 +150,27 @@ export default async function ScrimmageMatchPage({
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden text-white">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 pb-16 pt-6 sm:px-8 sm:pt-10">
-        <SiteNav active="scrimmages" />
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 pb-16 pt-6 sm:px-8 sm:pt-10">
+        <SiteNav active="stats" />
+        <StatsSectionNav />
 
         <Link
-          href="/scrimmages"
+          href="/stats/faceit"
           className="inline-flex w-fit items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-white/65 transition hover:text-white"
         >
           <ArrowLeft className="size-3.5" />
-          All scrimmages
+          All FACEIT matches
         </Link>
 
         <section className="flex flex-col gap-3">
           <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
-            Scrimmage Report
+            FACEIT Match Report
           </p>
           <div className="flex flex-wrap items-baseline gap-3">
             <h1 className="font-mono text-3xl font-semibold tracking-tight sm:text-4xl">
               {match.matchCode}
             </h1>
-            <Badge
-              variant="outline"
-              className={`shrink-0 ${status.class}`}
-            >
+            <Badge variant="outline" className={`shrink-0 ${status.class}`}>
               {status.label}
             </Badge>
           </div>
@@ -182,7 +182,9 @@ export default async function ScrimmageMatchPage({
             {match.playerCount ? (
               <>
                 <span className="text-white/25">·</span>
-                <span>{match.playerCount}v{match.playerCount} match</span>
+                <span>
+                  {match.playerCount}v{match.playerCount} match
+                </span>
               </>
             ) : null}
             {match.hostName ? (
@@ -244,10 +246,22 @@ export default async function ScrimmageMatchPage({
           match.queueStartedAt) && (
           <Card className="py-5">
             <div className="grid gap-3 px-5 sm:grid-cols-2 lg:grid-cols-4">
-              <MetaPair label="Queue started" value={formatDateTime(match.queueStartedAt ?? "")} />
-              <MetaPair label="Match started" value={formatDateTime(match.matchStartedAt ?? "")} />
-              <MetaPair label="Reported by" value={match.reportedByName ?? "—"} />
-              <MetaPair label="Confirmed by" value={match.confirmedByName ?? "—"} />
+              <MetaPair
+                label="Queue started"
+                value={formatDateTime(match.queueStartedAt ?? "")}
+              />
+              <MetaPair
+                label="Match started"
+                value={formatDateTime(match.matchStartedAt ?? "")}
+              />
+              <MetaPair
+                label="Reported by"
+                value={match.reportedByName ?? "—"}
+              />
+              <MetaPair
+                label="Confirmed by"
+                value={match.confirmedByName ?? "—"}
+              />
             </div>
           </Card>
         )}
@@ -480,9 +494,7 @@ function PlayerRosterRow({
           <p className="text-xs tabular-nums text-white/85">
             {player.eloBefore} → {player.eloAfter ?? "—"}
           </p>
-          <p
-            className={`text-[11px] font-semibold tabular-nums ${deltaTone}`}
-          >
+          <p className={`text-[11px] font-semibold tabular-nums ${deltaTone}`}>
             {deltaText}
           </p>
         </div>

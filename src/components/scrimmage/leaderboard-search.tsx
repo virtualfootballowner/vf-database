@@ -23,7 +23,7 @@ export function LeaderboardSearch({ initialQuery = "" }: Props) {
     const trimmed = next.trim();
     if (trimmed.length > 0) params.set("q", trimmed);
     const qs = params.toString();
-    router.push(qs ? `/scrimmages?${qs}` : "/scrimmages");
+    router.push(qs ? `/stats/faceit?${qs}` : "/stats/faceit");
   };
 
   return (

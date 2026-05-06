@@ -11,10 +11,12 @@ import { getRobloxHeadshots } from "@/lib/roblox";
 import { getScrimmageLeaderboard } from "@/lib/scrimmage/queries";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
+import { StatsSectionNav } from "../stats-section-nav";
+
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Scrimmages · VF League Database",
+  title: "FACEIT · Stats · VF League Database",
   description:
     "Live FACEIT-style ELO leaderboard for VF League scrimmages. Top players ranked by competitive scrim rating.",
 };
@@ -37,20 +39,17 @@ function rankBadge(rank: number) {
   if (rank === 1)
     return {
       label: "1",
-      class:
-        "border-amber-300/45 bg-amber-300/15 text-amber-100",
+      class: "border-amber-300/45 bg-amber-300/15 text-amber-100",
     };
   if (rank === 2)
     return {
       label: "2",
-      class:
-        "border-zinc-200/35 bg-zinc-200/10 text-zinc-100",
+      class: "border-zinc-200/35 bg-zinc-200/10 text-zinc-100",
     };
   if (rank === 3)
     return {
       label: "3",
-      class:
-        "border-orange-400/35 bg-orange-400/10 text-orange-200",
+      class: "border-orange-400/35 bg-orange-400/10 text-orange-200",
     };
   return {
     label: rank.toString(),
@@ -77,7 +76,7 @@ async function lookupRobloxIdsByPlayerIds(
   return out;
 }
 
-export default async function ScrimmagesLeaderboardPage({
+export default async function FaceitLeaderboardPage({
   searchParams,
 }: {
   searchParams: SearchParams;
@@ -101,7 +100,8 @@ export default async function ScrimmagesLeaderboardPage({
 
   // Pagination is approximate: a search restricts the universe, so we just
   // disable the "next" button when fewer than PAGE_SIZE rows came back.
-  const hasNext = !q && rows.length === PAGE_SIZE && offset + PAGE_SIZE < totalActive;
+  const hasNext =
+    !q && rows.length === PAGE_SIZE && offset + PAGE_SIZE < totalActive;
   const hasPrev = page > 1;
 
   const baseHref = (p: number) => {
@@ -109,13 +109,14 @@ export default async function ScrimmagesLeaderboardPage({
     if (q) params.set("q", q);
     if (p > 1) params.set("page", p.toString());
     const qs = params.toString();
-    return qs ? `/scrimmages?${qs}` : "/scrimmages";
+    return qs ? `/stats/faceit?${qs}` : "/stats/faceit";
   };
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden text-white">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 pb-16 pt-6 sm:px-8 sm:pt-10">
-        <SiteNav active="scrimmages" />
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 pb-16 pt-6 sm:px-8 sm:pt-10">
+        <SiteNav active="stats" />
+        <StatsSectionNav />
 
         <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -154,14 +155,17 @@ export default async function ScrimmagesLeaderboardPage({
               </p>
               {q ? (
                 <Link
-                  href="/scrimmages"
+                  href="/stats/faceit"
                   className="text-xs font-semibold uppercase tracking-[0.2em] text-white/65 transition hover:text-white"
                 >
                   Clear search
                 </Link>
               ) : (
                 <p className="max-w-md text-xs text-white/55">
-                  Once <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">/scrimmage start</code>{" "}
+                  Once{" "}
+                  <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">
+                    /scrimmage start
+                  </code>{" "}
                   matches finish in Discord, results land here.
                 </p>
               )}

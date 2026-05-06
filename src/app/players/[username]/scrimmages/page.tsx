@@ -108,7 +108,7 @@ export default async function PlayerScrimmagesPage({
   return (
     <main className="relative min-h-screen w-full overflow-hidden text-white">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 pb-16 pt-6 sm:px-8 sm:pt-10">
-        <SiteNav active="scrimmages" />
+        <SiteNav active="players" />
 
         <Link
           href={`/players/${encodeURIComponent(player.roblox_username)}`}
