@@ -76,11 +76,20 @@ export default function Home() {
         </div>
       </main>
 
+      <div
+        aria-hidden
+        className="pointer-events-none h-56 w-full sm:h-72 lg:h-80"
+        style={{
+          backgroundImage:
+            "linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.55) 55%, #ffffff 100%)",
+        }}
+      />
+
       <section
         id="explore"
-        className="relative w-full bg-white text-zinc-900"
+        className="relative -mt-px w-full bg-white text-zinc-900"
       >
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-5 pb-24 pt-20 sm:px-8 sm:pt-24">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-5 pb-24 pt-12 sm:px-8 sm:pt-16">
           <header className="flex max-w-3xl flex-col gap-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-zinc-500">
               The VF league
