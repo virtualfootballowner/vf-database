@@ -88,7 +88,10 @@ async function getPlayer(
   }
 }
 
-async function getPlayerCareer(playerId: string): Promise<CareerEntry[]> {
+async function getPlayerCareer(
+  playerId: string,
+  teams: Team[],
+): Promise<CareerEntry[]> {
   try {
     const supabase = createSupabaseServerClient();
     const result = await supabase
@@ -99,7 +102,6 @@ async function getPlayerCareer(playerId: string): Promise<CareerEntry[]> {
 
     if (result.error) return [];
     const rows = (result.data ?? []) as CareerEntryRow[];
-    const { teams } = await getTeamsCatalog();
     return rows.map((row) => ({
       ...row,
       team: teams.find((t) => t.slug === row.team_slug),
@@ -137,12 +139,27 @@ export default async function PlayerDetailPage({
 
   const headshotsMap = await getRobloxHeadshots([player.roblox_user_id]);
   const headshot = headshotsMap.get(player.roblox_user_id);
-  const career = await getPlayerCareer(player.id);
+  const { teams } = await getTeamsCatalog();
+  const career = await getPlayerCareer(player.id, teams);
   const appearances = await getPlayerMatchAppearances({
     playerId: player.id,
     robloxUserId: player.roblox_user_id,
     robloxUsername: player.roblox_username,
   });
+
+  const teamBySlug = new Map<string, Team>();
+  const teamByName = new Map<string, Team>();
+  for (const t of teams) {
+    if (t.slug) teamBySlug.set(t.slug, t);
+    teamByName.set(t.name.trim().toLowerCase(), t);
+  }
+  const lookupTeam = (slug: string | null, name: string): Team | undefined => {
+    if (slug) {
+      const hit = teamBySlug.get(slug);
+      if (hit) return hit;
+    }
+    return teamByName.get(name.trim().toLowerCase());
+  };
 
   const stats = {
     goals: player.goals_total ?? 0,
@@ -319,7 +336,12 @@ export default async function PlayerDetailPage({
           ) : (
             <div className="flex flex-col gap-2">
               {appearances.map((row) => (
-                <MatchAppearanceRow key={row.robloxMatchId} row={row} />
+                <MatchAppearanceRow
+                  key={row.robloxMatchId}
+                  row={row}
+                  homeTeam={lookupTeam(row.homeSlug, row.homeTeam)}
+                  awayTeam={lookupTeam(row.awaySlug, row.awayTeam)}
+                />
               ))}
             </div>
           )}
@@ -492,7 +514,15 @@ function TrophyStatTile({ trophies }: { trophies: Trophy[] }) {
   );
 }
 
-function MatchAppearanceRow({ row }: { row: PlayerMatchAppearance }) {
+function MatchAppearanceRow({
+  row,
+  homeTeam,
+  awayTeam,
+}: {
+  row: PlayerMatchAppearance;
+  homeTeam: Team | undefined;
+  awayTeam: Team | undefined;
+}) {
   const summary = summaryLine(row);
   const fftBadge =
     row.fft !== "No" ? (
@@ -517,13 +547,23 @@ function MatchAppearanceRow({ row }: { row: PlayerMatchAppearance }) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm font-semibold text-white">
-            <span className="text-white/80">{row.homeTeam}</span>
-            <span className="mx-1.5 text-white/45">
+          <div className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+            {homeTeam ? (
+              <span className="shrink-0">
+                <TeamCrest team={homeTeam} size="xs" />
+              </span>
+            ) : null}
+            <span className="truncate text-white/80">{row.homeTeam}</span>
+            <span className="mx-1 shrink-0 text-white/45">
               {row.homeScore}–{row.awayScore}
             </span>
-            <span className="text-white/80">{row.awayTeam}</span>
-          </p>
+            {awayTeam ? (
+              <span className="shrink-0">
+                <TeamCrest team={awayTeam} size="xs" />
+              </span>
+            ) : null}
+            <span className="truncate text-white/80">{row.awayTeam}</span>
+          </div>
           {fftBadge}
         </div>
         <p className="mt-0.5 text-[11px] text-white/50">

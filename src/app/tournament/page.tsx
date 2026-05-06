@@ -14,7 +14,7 @@ import {
 import { getTeamsCatalog } from "@/lib/site-db";
 
 export const metadata: Metadata = {
-  title: "Tournament · VF League",
+  title: "Fixtures · VF League",
   description:
     "Season 3 World Cup. The pool of nations is locked in — group draw pending.",
 };

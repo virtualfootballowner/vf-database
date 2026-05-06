@@ -245,44 +245,63 @@ export default async function TeamDetailPage({
 
   const players = await getTeamPlayers(slug, selectedSeason);
 
-  const managerName =
-    selectedSeason != null
-      ? ((await getTeamSeasonManagersBySeason(slug, [selectedSeason])).get(
-          selectedSeason,
-        ) ?? null)
-      : null;
+  const managerSeasons =
+    selectedSeason != null ? [selectedSeason] : [...team.seasons].sort((a, b) => a - b);
+  const managerNamesBySeason = await getTeamSeasonManagersBySeason(
+    slug,
+    managerSeasons,
+  );
 
-  const managerPlayer =
-    managerName != null && managerName.trim() !== ""
-      ? await lookupPlayerByRobloxUsername(managerName)
-      : null;
+  type ResolvedManager = {
+    season: number;
+    name: string | null;
+    displayName: string | null;
+    headshotUserId: string | null;
+    profileHref: string | null;
+  };
 
-  const managerRobloxId =
-    managerPlayer?.roblox_user_id &&
-    isVerifiedRobloxUserId(managerPlayer.roblox_user_id)
-      ? managerPlayer.roblox_user_id.trim()
-      : null;
+  const resolvedManagers: ResolvedManager[] = await Promise.all(
+    managerSeasons.map(async (season) => {
+      const raw = managerNamesBySeason.get(season) ?? null;
+      const name = raw && raw.trim() !== "" ? raw.trim() : null;
+      if (!name) {
+        return {
+          season,
+          name: null,
+          displayName: null,
+          headshotUserId: null,
+          profileHref: null,
+        };
+      }
+      const player = await lookupPlayerByRobloxUsername(name);
+      const robloxId =
+        player?.roblox_user_id && isVerifiedRobloxUserId(player.roblox_user_id)
+          ? player.roblox_user_id.trim()
+          : null;
+      const displayName = player?.roblox_username?.trim() || name;
+      return {
+        season,
+        name,
+        displayName,
+        headshotUserId: robloxId,
+        profileHref:
+          player && robloxId
+            ? `/players/${encodeURIComponent(player.roblox_username)}`
+            : null,
+      };
+    }),
+  );
 
   const playerIdsForHeadshots = [
     ...players
       .map((player) => player.roblox_user_id)
       .filter((id): id is string => id != null && id !== ""),
-    ...(managerRobloxId ? [managerRobloxId] : []),
+    ...resolvedManagers
+      .map((m) => m.headshotUserId)
+      .filter((id): id is string => id != null && id !== ""),
   ];
   const headshotsMap = await getRobloxHeadshots(playerIdsForHeadshots);
   const headshots = Object.fromEntries(headshotsMap);
-
-  const displayManagerName =
-    managerPlayer?.roblox_username?.trim() ||
-    managerName?.trim() ||
-    null;
-  const managerHeadshot = managerRobloxId
-    ? headshots[managerRobloxId]
-    : undefined;
-  const managerProfileHref =
-    managerPlayer && managerRobloxId
-      ? `/players/${encodeURIComponent(managerPlayer.roblox_username)}`
-      : null;
 
   const statsSeasons = seasonsForTeamStats(selectedSeason, team.seasons);
   const seasonSuffix = labelSeasonsSuffix(statsSeasons);
@@ -402,43 +421,43 @@ export default async function TeamDetailPage({
         <section className="flex flex-col gap-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
-              Manager
+              {selectedSeason != null || resolvedManagers.length === 1
+                ? "Manager"
+                : "Managers"}
             </p>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
               {selectedSeason != null
                 ? `Season ${selectedSeason}`
-                : "Select a season"}
+                : "All seasons"}
             </h2>
             <p className="mt-1 max-w-2xl text-sm text-white/55">
-              Head coach for the season you choose in the pills above.
+              {selectedSeason != null
+                ? "Head coach for the season you've selected."
+                : "Head coach for every season this club has registered."}
             </p>
           </div>
 
-          {selectedSeason === null ? (
-            <Card className="py-8">
-              <CardContent className="flex flex-col items-center gap-2 text-center">
-                <p className="text-sm font-medium text-white/75">
-                  Choose <strong className="text-white">Season {team.seasons.join(", ")}</strong>{" "}
-                  to view this club&apos;s manager.
-                </p>
-              </CardContent>
-            </Card>
-          ) : !displayManagerName ? (
-            <Card className="py-8">
-              <CardContent className="flex flex-col items-center gap-2 text-center">
-                <p className="text-sm font-medium text-white/75">
-                  No manager on file for Season {selectedSeason}.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <TeamManagerProfileCard
-              displayManagerName={displayManagerName}
-              managerHeadshot={managerHeadshot}
-              managerProfileHref={managerProfileHref}
-              selectedSeason={selectedSeason}
-            />
-          )}
+          <div
+            className={`grid gap-3 ${
+              resolvedManagers.length > 1
+                ? "sm:grid-cols-2 lg:grid-cols-3"
+                : ""
+            }`}
+          >
+            {resolvedManagers.map((manager) => (
+              <TeamManagerProfileCard
+                key={manager.season}
+                displayManagerName={manager.displayName}
+                managerHeadshot={
+                  manager.headshotUserId
+                    ? headshots[manager.headshotUserId]
+                    : undefined
+                }
+                managerProfileHref={manager.profileHref}
+                season={manager.season}
+              />
+            ))}
+          </div>
         </section>
 
         <section className="flex flex-col gap-4">
@@ -494,32 +513,38 @@ export default async function TeamDetailPage({
                   ? headshots[player.roblox_user_id]
                   : undefined;
                 return (
-                  <Card key={player.id} className="gap-0 py-0">
-                    <div className="flex items-center gap-3 px-4 py-4">
-                      <Avatar
-                        size="lg"
-                        className="bg-[#083696]/40 ring-1 ring-white/15"
-                      >
-                        {headshot ? (
-                          <AvatarImage
-                            src={headshot}
-                            alt={`${player.roblox_username} headshot`}
-                          />
-                        ) : null}
-                        <AvatarFallback className="bg-[#083696] text-sm font-black uppercase text-white">
-                          {player.roblox_username.slice(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-base font-semibold text-white">
-                          {player.roblox_username}
-                        </p>
-                        <p className="truncate text-xs text-white/55">
-                          {player.position ?? "Position unset"}
-                        </p>
+                  <Link
+                    key={player.id}
+                    href={`/players/${encodeURIComponent(player.roblox_username)}`}
+                    className="block rounded-xl outline-none transition focus-visible:ring-2 focus-visible:ring-white/40"
+                  >
+                    <Card className="gap-0 py-0 transition hover:bg-white/[0.07] hover:ring-white/25">
+                      <div className="flex items-center gap-3 px-4 py-4">
+                        <Avatar
+                          size="lg"
+                          className="bg-[#083696]/40 ring-1 ring-white/15"
+                        >
+                          {headshot ? (
+                            <AvatarImage
+                              src={headshot}
+                              alt={`${player.roblox_username} headshot`}
+                            />
+                          ) : null}
+                          <AvatarFallback className="bg-[#083696] text-sm font-black uppercase text-white">
+                            {player.roblox_username.slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-base font-semibold text-white">
+                            {player.roblox_username}
+                          </p>
+                          <p className="truncate text-xs text-white/55">
+                            {player.position ?? "Position unset"}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </Card>
+                    </Card>
+                  </Link>
                 );
               })}
             </section>
@@ -556,17 +581,24 @@ function TeamManagerProfileCard({
   displayManagerName,
   managerHeadshot,
   managerProfileHref,
-  selectedSeason,
+  season,
 }: {
-  displayManagerName: string;
+  displayManagerName: string | null;
   managerHeadshot: string | undefined;
   managerProfileHref: string | null;
-  selectedSeason: number;
+  season: number;
 }) {
-  const managerInitials = displayManagerName.slice(0, 2).toUpperCase();
+  const isMissing = !displayManagerName;
+  const managerInitials = displayManagerName
+    ? displayManagerName.slice(0, 2).toUpperCase()
+    : "—";
   const card = (
     <Card
-      className={`gap-0 py-0 ${managerProfileHref ? "transition hover:bg-white/[0.07] hover:ring-white/25" : ""}`}
+      className={`gap-0 py-0 ${
+        managerProfileHref
+          ? "transition hover:bg-white/[0.07] hover:ring-white/25"
+          : ""
+      }`}
     >
       <div className="flex items-center gap-3 px-4 py-4">
         <Avatar
@@ -576,7 +608,7 @@ function TeamManagerProfileCard({
           {managerHeadshot ? (
             <AvatarImage
               src={managerHeadshot}
-              alt={`${displayManagerName} headshot`}
+              alt={`${displayManagerName ?? "Manager"} headshot`}
             />
           ) : null}
           <AvatarFallback className="bg-[#083696] text-sm font-black uppercase text-white">
@@ -584,11 +616,15 @@ function TeamManagerProfileCard({
           </AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-semibold text-white">
-            {displayManagerName}
+          <p
+            className={`truncate text-base font-semibold ${
+              isMissing ? "text-white/55" : "text-white"
+            }`}
+          >
+            {displayManagerName ?? "No manager on file"}
           </p>
           <p className="truncate text-xs text-white/55">
-            Head coach · Season {selectedSeason}
+            Head coach · Season {season}
             {managerProfileHref ? " · VF profile" : ""}
           </p>
         </div>
@@ -600,13 +636,13 @@ function TeamManagerProfileCard({
     return (
       <Link
         href={managerProfileHref}
-        className="block max-w-xl rounded-xl outline-none transition focus-visible:ring-2 focus-visible:ring-white/40"
+        className="block rounded-xl outline-none transition focus-visible:ring-2 focus-visible:ring-white/40"
       >
         {card}
       </Link>
     );
   }
-  return <div className="max-w-xl">{card}</div>;
+  return <div>{card}</div>;
 }
 
 function SeasonPill({

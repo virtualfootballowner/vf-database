@@ -1,10 +1,14 @@
 import { Trophy } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
+import { TeamCrest } from "@/app/teams/team-crest";
+import type { Team } from "@/app/teams/teams-data";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { MatchRecord } from "@/app/stats/matches-data";
-import { getSiteStatsBundle } from "@/lib/site-db";
+import { getSiteStatsBundle, getTeamsCatalog } from "@/lib/site-db";
+import { competitionLogo } from "@/lib/trophy-assets";
 import {
   buildKnockoutRounds,
   competitionKeysWithResults,
@@ -13,6 +17,8 @@ import {
   type CompetitionChampion,
   type StandingRow,
 } from "@/lib/stats-tournaments";
+
+type TeamLookup = Map<string, Team>;
 
 const SEASON_INTRO: Record<number, string> = {
   1: "EuroLeague table plus the EuroBlox Playoffs knockout — bird’s-eye view.",
@@ -52,7 +58,25 @@ function groupCompetitionsBySeason(
 }
 
 export async function TournamentsArchive() {
-  const bundle = await getSiteStatsBundle();
+  const [bundle, { teams }] = await Promise.all([
+    getSiteStatsBundle(),
+    getTeamsCatalog(),
+  ]);
+  const teamBySlug: TeamLookup = new Map();
+  const teamByName = new Map<string, Team>();
+  for (const t of teams) {
+    if (t.slug) teamBySlug.set(t.slug, t);
+    teamByName.set(t.name.trim().toLowerCase(), t);
+  }
+
+  const lookupTeam = (slug: string | null, name: string): Team | undefined => {
+    if (slug) {
+      const hit = teamBySlug.get(slug);
+      if (hit) return hit;
+    }
+    return teamByName.get(name.trim().toLowerCase());
+  };
+
   const pairs = competitionKeysWithResults(bundle.allMatches);
   const bySeason = groupCompetitionsBySeason(pairs);
   const seasonsToShow = [1, 2, 3].filter((s) => (bySeason.get(s)?.length ?? 0) > 0);
@@ -108,6 +132,7 @@ export async function TournamentsArchive() {
                     season={season}
                     competition={competition}
                     allMatches={bundle.allMatches}
+                    lookupTeam={lookupTeam}
                   />
                 ))}
               </div>
@@ -123,10 +148,12 @@ function CompetitionBlock({
   season,
   competition,
   allMatches,
+  lookupTeam,
 }: {
   season: number;
   competition: string;
   allMatches: MatchRecord[];
+  lookupTeam: (slug: string | null, name: string) => Team | undefined;
 }) {
   const standings = computeGroupStandings(allMatches, season, competition);
   const rounds = buildKnockoutRounds(allMatches, season, competition);
@@ -134,14 +161,32 @@ function CompetitionBlock({
   if (standings.length === 0 && rounds.length === 0) return null;
 
   const champion = getCompetitionChampion(standings, rounds);
+  const compLogo = competitionLogo(competition);
+  const championTeam = champion ? lookupTeam(champion.slug, champion.team) : undefined;
 
   return (
     <Card className="gap-0 border-white/10 bg-white/[0.03] py-0">
       <CardHeader className="border-b border-white/10 px-4 py-3 sm:px-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-base font-semibold text-white sm:text-lg">
-            {competition}
-          </h3>
+          <div className="flex min-w-0 items-center gap-2.5">
+            {compLogo ? (
+              <span
+                aria-hidden
+                className="relative inline-flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white/[0.04] ring-1 ring-white/10"
+              >
+                <Image
+                  src={compLogo}
+                  alt=""
+                  fill
+                  sizes="28px"
+                  className="object-contain p-0.5"
+                />
+              </span>
+            ) : null}
+            <h3 className="truncate text-base font-semibold text-white sm:text-lg">
+              {competition}
+            </h3>
+          </div>
           <Badge
             variant="outline"
             className="border-white/15 text-[10px] text-white/65"
@@ -151,7 +196,9 @@ function CompetitionBlock({
         </div>
       </CardHeader>
 
-      {champion ? <ChampionStrip champion={champion} /> : null}
+      {champion ? (
+        <ChampionStrip champion={champion} championTeam={championTeam} />
+      ) : null}
 
       <CardContent className="flex flex-col gap-5 px-3 py-4 sm:px-5">
         {standings.length > 0 ? (
@@ -164,6 +211,7 @@ function CompetitionBlock({
               championTeam={
                 champion?.source === "league" ? champion.team : null
               }
+              lookupTeam={lookupTeam}
             />
           </div>
         ) : null}
@@ -172,7 +220,7 @@ function CompetitionBlock({
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
               Knockout
             </p>
-            <KnockoutOverview rounds={rounds} />
+            <KnockoutOverview rounds={rounds} lookupTeam={lookupTeam} />
           </div>
         ) : null}
       </CardContent>
@@ -180,7 +228,13 @@ function CompetitionBlock({
   );
 }
 
-function ChampionStrip({ champion }: { champion: CompetitionChampion }) {
+function ChampionStrip({
+  champion,
+  championTeam,
+}: {
+  champion: CompetitionChampion;
+  championTeam: Team | undefined;
+}) {
   const label =
     champion.source === "knockout" ? "Cup Champions" : "League Champions";
   const TeamTag = champion.slug ? (
@@ -205,6 +259,11 @@ function ChampionStrip({ champion }: { champion: CompetitionChampion }) {
         >
           <Trophy className="size-4" />
         </div>
+        {championTeam ? (
+          <div className="shrink-0">
+            <TeamCrest team={championTeam} size="sm" />
+          </div>
+        ) : null}
         <div className="min-w-0 flex-1">
           <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-amber-200/85 sm:text-[10px]">
             {label}
@@ -219,10 +278,12 @@ function ChampionStrip({ champion }: { champion: CompetitionChampion }) {
 function StandingsMini({
   rows,
   championTeam,
+  lookupTeam,
 }: {
   rows: StandingRow[];
   /** When set, that team's row gets the gold-row treatment. */
   championTeam: string | null;
+  lookupTeam: (slug: string | null, name: string) => Team | undefined;
 }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-white/10 bg-black/20">
@@ -272,27 +333,37 @@ function StandingsMini({
                     {i + 1}
                   </span>
                 </td>
-                <td className="max-w-[140px] px-2 py-1 sm:max-w-[200px] sm:px-3 sm:py-1.5">
-                  {r.slug ? (
-                    <Link
-                      href={`/teams/${encodeURIComponent(r.slug)}`}
-                      className={`truncate font-medium underline underline-offset-2 ${
-                        isChampion
-                          ? "text-white decoration-amber-200/45 hover:decoration-amber-200/90"
-                          : "text-white decoration-white/25 hover:decoration-white/60"
-                      } ${isChampion ? "font-bold" : ""}`}
-                    >
-                      {r.team}
-                    </Link>
-                  ) : (
-                    <span
-                      className={`truncate font-medium ${
-                        isChampion ? "font-bold text-white" : "text-white/90"
-                      }`}
-                    >
-                      {r.team}
-                    </span>
-                  )}
+                <td className="max-w-[180px] px-2 py-1 sm:max-w-[240px] sm:px-3 sm:py-1.5">
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const t = lookupTeam(r.slug, r.team);
+                      return t ? (
+                        <span className="shrink-0">
+                          <TeamCrest team={t} size="xs" />
+                        </span>
+                      ) : null;
+                    })()}
+                    {r.slug ? (
+                      <Link
+                        href={`/teams/${encodeURIComponent(r.slug)}`}
+                        className={`truncate font-medium underline underline-offset-2 ${
+                          isChampion
+                            ? "text-white decoration-amber-200/45 hover:decoration-amber-200/90"
+                            : "text-white decoration-white/25 hover:decoration-white/60"
+                        } ${isChampion ? "font-bold" : ""}`}
+                      >
+                        {r.team}
+                      </Link>
+                    ) : (
+                      <span
+                        className={`truncate font-medium ${
+                          isChampion ? "font-bold text-white" : "text-white/90"
+                        }`}
+                      >
+                        {r.team}
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className={numCellClass}>{r.played}</td>
                 <td className={numCellClass}>{r.won}</td>
@@ -321,8 +392,10 @@ function StandingsMini({
 
 function KnockoutOverview({
   rounds,
+  lookupTeam,
 }: {
   rounds: { stage: string; matches: MatchRecord[] }[];
+  lookupTeam: (slug: string | null, name: string) => Team | undefined;
 }) {
   return (
     <div className="-mx-1 overflow-x-auto pb-1">
@@ -332,7 +405,7 @@ function KnockoutOverview({
           return (
             <div
               key={round.stage}
-              className="flex w-[148px] shrink-0 flex-col gap-1.5 sm:w-[160px]"
+              className="flex w-[170px] shrink-0 flex-col gap-1.5 sm:w-[184px]"
             >
               <p
                 className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${
@@ -347,6 +420,7 @@ function KnockoutOverview({
                     key={m.id}
                     match={m}
                     isFinal={isFinalRound}
+                    lookupTeam={lookupTeam}
                   />
                 ))}
               </div>
@@ -361,9 +435,11 @@ function KnockoutOverview({
 function KnockoutTile({
   match,
   isFinal,
+  lookupTeam,
 }: {
   match: MatchRecord;
   isFinal: boolean;
+  lookupTeam: (slug: string | null, name: string) => Team | undefined;
 }) {
   const draw = match.homeScore === match.awayScore;
   const homeW = match.homeScore > match.awayScore;
@@ -380,22 +456,32 @@ function KnockoutTile({
     ? "rounded-md border border-amber-300/45 bg-gradient-to-b from-amber-300/15 via-amber-300/[0.07] to-black/30 px-2 py-1.5 ring-1 ring-amber-200/20"
     : "rounded-md border border-white/10 bg-black/25 px-2 py-1.5";
 
+  const homeTeam = lookupTeam(match.homeSlug, match.homeTeam);
+  const awayTeam = lookupTeam(match.awaySlug, match.awayTeam);
+
   const inner = (
     <div className={tileClass}>
-      <div className="flex items-center justify-between gap-1 border-b border-white/5 pb-1">
-        <span
-          className={`min-w-0 flex-1 truncate text-left text-[10px] leading-tight sm:text-[11px] ${
-            draw
-              ? "font-medium text-white/75"
-              : homeW
-                ? showChampion
-                  ? "font-bold text-amber-100"
-                  : "font-medium text-white"
-                : "font-medium text-white/55"
-          }`}
-        >
-          {match.homeTeam}
-        </span>
+      <div className="flex items-center justify-between gap-1.5 border-b border-white/5 pb-1">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          {homeTeam ? (
+            <span className="shrink-0">
+              <TeamCrest team={homeTeam} size="xs" />
+            </span>
+          ) : null}
+          <span
+            className={`min-w-0 truncate text-left text-[10px] leading-tight sm:text-[11px] ${
+              draw
+                ? "font-medium text-white/75"
+                : homeW
+                  ? showChampion
+                    ? "font-bold text-amber-100"
+                    : "font-medium text-white"
+                  : "font-medium text-white/55"
+            }`}
+          >
+            {match.homeTeam}
+          </span>
+        </div>
         <span
           className={`shrink-0 text-[11px] font-bold tabular-nums ${
             draw
@@ -410,20 +496,27 @@ function KnockoutTile({
           {match.homeScore}
         </span>
       </div>
-      <div className="flex items-center justify-between gap-1 pt-1">
-        <span
-          className={`min-w-0 flex-1 truncate text-left text-[10px] leading-tight sm:text-[11px] ${
-            draw
-              ? "font-medium text-white/75"
-              : awayW
-                ? showChampion
-                  ? "font-bold text-amber-100"
-                  : "font-medium text-white"
-                : "font-medium text-white/55"
-          }`}
-        >
-          {match.awayTeam}
-        </span>
+      <div className="flex items-center justify-between gap-1.5 pt-1">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          {awayTeam ? (
+            <span className="shrink-0">
+              <TeamCrest team={awayTeam} size="xs" />
+            </span>
+          ) : null}
+          <span
+            className={`min-w-0 truncate text-left text-[10px] leading-tight sm:text-[11px] ${
+              draw
+                ? "font-medium text-white/75"
+                : awayW
+                  ? showChampion
+                    ? "font-bold text-amber-100"
+                    : "font-medium text-white"
+                  : "font-medium text-white/55"
+            }`}
+          >
+            {match.awayTeam}
+          </span>
+        </div>
         <span
           className={`shrink-0 text-[11px] font-bold tabular-nums ${
             draw

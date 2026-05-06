@@ -4,10 +4,11 @@ import type { Team } from "./teams-data";
 
 type TeamCrestProps = {
   team: Pick<Team, "name" | "short" | "logo">;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
 };
 
 const SIZE_MAP = {
+  xs: { box: "h-5 w-5", text: "text-[8px]", sizes: "20px" },
   sm: { box: "h-10 w-10", text: "text-[10px]", sizes: "40px" },
   md: { box: "h-14 w-14", text: "text-sm", sizes: "56px" },
   lg: { box: "h-24 w-24", text: "text-xl", sizes: "96px" },

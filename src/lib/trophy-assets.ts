@@ -28,3 +28,15 @@ export function trophyImageForTrophyTitle(title: string): string | null {
   if (/euro\s*league|euroleague/i.test(t)) return TROPHY_IMAGE.euroleague;
   return null;
 }
+
+/**
+ * Competition name → competition crest under /public, or null when none.
+ * Useful for table/bracket headers in the tournaments archive.
+ */
+export function competitionLogo(competition: string): string | null {
+  const t = competition.trim().toLowerCase();
+  if (!t) return null;
+  if (t.includes("euroblox")) return TROPHY_IMAGE.eurobloxCup;
+  if (t.includes("euroleague")) return TROPHY_IMAGE.euroleague;
+  return null;
+}

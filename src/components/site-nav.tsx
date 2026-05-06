@@ -8,7 +8,7 @@ type SiteNavProps = {
 };
 
 const links: { href: string; label: string; key: SiteNavKey }[] = [
-  { href: "/tournament", label: "Tournament", key: "tournament" },
+  { href: "/tournament", label: "Fixtures", key: "tournament" },
   { href: "/stats", label: "Stats", key: "stats" },
   { href: "/teams", label: "Teams", key: "teams" },
   { href: "/players", label: "Players", key: "players" },
