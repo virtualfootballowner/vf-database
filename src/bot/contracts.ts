@@ -6,6 +6,7 @@ import {
   ButtonStyle,
   EmbedBuilder,
   MessageFlags,
+  PermissionFlagsBits,
   type ButtonInteraction,
   type ChatInputCommandInteraction,
   type GuildMember,
@@ -19,6 +20,7 @@ import {
   findPlayerByDiscordId,
   listPlayerRosterTeamsForSeason,
   loadTeams,
+  resolveManagerTeamSlugForSeason,
   resolveTeamForSlashCommand,
 } from "@/bot/stats-queries";
 
@@ -133,6 +135,52 @@ export async function handleContractCommand(
       return;
     }
     const teamRes = { ok: true as const, teamSlug: resolvedTeam.slug };
+
+    const canContractAnyTeam =
+      interaction.guild.ownerId === interaction.user.id ||
+      Boolean(
+        interaction.memberPermissions?.has(PermissionFlagsBits.Administrator),
+      );
+
+    if (!canContractAnyTeam) {
+      const managerTeam = await resolveManagerTeamSlugForSeason(
+        supabase,
+        interaction.user.id,
+        activeSeason,
+      );
+      if (!managerTeam.ok) {
+        const lines: Record<
+          "no_player" | "no_username" | "not_manager" | "ambiguous",
+          string
+        > = {
+          no_player:
+            "Couldn’t find your VF profile. Verify on the website first — contracts are tied to your Discord link.",
+          no_username:
+            "Your VF profile has no Roblox username. Staff need to fix your **players** row before you can offer contracts.",
+          not_manager:
+            "You’re not listed as a **Season " +
+            activeSeason +
+            "** club manager in the database (`team_season_managers`), so you can’t offer contracts. Ask staff to assign your club, or use the correct team only if you’ve just been added.",
+          ambiguous:
+            "You’re listed as manager for **multiple clubs** this season in `team_season_managers`. Staff must fix that to one club before you can offer contracts.",
+        };
+        await interaction.editReply({
+          content: lines[managerTeam.reason],
+        });
+        return;
+      }
+      if (managerTeam.teamSlug !== teamRes.teamSlug) {
+        const teamNames = await buildTeamNameBySlug(supabase);
+        const yours =
+          teamNames.get(managerTeam.teamSlug) ?? managerTeam.teamSlug;
+        await interaction.editReply({
+          content:
+            `You can only offer contracts for **your** club (**${yours}** · \`${managerTeam.teamSlug}\`), not \`${teamRes.teamSlug}\`. ` +
+            "Pick your team in the \`team\` option. *Server admins can still offer for any club if needed.*",
+        });
+        return;
+      }
+    }
 
     const signeeProfile = await findPlayerByDiscordId(supabase, signeeUser.id);
     if (!signeeProfile) {
