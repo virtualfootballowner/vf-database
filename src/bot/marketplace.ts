@@ -164,7 +164,7 @@ export async function handleFreeAgent(
   const robloxProfile = `https://www.roblox.com/users/${profile.roblox_user_id}/profile`;
 
   const description = [
-    `### Available now`,
+    `**Available now**`,
     `**${interaction.user}** is open to offers — DM to make one.`,
     "",
     `> **Position** · **${position}**`,
@@ -283,7 +283,7 @@ export async function handleFriendly(
   );
 
   const description = [
-    `### Looking for a friendly`,
+    `**Looking for a friendly**`,
     `${interaction.user} wants to play — DM to lock it in.`,
     "",
     `> **When** · **${time}**`,
@@ -366,7 +366,7 @@ export async function handleScouting(
 
   const slotsLabel = count === 1 ? "slot" : "slots";
   const description = [
-    `### Recruiting · ${count} ${slotsLabel} open`,
+    `**Recruiting · ${count} ${slotsLabel} open**`,
     `${interaction.user} is signing **${position}** for ${teamLabel} — DM to trial.`,
     "",
     `> **Position** · **${position}**`,

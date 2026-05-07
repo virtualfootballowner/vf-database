@@ -905,8 +905,8 @@ async function handleTeam(
     const squadHeaderName = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
     const squadHeaderValue =
       squad.length === 0
-        ? `## 👥 Squad · Season ${season}\n_No players registered for this season yet._`
-        : `## 👥 Squad · Season ${season}\n**${squad.length}** ${squad.length === 1 ? "player" : "players"} on the sheet`;
+        ? `**👥 Squad · Season ${season}**\n_No players registered for this season yet._`
+        : `**👥 Squad · Season ${season}**\n**${squad.length}** ${squad.length === 1 ? "player" : "players"} on the sheet`;
     embed.addFields({
       name: squadHeaderName,
       value: squadHeaderValue,
