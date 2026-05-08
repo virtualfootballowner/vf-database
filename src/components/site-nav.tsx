@@ -29,18 +29,28 @@ const links: { href: string; label: string; key: SiteNavKey }[] = [
 
 export function SiteNav({ active }: SiteNavProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const mobileCenterLabel = active
+    ? (links.find((l) => l.key === active)?.label ?? "Menu")
+    : "Home";
 
   return (
     <>
-      <header className="glass sticky top-[max(0.75rem,env(safe-area-inset-top))] z-40 flex w-full max-w-full items-center justify-between gap-2 rounded-full px-3 py-2 md:mx-auto md:w-fit md:max-w-none md:justify-start md:gap-3 md:px-4">
-        <div className="flex min-w-0 items-center gap-2 md:gap-3">
-          <Link href="/" className="flex items-center shrink-0" aria-label="VF League home">
+      <header className="sticky top-[max(0.5rem,env(safe-area-inset-top))] z-40 flex w-full max-w-full items-center gap-2 border-b border-white/10 bg-[#020d28]/94 px-3 py-2.5 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.5)] backdrop-blur-md md:top-[max(0.75rem,env(safe-area-inset-top))] md:w-fit md:max-w-none md:rounded-full md:border md:border-white/14 md:bg-white/[0.09] md:px-4 md:py-2 md:shadow-none md:backdrop-blur-[28px] md:backdrop-saturate-[160%]">
+        <div className="flex min-w-0 flex-1 items-center gap-2 md:flex-initial md:gap-3">
+          <Link href="/" className="flex shrink-0 items-center" aria-label="VF League home">
             <span
               className="font-display text-2xl leading-none tracking-[0.08em] text-white drop-shadow-[0_2px_12px_rgba(8,54,150,0.6)]"
             >
               VF
             </span>
           </Link>
+
+          <p
+            className="min-w-0 flex-1 truncate text-center text-[13px] font-semibold tracking-wide text-white/90 md:hidden"
+            aria-current={active ? "page" : undefined}
+          >
+            {mobileCenterLabel}
+          </p>
 
           <span aria-hidden className="hidden h-4 w-px shrink-0 bg-white/15 md:block" />
 

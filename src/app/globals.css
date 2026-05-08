@@ -138,30 +138,30 @@
   body {
     @apply text-foreground;
     overflow-x: clip;
+    /* Solid base + vertical blend that stretches with content (no 100vh “seam”
+       on long pages — old radial stopped after one viewport and blew bright
+       white into the middle of scroll on mobile). */
     background-color: #02103f;
-    background-image: radial-gradient(
-      ellipse 130% 110% at 50% 105%,
-      #ffffff 0%,
-      #e2eaff 8%,
-      #aebde8 20%,
-      #5a7cd8 35%,
-      #224aae 50%,
-      #083696 65%,
-      rgba(8, 54, 150, 0) 95%
-    );
+    background-image:
+      radial-gradient(
+        ellipse 140% 90% at 50% -35%,
+        rgba(62, 108, 198, 0.38) 0%,
+        transparent 55%
+      ),
+      linear-gradient(
+        180deg,
+        #0a2565 0%,
+        #061a48 22%,
+        #02103f 45%,
+        #020d30 100%
+      );
     background-repeat: no-repeat;
-    background-attachment: fixed;
-    background-size: 100% 100vh;
-    background-position: 0 0;
+    background-size: 100% 100%;
+    background-attachment: scroll;
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Fixed backgrounds + heavy blur cost jank on many phones. */
-  @media (max-width: 767px) {
-    body {
-      background-attachment: scroll;
-    }
-  }
+  /* No separate mobile attachment rule — scroll-only avoids iOS fixed-bg bugs. */
 }
 
 .glass {

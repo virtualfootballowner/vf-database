@@ -65,11 +65,11 @@ export default function Home() {
   return (
     <>
       <main className="relative min-h-dvh min-w-0 w-full overflow-x-clip text-white">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 pb-16 pt-5 sm:px-6 sm:pt-8 md:px-8 md:pt-10">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-5 pb-16 pt-5 sm:px-6 sm:pt-8 md:px-8 md:pt-10">
           <SiteNav />
 
-          <section className="relative grid items-center gap-6 pt-6 sm:gap-8 sm:pt-16 lg:grid-cols-[1.15fr_0.85fr] lg:gap-2 lg:pt-24">
-            <div className="relative z-10 order-2 min-w-0 lg:order-1">
+          <section className="relative grid items-center gap-8 pt-2 sm:gap-10 sm:pt-16 lg:grid-cols-[1.15fr_0.85fr] lg:gap-2 lg:pt-24">
+            <div className="relative z-10 order-1 min-w-0 lg:order-1">
               <h1 className="text-shadow-glass relative z-10 text-3xl font-semibold leading-[1.08] tracking-tight sm:text-5xl sm:leading-[1.05] lg:max-w-[155%] xl:text-6xl">
                 The home of every player,
                 <br />
@@ -77,7 +77,7 @@ export default function Home() {
                 <br />
                 in the <span className="glisten">league</span>.
               </h1>
-              <p className="mt-4 max-w-sm text-[15px] leading-7 text-white/75 sm:mt-5 sm:text-lg">
+              <p className="mt-4 max-w-md text-[15px] leading-7 text-white/75 sm:mt-5 sm:text-lg">
                 A display layer for the VF database. Browse teams, scout
                 players, and revisit every season.
               </p>
@@ -91,20 +91,20 @@ export default function Home() {
               </a>
             </div>
 
-            <div className="relative order-1 -mx-1 max-h-[min(52vh,22rem)] min-h-0 sm:-mx-2 sm:max-h-[min(58vh,28rem)] md:max-h-none lg:order-2 lg:-mb-44 lg:-ml-20 lg:max-h-none xl:-mb-56">
+            <div className="relative order-2 mx-auto w-full max-w-[min(100%,26rem)] min-h-0 sm:max-w-xl md:max-w-2xl lg:order-2 lg:mx-0 lg:-mb-44 lg:-ml-20 lg:max-w-none xl:-mb-56">
               <Image
                 src="/VF LANDING.png"
                 alt="VF League players"
                 width={1024}
                 height={788}
                 priority
-                sizes="(min-width: 1024px) 40vw, 100vw"
-                className="h-auto w-full max-w-full origin-bottom scale-[1.08] sm:scale-125 lg:scale-150"
+                sizes="(min-width: 1024px) 40vw, (min-width: 640px) 85vw, 100vw"
+                className="h-auto w-full max-w-full origin-bottom scale-100 sm:scale-105 lg:scale-150"
                 style={{
                   WebkitMaskImage:
-                    "linear-gradient(to bottom, #000 50%, rgba(0,0,0,0.6) 75%, transparent 100%)",
+                    "linear-gradient(to bottom, #000 58%, rgba(0,0,0,0.82) 80%, transparent 100%)",
                   maskImage:
-                    "linear-gradient(to bottom, #000 50%, rgba(0,0,0,0.6) 75%, transparent 100%)",
+                    "linear-gradient(to bottom, #000 58%, rgba(0,0,0,0.82) 80%, transparent 100%)",
                 }}
               />
             </div>
@@ -125,7 +125,7 @@ export default function Home() {
         id="explore"
         className="relative -mt-px w-full bg-white text-zinc-900"
       >
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 pb-24 pt-10 sm:gap-16 sm:px-6 sm:pt-14 md:px-8 md:pt-16">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-5 pb-24 pt-10 sm:gap-16 sm:px-6 sm:pt-14 md:px-8 md:pt-16">
           <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex max-w-3xl flex-col gap-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-zinc-500">
