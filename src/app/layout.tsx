@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bebas_Neue, Geist, Geist_Mono } from "next/font/google";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -29,6 +29,16 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#02103f" },
+  ],
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -37,9 +47,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`dark ${geistSans.variable} ${geistMono.variable} ${bebasNeue.variable} h-full antialiased`}
+      className={`dark ${geistSans.variable} ${geistMono.variable} ${bebasNeue.variable} min-h-dvh antialiased`}
     >
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-dvh min-w-0 flex-col pb-[env(safe-area-inset-bottom,0px)]">
         <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>

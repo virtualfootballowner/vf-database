@@ -132,9 +132,12 @@
   }
   html {
     @apply font-sans;
+    overflow-x: clip;
+    scroll-behavior: smooth;
   }
   body {
     @apply text-foreground;
+    overflow-x: clip;
     background-color: #02103f;
     background-image: radial-gradient(
       ellipse 130% 110% at 50% 105%,
@@ -152,6 +155,13 @@
     background-position: 0 0;
     -webkit-font-smoothing: antialiased;
   }
+
+  /* Fixed backgrounds + heavy blur cost jank on many phones. */
+  @media (max-width: 767px) {
+    body {
+      background-attachment: scroll;
+    }
+  }
 }
 
 .glass {
@@ -162,6 +172,13 @@
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.16),
     0 20px 40px -15px rgba(0, 0, 0, 0.45);
+}
+
+@media (max-width: 767px) {
+  .glass {
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+  }
 }
 
 .glass-strong {

@@ -91,7 +91,7 @@ export default async function VerifyDonePage({ searchParams }: Props) {
   ].filter(Boolean) as string[];
 
   return (
-    <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col justify-center gap-6 px-6 py-16">
+    <main className="mx-auto flex min-h-dvh min-w-0 max-w-lg flex-col justify-center gap-6 overflow-x-clip px-4 py-12 sm:px-6 sm:py-16">
       <h1
         className={`text-2xl font-semibold tracking-tight ${ok ? "text-green-600 dark:text-green-400" : ""}`}
       >

@@ -64,42 +64,42 @@ const SOCIAL_LINKS = {
 export default function Home() {
   return (
     <>
-      <main className="relative min-h-screen w-full overflow-hidden text-white">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-5 pb-16 pt-6 sm:px-8 sm:pt-10">
+      <main className="relative min-h-dvh min-w-0 w-full overflow-x-clip text-white">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 pb-16 pt-5 sm:px-6 sm:pt-8 md:px-8 md:pt-10">
           <SiteNav />
 
-          <section className="relative grid items-center gap-4 pt-12 sm:pt-20 lg:grid-cols-[1.15fr_0.85fr] lg:gap-2 lg:pt-24">
-            <div className="relative">
-              <h1 className="text-shadow-glass relative z-10 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl lg:max-w-[155%]">
+          <section className="relative grid items-center gap-6 pt-6 sm:gap-8 sm:pt-16 lg:grid-cols-[1.15fr_0.85fr] lg:gap-2 lg:pt-24">
+            <div className="relative z-10 order-2 min-w-0 lg:order-1">
+              <h1 className="text-shadow-glass relative z-10 text-3xl font-semibold leading-[1.08] tracking-tight sm:text-5xl sm:leading-[1.05] lg:max-w-[155%] xl:text-6xl">
                 The home of every player,
                 <br />
                 team & season
                 <br />
                 in the <span className="glisten">league</span>.
               </h1>
-              <p className="mt-5 max-w-sm text-base leading-7 text-white/75 sm:text-lg">
+              <p className="mt-4 max-w-sm text-[15px] leading-7 text-white/75 sm:mt-5 sm:text-lg">
                 A display layer for the VF database. Browse teams, scout
                 players, and revisit every season.
               </p>
 
               <a
                 href="#explore"
-                className="group relative z-10 mt-8 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/85 backdrop-blur transition hover:border-white/40 hover:bg-white/10 hover:text-white"
+                className="group relative z-10 mt-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/85 backdrop-blur transition hover:border-white/40 hover:bg-white/10 hover:text-white sm:mt-8 sm:text-xs sm:tracking-[0.2em]"
               >
                 Scroll to explore
                 <ChevronDown className="size-3.5 transition group-hover:translate-y-0.5" />
               </a>
             </div>
 
-            <div className="relative -mb-32 sm:-mb-44 lg:-ml-20 lg:-mb-56">
+            <div className="relative order-1 -mx-1 max-h-[min(52vh,22rem)] min-h-0 sm:-mx-2 sm:max-h-[min(58vh,28rem)] md:max-h-none lg:order-2 lg:-mb-44 lg:-ml-20 lg:max-h-none xl:-mb-56">
               <Image
                 src="/VF LANDING.png"
                 alt="VF League players"
                 width={1024}
                 height={788}
                 priority
-                sizes="(min-width: 1024px) 75vw, 100vw"
-                className="h-auto w-full origin-bottom scale-150"
+                sizes="(min-width: 1024px) 40vw, 100vw"
+                className="h-auto w-full max-w-full origin-bottom scale-[1.08] sm:scale-125 lg:scale-150"
                 style={{
                   WebkitMaskImage:
                     "linear-gradient(to bottom, #000 50%, rgba(0,0,0,0.6) 75%, transparent 100%)",
@@ -125,7 +125,7 @@ export default function Home() {
         id="explore"
         className="relative -mt-px w-full bg-white text-zinc-900"
       >
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-5 pb-24 pt-12 sm:px-8 sm:pt-16">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 pb-24 pt-10 sm:gap-16 sm:px-6 sm:pt-14 md:px-8 md:pt-16">
           <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex max-w-3xl flex-col gap-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-zinc-500">
@@ -297,9 +297,9 @@ export default function Home() {
             </div>
           </div>
 
-          <footer className="flex flex-col items-start gap-3 border-t border-zinc-200 pt-8 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
-            <p>VF League Database · A display layer for the VF database.</p>
-            <div className="flex items-center gap-4">
+          <footer className="flex flex-col items-start gap-4 border-t border-zinc-200 pt-8 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
+            <p className="max-w-[100%]">VF League Database · A display layer for the VF database.</p>
+            <div className="flex w-full min-w-0 flex-wrap items-center gap-x-4 gap-y-2 sm:w-auto sm:justify-end">
               <a
                 href={SOCIAL_LINKS.youtube}
                 target="_blank"

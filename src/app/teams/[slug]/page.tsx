@@ -321,8 +321,8 @@ export default async function TeamDetailPage({
     seasonSuffix.length > 0 ? `Titles · ${seasonSuffix}` : "Titles";
 
   return (
-    <main className="relative min-h-screen w-full overflow-hidden text-white">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 pb-16 pt-6 sm:px-8 sm:pt-10">
+    <main className="relative min-h-dvh min-w-0 w-full overflow-x-clip text-white">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 pb-16 pt-5 sm:px-6 sm:pt-8 md:px-8 md:pt-10">
         <SiteNav active="teams" />
 
         <Link
@@ -363,7 +363,7 @@ export default async function TeamDetailPage({
           </div>
         </section>
 
-        <section className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Card className="gap-2 py-5">
             <CardContent>
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">

@@ -37,26 +37,28 @@ export function StatsSectionNav() {
   };
 
   return (
-    <nav
-      aria-label="Stats sections"
-      className="inline-flex flex-wrap gap-1 rounded-full border border-white/10 bg-white/5 p-1"
-    >
-      {tabs.map((tab) => {
-        const active = isActive(tab.href);
-        return (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
-              active
-                ? "bg-white text-zinc-950 shadow-[0_4px_16px_-4px_rgba(255,255,255,0.35)]"
-                : "text-white/70 hover:bg-white/10 hover:text-white"
-            }`}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <div className="w-full overflow-x-auto overflow-y-visible overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav
+        aria-label="Stats sections"
+        className="inline-flex w-max min-w-0 flex-nowrap gap-1 rounded-full border border-white/10 bg-white/5 p-1"
+      >
+        {tabs.map((tab) => {
+          const active = isActive(tab.href);
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={`shrink-0 rounded-full px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] transition sm:px-4 sm:text-xs sm:tracking-[0.14em] ${
+                active
+                  ? "bg-white text-zinc-950 shadow-[0_4px_16px_-4px_rgba(255,255,255,0.35)]"
+                  : "text-white/70 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
   );
 }

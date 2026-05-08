@@ -114,8 +114,8 @@ export default async function FaceitLeaderboardPage({
   };
 
   return (
-    <main className="relative min-h-screen w-full overflow-hidden text-white">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 pb-16 pt-6 sm:px-8 sm:pt-10">
+    <main className="relative min-h-dvh min-w-0 w-full overflow-x-clip text-white">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 pb-16 pt-5 sm:px-6 sm:pt-8 md:px-8 md:pt-10">
         <SiteNav active="stats" />
         <StatsSectionNav />
 
@@ -124,8 +124,8 @@ export default async function FaceitLeaderboardPage({
             <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
               FACEIT Mode
             </p>
-            <h1 className="mt-2 flex items-center gap-3 text-4xl font-semibold tracking-tight sm:text-5xl">
-              <Swords className="size-8 text-cyan-200/90 sm:size-10" />
+            <h1 className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl">
+              <Swords className="size-7 shrink-0 text-cyan-200/90 sm:size-8 md:size-10" />
               Scrimmages
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">
