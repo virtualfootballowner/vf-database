@@ -93,18 +93,18 @@
 }
 
 .dark {
-  --background: #0f1d3f;
-  --foreground: #f5f6fa;
-  --card: rgba(255, 255, 255, 0.05);
-  --card-foreground: #f5f6fa;
-  --popover: #142a55;
+  --background: #152a52;
+  --foreground: #f7f8fc;
+  --card: rgba(255, 255, 255, 0.07);
+  --card-foreground: #f7f8fc;
+  --popover: #1a3260;
   --popover-foreground: #f5f6fa;
   --primary: #083696;
   --primary-foreground: #ffffff;
   --secondary: rgba(255, 255, 255, 0.08);
   --secondary-foreground: #f5f6fa;
   --muted: rgba(255, 255, 255, 0.06);
-  --muted-foreground: rgba(245, 246, 250, 0.65);
+  --muted-foreground: rgba(247, 248, 252, 0.68);
   --accent: rgba(8, 54, 150, 0.45);
   --accent-foreground: #ffffff;
   --destructive: oklch(0.704 0.191 22.216);
@@ -138,22 +138,33 @@
   body {
     @apply text-foreground;
     overflow-x: clip;
-    /* Solid base + vertical blend that stretches with content (no 100vh “seam”
-       on long pages — old radial stopped after one viewport and blew bright
-       white into the middle of scroll on mobile). */
-    background-color: #02103f;
+    /* Lifted blues + soft top light + hint of warm ember at the bottom
+       (full-document gradients — avoids mid-page seam on long pages). */
+    background-color: #0e2860;
     background-image:
       radial-gradient(
-        ellipse 140% 90% at 50% -35%,
-        rgba(62, 108, 198, 0.38) 0%,
-        transparent 55%
+        ellipse 125% 75% at 50% -28%,
+        rgba(170, 200, 255, 0.42) 0%,
+        rgba(90, 120, 210, 0.18) 38%,
+        transparent 58%
+      ),
+      radial-gradient(
+        ellipse 95% 50% at 18% 108%,
+        rgba(255, 155, 95, 0.14) 0%,
+        transparent 52%
+      ),
+      radial-gradient(
+        ellipse 85% 48% at 92% 102%,
+        rgba(255, 130, 85, 0.1) 0%,
+        transparent 50%
       ),
       linear-gradient(
         180deg,
-        #0a2565 0%,
-        #061a48 22%,
-        #02103f 45%,
-        #020d30 100%
+        #2858b8 0%,
+        #1c4496 16%,
+        #12326e 34%,
+        #0e2860 52%,
+        #081838 100%
       );
     background-repeat: no-repeat;
     background-size: 100% 100%;
@@ -165,7 +176,7 @@
 }
 
 .glass {
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(28px) saturate(160%);
   -webkit-backdrop-filter: blur(28px) saturate(160%);
   border: 1px solid rgba(255, 255, 255, 0.14);

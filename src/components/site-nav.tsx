@@ -35,7 +35,7 @@ export function SiteNav({ active }: SiteNavProps) {
 
   return (
     <>
-      <header className="sticky top-[max(0.5rem,env(safe-area-inset-top))] z-40 flex w-full max-w-full items-center gap-2 border-b border-white/10 bg-[#020d28]/94 px-3 py-2.5 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.5)] backdrop-blur-md md:top-[max(0.75rem,env(safe-area-inset-top))] md:w-fit md:max-w-none md:rounded-full md:border md:border-white/14 md:bg-white/[0.09] md:px-4 md:py-2 md:shadow-none md:backdrop-blur-[28px] md:backdrop-saturate-[160%]">
+      <header className="sticky top-[max(0.5rem,env(safe-area-inset-top))] z-40 flex w-full max-w-full items-center gap-2 border-b border-white/10 bg-[#142952]/92 px-3 py-2.5 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.45)] backdrop-blur-md md:top-[max(0.75rem,env(safe-area-inset-top))] md:w-fit md:max-w-none md:rounded-full md:border md:border-white/14 md:bg-white/[0.09] md:px-4 md:py-2 md:shadow-none md:backdrop-blur-[28px] md:backdrop-saturate-[160%]">
         <div className="flex min-w-0 flex-1 items-center gap-2 md:flex-initial md:gap-3">
           <Link href="/" className="flex shrink-0 items-center" aria-label="VF League home">
             <span

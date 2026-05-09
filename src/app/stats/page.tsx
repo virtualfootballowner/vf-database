@@ -178,7 +178,7 @@ function LeaderCard({
   resolvedUserIds: Map<string, string>;
 }) {
   return (
-    <Card className="gap-0 border-white/10 bg-[#050c26]/92 py-0 shadow-[0_12px_40px_-20px_rgba(0,0,0,0.65)] backdrop-blur-md md:bg-white/[0.03] md:shadow-none md:backdrop-blur-0">
+    <Card className="gap-0 border-white/10 bg-[#0f224a]/88 py-0 shadow-[0_12px_40px_-20px_rgba(0,0,0,0.45)] backdrop-blur-md md:bg-white/[0.03] md:shadow-none md:backdrop-blur-0">
       <CardHeader className="px-5 pb-2 pt-5">
         <CardTitle className="text-lg font-semibold text-white">
           {title}
