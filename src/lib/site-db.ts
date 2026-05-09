@@ -412,6 +412,8 @@ export async function getTeamsCatalog(): Promise<{
 
   // Supabase only has rows that were migrated/imported. Merge repo `teams-data`
   // entries missing in DB (e.g. new S3 nations before `db push` / import).
+  // Union `seasons` with the file catalogue so DB rows that dropped `{3}` still
+  // show in the Season 3 World Cup pool (e.g. Canada).
   const bySlug = new Map<string, Team>();
   for (const t of bundle.teams) {
     const s = t.slug?.trim();
@@ -419,8 +421,17 @@ export async function getTeamsCatalog(): Promise<{
   }
   for (const t of fileTeams) {
     const s = t.slug?.trim();
-    if (!s || bySlug.has(s)) continue;
-    bySlug.set(s, t);
+    if (!s) continue;
+    const existing = bySlug.get(s);
+    if (!existing) {
+      bySlug.set(s, t);
+      continue;
+    }
+    const seasonSet = new Set<number>([...existing.seasons, ...t.seasons]);
+    bySlug.set(s, {
+      ...existing,
+      seasons: [...seasonSet].sort((a, b) => a - b),
+    });
   }
 
   const teams = [...bySlug.values()].sort((a, b) =>
