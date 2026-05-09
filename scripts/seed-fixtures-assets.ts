@@ -14,7 +14,7 @@ import {
 } from "../src/app/stats/fixtures-data";
 import { matches } from "../src/app/stats/matches-data";
 import {
-  buildS3WorldCup24FixtureRows,
+  buildS3WorldCup16FixtureRows,
   S3_WORLD_CUP_STRUCTURE,
 } from "../src/lib/s3-world-cup-fixtures";
 import { teams as catalogTeams } from "../src/app/teams/teams-data";
@@ -85,8 +85,15 @@ async function upsertAssets(): Promise<void> {
 }
 
 async function upsertFixtures(): Promise<void> {
+  const { error: delS3 } = await supabase
+    .from("fixtures")
+    .delete()
+    .eq("season", 3)
+    .eq("competition", "World Cup");
+  if (delS3) throw delS3;
+
   const s1s2 = buildS1S2FixtureDbSeedRows(matches);
-  const s3 = buildS3WorldCup24FixtureRows();
+  const s3 = buildS3WorldCup16FixtureRows();
   const all = [...s1s2, ...s3];
 
   for (const batch of chunk(all, 80)) {
@@ -96,7 +103,7 @@ async function upsertFixtures(): Promise<void> {
     if (error) throw error;
   }
 
-  console.log(`Fixtures: ${s1s2.length} S1/S2 + ${s3.length} S3 (World Cup 24) = ${all.length}.`);
+  console.log(`Fixtures: ${s1s2.length} S1/S2 + ${s3.length} S3 (World Cup 16) = ${all.length}.`);
 }
 
 async function patchTournamentStructures(): Promise<void> {
@@ -143,7 +150,7 @@ async function patchTournamentStructures(): Promise<void> {
     const ins = await supabase
       .from("tournaments")
       .insert({
-        name: "Season 3 · World Cup (24 teams)",
+        name: "Season 3 · World Cup (16 teams)",
         type: "world_cup",
         format: "groups_knockout",
         status: "upcoming",
@@ -151,7 +158,7 @@ async function patchTournamentStructures(): Promise<void> {
         end_date: "2026-07-15",
         season: 3,
         competition: "World Cup",
-        structure_kind: "s3_world_cup_24",
+        structure_kind: "s3_world_cup_16",
         structure_config: S3_WORLD_CUP_STRUCTURE as unknown as Record<string, unknown>,
       })
       .select("id")
@@ -162,7 +169,8 @@ async function patchTournamentStructures(): Promise<void> {
     const upd = await supabase
       .from("tournaments")
       .update({
-        structure_kind: "s3_world_cup_24",
+        name: "Season 3 · World Cup (16 teams)",
+        structure_kind: "s3_world_cup_16",
         structure_config: S3_WORLD_CUP_STRUCTURE as unknown as Record<string, unknown>,
       })
       .eq("id", s3Existing.data.id);

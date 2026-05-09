@@ -145,7 +145,7 @@ export const teams: Team[] = [
     seasons: [1],
   },
 
-  // --- Season 3 · National teams (international / World Cup roster) ---
+  // --- Season 3 · National teams (16 nations · 4×4 World Cup) ---
   {
     name: "France",
     short: "FRA",
@@ -219,14 +219,6 @@ export const teams: Team[] = [
     seasons: [3],
   },
   {
-    name: "Türkiye",
-    short: "TUR",
-    slug: "turkiye",
-    logo: "/TURKEY.png",
-    form: "National squad · Season 3",
-    seasons: [3],
-  },
-  {
     name: "Brazil",
     short: "BRA",
     slug: "brazil",
@@ -243,30 +235,6 @@ export const teams: Team[] = [
     seasons: [3],
   },
   {
-    name: "Colombia",
-    short: "COL",
-    slug: "colombia",
-    logo: "/Colombia.png",
-    form: "National squad · Season 3",
-    seasons: [3],
-  },
-  {
-    name: "Uruguay",
-    short: "URU",
-    slug: "uruguay",
-    logo: "/URUGAWAY.png",
-    form: "National squad · Season 3",
-    seasons: [3],
-  },
-  {
-    name: "Ecuador",
-    short: "ECU",
-    slug: "ecuador",
-    logo: "/Ecuador.png",
-    form: "National squad · Season 3",
-    seasons: [3],
-  },
-  {
     name: "USA",
     short: "USA",
     slug: "usa",
@@ -275,26 +243,10 @@ export const teams: Team[] = [
     seasons: [3],
   },
   {
-    name: "Canada",
-    short: "CAN",
-    slug: "canada",
-    logo: "/Canada.png",
-    form: "National squad · Season 3",
-    seasons: [3],
-  },
-  {
     name: "Mexico",
     short: "MEX",
     slug: "mexico",
     logo: "/Mexico.png",
-    form: "National squad · Season 3",
-    seasons: [3],
-  },
-  {
-    name: "Algeria",
-    short: "ALG",
-    slug: "algeria",
-    logo: "/Algeria.png",
     form: "National squad · Season 3",
     seasons: [3],
   },
@@ -315,26 +267,10 @@ export const teams: Team[] = [
     seasons: [3],
   },
   {
-    name: "South Africa",
-    short: "RSA",
-    slug: "south-africa",
-    logo: "/South Africa.png",
-    form: "National squad · Season 3",
-    seasons: [3],
-  },
-  {
     name: "Japan",
     short: "JPN",
     slug: "japan",
     logo: "/japan.png",
-    form: "National squad · Season 3",
-    seasons: [3],
-  },
-  {
-    name: "South Korea",
-    short: "KOR",
-    slug: "south-korea",
-    logo: "/SK.png",
     form: "National squad · Season 3",
     seasons: [3],
   },

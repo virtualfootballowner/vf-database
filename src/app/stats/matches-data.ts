@@ -46,23 +46,13 @@ const TEAM_NAME_TO_SLUG: Record<string, string | null> = {
   Netherlands: "netherlands",
   Italy: "italy",
   Portugal: "portugal",
-  Türkiye: "turkiye",
-  Turkey: "turkiye",
   Brazil: "brazil",
   Argentina: "argentina",
-  Colombia: "colombia",
-  Uruguay: "uruguay",
-  Ecuador: "ecuador",
   USA: "usa",
-  Canada: "canada",
   Mexico: "mexico",
-  Algeria: "algeria",
   Nigeria: "nigeria",
   Morocco: "morocco",
-  "South Africa": "south-africa",
   Japan: "japan",
-  "South Korea": "south-korea",
-  Korea: "south-korea",
 };
 
 export function slugFor(name: string): string | null {

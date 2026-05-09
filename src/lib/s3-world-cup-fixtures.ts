@@ -1,39 +1,37 @@
 /**
- * Season 3 — 24-team World Cup skeleton: 6 groups × 4 teams (round-robin 6 each),
- * then Round of 16 (8), Quarter (4), Semi (2), Final (1).
+ * Season 3 — 16-team World Cup skeleton: 4 groups × 4 teams (6 round-robin each),
+ * then Quarter-Finals (4), Semi-Finals (2), Final (1). Top two per group advance (8 teams).
  *
- * Group stage uses empty team names; `metadata` carries seeds (A1…F4) for draws.
+ * Group stage uses empty team names; `metadata` carries seeds (A1…D4) for draws.
  * Knockout rows use bracket placeholders until results link teams.
  */
 
 export type WorldCupStructureConfig = {
-  format: "world_cup_24";
-  groups: 6;
+  format: "world_cup_16";
+  groups: 4;
   teams_per_group: 4;
   group_stage_matches_per_group: 6;
-  round_of_16_matches: 8;
+  /** First knockout round (8 teams → 4 matches). */
   quarter_final_matches: 4;
   semi_final_matches: 2;
   final_matches: 1;
-  /** Top two per group plus four best third-placed → 16 knockouts (classic 24-team format). */
   advancers_per_group: 2;
-  best_third_place_advancers: 4;
+  best_third_place_advancers: 0;
 };
 
 export const S3_WORLD_CUP_STRUCTURE: WorldCupStructureConfig = {
-  format: "world_cup_24",
-  groups: 6,
+  format: "world_cup_16",
+  groups: 4,
   teams_per_group: 4,
   group_stage_matches_per_group: 6,
-  round_of_16_matches: 8,
   quarter_final_matches: 4,
   semi_final_matches: 2,
   final_matches: 1,
   advancers_per_group: 2,
-  best_third_place_advancers: 4,
+  best_third_place_advancers: 0,
 };
 
-/** Pair indices for a double round-style single round-robin of 4 teams (6 games). */
+/** Pair indices for a single round-robin of 4 teams (6 games). */
 const FOUR_TEAM_ROUND_ROBIN: [number, number][] = [
   [0, 1],
   [2, 3],
@@ -56,13 +54,13 @@ export type WorldCupFixtureSeedRow = {
   metadata: Record<string, unknown>;
 };
 
-const GROUP_LETTERS = ["A", "B", "C", "D", "E", "F"] as const;
+const GROUP_LETTERS = ["A", "B", "C", "D"] as const;
 
 function seedLabel(group: string, pos: 1 | 2 | 3 | 4): string {
   return `${group}${pos}`;
 }
 
-export function buildS3WorldCup24FixtureRows(): WorldCupFixtureSeedRow[] {
+export function buildS3WorldCup16FixtureRows(): WorldCupFixtureSeedRow[] {
   const rows: WorldCupFixtureSeedRow[] = [];
   let order = 0;
 
@@ -81,7 +79,7 @@ export function buildS3WorldCup24FixtureRows(): WorldCupFixtureSeedRow[] {
         away_team_name: "",
         roblox_match_id: null,
         metadata: {
-          structure: "s3_world_cup_24",
+          structure: "s3_world_cup_16",
           group: g,
           home_seed: seedLabel(g, (hi + 1) as 1 | 2 | 3 | 4),
           away_seed: seedLabel(g, (ai + 1) as 1 | 2 | 3 | 4),
@@ -92,7 +90,6 @@ export function buildS3WorldCup24FixtureRows(): WorldCupFixtureSeedRow[] {
   }
 
   const koStages: { stage: string; count: number; prefix: string }[] = [
-    { stage: "Round of 16", count: 8, prefix: "S3-WC-R16" },
     { stage: "Quarter-Final", count: 4, prefix: "S3-WC-QF" },
     { stage: "Semi-Final", count: 2, prefix: "S3-WC-SF" },
     { stage: "Final", count: 1, prefix: "S3-WC-F" },
@@ -112,7 +109,7 @@ export function buildS3WorldCup24FixtureRows(): WorldCupFixtureSeedRow[] {
         away_team_name: "",
         roblox_match_id: null,
         metadata: {
-          structure: "s3_world_cup_24",
+          structure: "s3_world_cup_16",
           ko_slot: `${prefix}-${i}`,
           stage,
         },

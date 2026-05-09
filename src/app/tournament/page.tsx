@@ -16,13 +16,13 @@ import { getTeamsCatalog } from "@/lib/site-db";
 export const metadata: Metadata = {
   title: "Fixtures · VF League",
   description:
-    "Season 3 World Cup. The pool of nations is locked in — group draw pending.",
+    "Season 3 World Cup — 16 nations, four groups of four. Draw pending.",
 };
 
 export const dynamic = "force-dynamic";
 
 const TOURNAMENT_SEASON = 3;
-const GROUP_LETTERS = ["A", "B", "C", "D", "E", "F"] as const;
+const GROUP_LETTERS = ["A", "B", "C", "D"] as const;
 const TEAMS_PER_GROUP = 4;
 
 export default async function TournamentPage() {
@@ -54,8 +54,8 @@ export default async function TournamentPage() {
             World <span className="glisten">Cup</span>
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-white/70 sm:text-base">
-            {pool.length} nations have qualified. They’re sitting in the pool
-            below — pots and groups will fill in the moment the draw is made.
+            {pool.length} nations in the World Cup pool (16-team tournament).
+            Groups below update once the draw is set.
           </p>
         </section>
 
@@ -74,7 +74,7 @@ export default async function TournamentPage() {
               className="h-8 shrink-0 gap-2 border-white/15 bg-white/5 px-3 text-white/85"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
-              {pool.length} teams · awaiting draw
+              {pool.length} teams · 16-nation World Cup
             </Badge>
           </div>
 
@@ -86,7 +86,7 @@ export default async function TournamentPage() {
             </Card>
           ) : (
             <Card className="border-white/10 bg-white/[0.04] backdrop-blur">
-              <CardContent className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 sm:gap-4 sm:p-6 md:grid-cols-4 lg:grid-cols-6">
+              <CardContent className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 sm:gap-4 sm:p-6 md:grid-cols-4">
                 {pool.map((team) => (
                   <Link
                     key={team.slug}
@@ -132,7 +132,7 @@ export default async function TournamentPage() {
             </Badge>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {GROUP_LETTERS.map((letter) => (
               <Card
                 key={letter}
