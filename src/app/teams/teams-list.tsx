@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 
 import { TeamCrest } from "./team-crest";
 import type { Team } from "./teams-data";
+import { teamHasSeason } from "@/lib/team-seasons";
 
 type SeasonFilter = "all" | "1" | "2" | "3";
 
@@ -38,7 +39,7 @@ export function TeamsList({ teams }: TeamsListProps) {
   const filtered = useMemo(() => {
     const q = deferredQuery.trim().toLowerCase();
     return teams.filter((team) => {
-      if (season !== "all" && !team.seasons.includes(Number(season))) {
+      if (season !== "all" && !teamHasSeason(team.seasons, Number(season))) {
         return false;
       }
       if (!q) return true;

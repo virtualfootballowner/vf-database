@@ -17,6 +17,10 @@ import type { MatchEvent } from "@/app/stats/match-events-data";
 import type { Team } from "@/app/teams/teams-data";
 import { teams as fileTeams } from "@/app/teams/teams-data";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import {
+  normalizeSeasons,
+  teamHasSeason,
+} from "@/lib/team-seasons";
 
 const STATS_SEASONS = [1, 2, 3] as const;
 
@@ -98,7 +102,7 @@ function mapTeamRow(r: {
     slug: r.slug?.trim() || "",
     logo: r.logo_url?.trim() || null,
     form: r.form_label?.trim() || "",
-    seasons: [...(r.seasons ?? [])].sort((a, b) => a - b),
+    seasons: normalizeSeasons(r.seasons),
   };
 }
 
@@ -427,7 +431,10 @@ export async function getTeamsCatalog(): Promise<{
       bySlug.set(s, t);
       continue;
     }
-    const seasonSet = new Set<number>([...existing.seasons, ...t.seasons]);
+    const seasonSet = new Set<number>([
+      ...normalizeSeasons(existing.seasons),
+      ...normalizeSeasons(t.seasons),
+    ]);
     bySlug.set(s, {
       ...existing,
       seasons: [...seasonSet].sort((a, b) => a - b),
@@ -438,6 +445,40 @@ export async function getTeamsCatalog(): Promise<{
     a.name.localeCompare(b.name),
   );
   return { teams, source: bundle.source };
+}
+
+/**
+ * Nations / teams for a season: start from repo `teams-data` (source of truth),
+ * then overlay Supabase row when present so logos/db fields win, but seasons
+ * always keep the union with the file (fixes missing S3 flags on partial DB rows).
+ */
+export function catalogSliceForFileSeason(
+  catalogTeams: Team[],
+  season: number,
+): Team[] {
+  const bySlug = new Map<string, Team>();
+  for (const t of catalogTeams) {
+    const s = t.slug?.trim();
+    if (s) bySlug.set(s, t);
+  }
+
+  return fileTeams
+    .filter((t) => teamHasSeason(t.seasons, season))
+    .map((t) => {
+      const s = t.slug?.trim();
+      if (!s) return t;
+      const db = bySlug.get(s);
+      if (!db) return t;
+      const seasonSet = new Set<number>([
+        ...normalizeSeasons(t.seasons),
+        ...normalizeSeasons(db.seasons),
+      ]);
+      return {
+        ...db,
+        seasons: [...seasonSet].sort((a, b) => a - b),
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function getMatchTeamResolver(teams: Team[]) {

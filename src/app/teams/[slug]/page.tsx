@@ -18,6 +18,7 @@ import { getRobloxHeadshots, isVerifiedRobloxUserId } from "@/lib/roblox";
 import { fillManagerNamesFromSeed } from "@/lib/team-season-manager-fallback";
 import { getAllTeamSlugs, getTeamBySlugFromDb } from "@/lib/site-db";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { teamHasSeason } from "@/lib/team-seasons";
 
 import { TeamCrest } from "../team-crest";
 
@@ -239,7 +240,7 @@ export default async function TeamDetailPage({
 
   const parsedSeason = Number.parseInt(seasonParam ?? "", 10);
   const selectedSeason =
-    Number.isFinite(parsedSeason) && team.seasons.includes(parsedSeason)
+    Number.isFinite(parsedSeason) && teamHasSeason(team.seasons, parsedSeason)
       ? parsedSeason
       : null;
 
