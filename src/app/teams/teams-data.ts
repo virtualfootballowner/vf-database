@@ -238,7 +238,7 @@ export const teams: Team[] = [
     name: "Russia",
     short: "RUS",
     slug: "russia",
-    logo: "/Russia.png",
+    logo: "/Flag_of_Russia.svg.png",
     form: "National squad · Season 3",
     seasons: [3],
   },
