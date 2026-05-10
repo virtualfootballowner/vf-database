@@ -16,7 +16,7 @@ import { getTeamsCatalog, catalogSliceForFileSeason } from "@/lib/site-db";
 export const metadata: Metadata = {
   title: "Fixtures · VF League",
   description:
-    "Season 3 World Cup — fifteen nations, four groups of four, knockouts from the quarters.",
+    "Season 3 World Cup — sixteen nations, four groups of four, knockouts from the quarters.",
 };
 
 export const dynamic = "force-dynamic";
@@ -53,8 +53,7 @@ export default async function TournamentPage() {
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-white/70 sm:text-base">
             {pool.length} nations are in the pool for Season {TOURNAMENT_SEASON}{" "}
-            — four groups of four. One draw slot stays open until the field is
-            complete. Pots and groups fill once the draw runs.
+            — four groups of four. Pots and groups fill once the draw runs.
           </p>
         </section>
 

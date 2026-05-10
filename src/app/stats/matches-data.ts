@@ -50,6 +50,7 @@ const TEAM_NAME_TO_SLUG: Record<string, string | null> = {
   Brazil: "brazil",
   Argentina: "argentina",
   Canada: "canada",
+  USA: "usa",
   Mexico: "mexico",
   Nigeria: "nigeria",
   Morocco: "morocco",

@@ -235,6 +235,14 @@ export const teams: Team[] = [
     seasons: [3],
   },
   {
+    name: "USA",
+    short: "USA",
+    slug: "usa",
+    logo: "/usa.png",
+    form: "National squad · Season 3",
+    seasons: [3],
+  },
+  {
     name: "Mexico",
     short: "MEX",
     slug: "mexico",
