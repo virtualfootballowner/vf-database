@@ -50,7 +50,9 @@ const TEAM_NAME_TO_SLUG: Record<string, string | null> = {
   Brazil: "brazil",
   Argentina: "argentina",
   Canada: "canada",
-  USA: "usa",
+  Russia: "russia",
+  /** Legacy sheet label — USA slot is Russia on the Season 3 roster. */
+  USA: "russia",
   Mexico: "mexico",
   Nigeria: "nigeria",
   Morocco: "morocco",
