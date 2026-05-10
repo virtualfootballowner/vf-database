@@ -95,6 +95,8 @@ export function normalizeTeamInputForLookup(raw: string): string {
     .toLowerCase();
 }
 
+const SLUG_LOOKUP_ALIASES: Record<string, string> = {};
+
 function mapResolvedRow(row: {
   name: string;
   slug: string | null;
@@ -127,9 +129,10 @@ export function resolveTeamFromList(
     }))
     .filter((t) => t.slug.length > 0);
 
+  const aliasSlug = SLUG_LOOKUP_ALIASES[q];
   const bySlug = withSlug.find((t) => {
     const s = normalizeTeamInputForLookup(t.slug);
-    return s === q;
+    return s === q || (aliasSlug !== undefined && s === aliasSlug);
   });
   if (bySlug) return bySlug;
 
@@ -161,9 +164,10 @@ export async function resolveTeamForSlashCommand(
   const base = normalizeTeamInputForLookup(raw);
   if (!base) return null;
 
+  const alias = SLUG_LOOKUP_ALIASES[base];
   const candidates = [
     ...new Set(
-      [base, base.replace(/\s+/g, "-"), base.replace(/-+/g, "-")].filter(
+      [base, alias, base.replace(/\s+/g, "-"), base.replace(/-+/g, "-")].filter(
         (s): s is string => typeof s === "string" && s.length > 0,
       ),
     ),

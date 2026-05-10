@@ -16,13 +16,13 @@ import { getTeamsCatalog, catalogSliceForFileSeason } from "@/lib/site-db";
 export const metadata: Metadata = {
   title: "Fixtures · VF League",
   description:
-    "Season 3 World Cup. The pool of nations is locked in — group draw pending.",
+    "Season 3 World Cup — fifteen nations, four groups of four, knockouts from the quarters.",
 };
 
 export const dynamic = "force-dynamic";
 
 const TOURNAMENT_SEASON = 3;
-const GROUP_LETTERS = ["A", "B", "C", "D", "E", "F"] as const;
+const GROUP_LETTERS = ["A", "B", "C", "D"] as const;
 const TEAMS_PER_GROUP = 4;
 
 export default async function TournamentPage() {
@@ -52,8 +52,9 @@ export default async function TournamentPage() {
             World <span className="glisten">Cup</span>
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-white/70 sm:text-base">
-            {pool.length} nations have qualified. They’re sitting in the pool
-            below — pots and groups will fill in the moment the draw is made.
+            {pool.length} nations are in the pool for Season {TOURNAMENT_SEASON}{" "}
+            — four groups of four. One draw slot stays open until the field is
+            complete. Pots and groups fill once the draw runs.
           </p>
         </section>
 

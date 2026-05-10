@@ -14,7 +14,7 @@ import {
 } from "../src/app/stats/fixtures-data";
 import { matches } from "../src/app/stats/matches-data";
 import {
-  buildS3WorldCup16FixtureRows,
+  buildS3WorldCupFixtureRows,
   S3_WORLD_CUP_STRUCTURE,
 } from "../src/lib/s3-world-cup-fixtures";
 import { teams as catalogTeams } from "../src/app/teams/teams-data";
@@ -85,15 +85,8 @@ async function upsertAssets(): Promise<void> {
 }
 
 async function upsertFixtures(): Promise<void> {
-  const { error: delS3 } = await supabase
-    .from("fixtures")
-    .delete()
-    .eq("season", 3)
-    .eq("competition", "World Cup");
-  if (delS3) throw delS3;
-
   const s1s2 = buildS1S2FixtureDbSeedRows(matches);
-  const s3 = buildS3WorldCup16FixtureRows();
+  const s3 = buildS3WorldCupFixtureRows();
   const all = [...s1s2, ...s3];
 
   for (const batch of chunk(all, 80)) {
@@ -150,7 +143,7 @@ async function patchTournamentStructures(): Promise<void> {
     const ins = await supabase
       .from("tournaments")
       .insert({
-        name: "Season 3 · World Cup (16 teams)",
+        name: "Season 3 · World Cup (4×4)",
         type: "world_cup",
         format: "groups_knockout",
         status: "upcoming",
@@ -169,7 +162,7 @@ async function patchTournamentStructures(): Promise<void> {
     const upd = await supabase
       .from("tournaments")
       .update({
-        name: "Season 3 · World Cup (16 teams)",
+        name: "Season 3 · World Cup (4×4)",
         structure_kind: "s3_world_cup_16",
         structure_config: S3_WORLD_CUP_STRUCTURE as unknown as Record<string, unknown>,
       })

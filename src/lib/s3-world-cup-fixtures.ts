@@ -1,9 +1,9 @@
 /**
- * Season 3 — 16-team World Cup skeleton: 4 groups × 4 teams (6 round-robin each),
- * then Quarter-Finals (4), Semi-Finals (2), Final (1). Top two per group advance (8 teams).
+ * Season 3 — 16-team World Cup skeleton: 4 groups × 4 teams (round-robin 6 each),
+ * then Quarter-Finals (4), Semi-Final (2), Final (1).
+ * Top 2 per group → 8 teams into knockouts (no Round of 16).
  *
  * Group stage uses empty team names; `metadata` carries seeds (A1…D4) for draws.
- * Knockout rows use bracket placeholders until results link teams.
  */
 
 export type WorldCupStructureConfig = {
@@ -11,7 +11,6 @@ export type WorldCupStructureConfig = {
   groups: 4;
   teams_per_group: 4;
   group_stage_matches_per_group: 6;
-  /** First knockout round (8 teams → 4 matches). */
   quarter_final_matches: 4;
   semi_final_matches: 2;
   final_matches: 1;
@@ -60,7 +59,7 @@ function seedLabel(group: string, pos: 1 | 2 | 3 | 4): string {
   return `${group}${pos}`;
 }
 
-export function buildS3WorldCup16FixtureRows(): WorldCupFixtureSeedRow[] {
+export function buildS3WorldCupFixtureRows(): WorldCupFixtureSeedRow[] {
   const rows: WorldCupFixtureSeedRow[] = [];
   let order = 0;
 

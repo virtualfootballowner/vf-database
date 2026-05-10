@@ -1419,7 +1419,7 @@ async function handleAppoint(
     if (!resolved) {
       await interaction.editReply({
         content:
-          "Could not resolve that team. Use **team** suggestions or the exact slug (e.g. `france`).",
+          "Could not resolve that team. Use **team** suggestions or the exact slug (e.g. `canada`).",
       });
       return;
     }
