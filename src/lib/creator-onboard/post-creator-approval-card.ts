@@ -1,0 +1,112 @@
+import {
+  CREATOR_APPROVE_PREFIX,
+  CREATOR_REJECT_PREFIX,
+} from "@/lib/creator-onboard/creator-discord-constants";
+
+const DISCORD_API = "https://discord.com/api/v10";
+
+function redactEmail(email: string | null | undefined): string {
+  if (!email || !email.includes("@")) return "—";
+  const [a, dom] = email.split("@");
+  const safe =
+    a.length <= 2 ? `${a[0] ?? ""}***` : `${a.slice(0, 2)}***`;
+  return `${safe}@${dom}`;
+}
+
+/** Post the staff review embed + Approve/Reject buttons (Discord REST, same pattern as /verify). */
+export async function postCreatorApprovalCardViaDiscordApi(opts: {
+  botToken: string;
+  channelId: string;
+  applicationId: string;
+  row: Record<string, unknown>;
+}): Promise<{ ok: true } | { ok: false; detail: string }> {
+  const r = opts.row;
+  const discordId = String(r.discord_id ?? "");
+  const discordUser = String(r.discord_username ?? "unknown");
+  const robloxUser = String(r.roblox_username ?? "");
+  const robloxId = String(r.roblox_id ?? "");
+  const age = r.age != null ? String(r.age) : "—";
+  const country = String(r.country ?? "—");
+  const tt = r.tiktok_handle ? `@${String(r.tiktok_handle)}` : "—";
+  const yt = r.youtube_handle ? `@${String(r.youtube_handle)}` : "—";
+
+  const embed = {
+    title: "New creator application",
+    description: `Application ID: \`${opts.applicationId}\``,
+    color: 0xf59e0b,
+    fields: [
+      {
+        name: "Discord",
+        value: `${discordUser}\n\`${discordId}\``,
+        inline: false,
+      },
+      {
+        name: "Roblox",
+        value: `${robloxUser}\n\`${robloxId}\``,
+        inline: false,
+      },
+      {
+        name: "Age / country",
+        value: `${age} · ${country}`,
+        inline: true,
+      },
+      {
+        name: "TikTok / YouTube",
+        value: `${tt} · ${yt}`,
+        inline: false,
+      },
+      {
+        name: "Email",
+        value: redactEmail(typeof r.email === "string" ? r.email : null),
+        inline: false,
+      },
+    ],
+    footer: { text: "Pending review" },
+    timestamp: new Date().toISOString(),
+  };
+
+  const components = [
+    {
+      type: 1,
+      components: [
+        {
+          type: 2,
+          style: 3,
+          label: "Approve",
+          custom_id: `${CREATOR_APPROVE_PREFIX}${opts.applicationId}`,
+        },
+        {
+          type: 2,
+          style: 4,
+          label: "Reject",
+          custom_id: `${CREATOR_REJECT_PREFIX}${opts.applicationId}`,
+        },
+      ],
+    },
+  ];
+
+  const res = await fetch(
+    `${DISCORD_API}/channels/${opts.channelId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bot ${opts.botToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        embeds: [embed],
+        components,
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    return {
+      ok: false,
+      detail: `${res.status} ${res.statusText} ${t.slice(0, 300)}`,
+    };
+  }
+
+  return { ok: true };
+}

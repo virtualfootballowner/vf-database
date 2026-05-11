@@ -24,6 +24,55 @@ import {
   resolveTeamForSlashCommand,
 } from "@/bot/stats-queries";
 
+/** Max players per club per season (signed squad); managers cannot /contract beyond this. */
+export const MAX_ROSTER_PLAYERS = 15;
+
+async function rosterSpaceForNewSignee(
+  supabase: ReturnType<typeof createBotSupabase>,
+  teamSlug: string,
+  season: number,
+  signeePlayerId: string,
+): Promise<{ allowed: boolean; onRoster: boolean; filled: number; pendingNew: number }> {
+  const { data: rosterRows, error: rErr } = await supabase
+    .from("player_team_seasons")
+    .select("player_id")
+    .eq("team_slug", teamSlug)
+    .eq("season", season);
+
+  if (rErr) throw rErr;
+  const rosterIds = new Set(
+    (rosterRows ?? []).map((r: { player_id: string }) => r.player_id),
+  );
+  const onRoster = rosterIds.has(signeePlayerId);
+  if (onRoster) {
+    return {
+      allowed: true,
+      onRoster: true,
+      filled: rosterIds.size,
+      pendingNew: 0,
+    };
+  }
+
+  const { data: pendingRows, error: pErr } = await supabase
+    .from("contract_offers")
+    .select("signee_player_id")
+    .eq("team_slug", teamSlug)
+    .eq("season", season)
+    .eq("status", "pending");
+
+  if (pErr) throw pErr;
+
+  let pendingNew = 0;
+  for (const row of pendingRows ?? []) {
+    const sid = (row as { signee_player_id: string }).signee_player_id;
+    if (!rosterIds.has(sid)) pendingNew += 1;
+  }
+
+  const filled = rosterIds.size;
+  const allowed = filled + pendingNew < MAX_ROSTER_PLAYERS;
+  return { allowed, onRoster: false, filled, pendingNew };
+}
+
 export const CONTRACT_BTN_APPROVE = "vfl:con:a:";
 export const CONTRACT_BTN_DENY = "vfl:con:d:";
 
@@ -194,6 +243,21 @@ export async function handleContractCommand(
     const offerId = randomUUID();
     const teamNames = await buildTeamNameBySlug(supabase);
     const teamLabel = teamNames.get(teamRes.teamSlug) ?? teamRes.teamSlug;
+
+    const space = await rosterSpaceForNewSignee(
+      supabase,
+      teamRes.teamSlug,
+      activeSeason,
+      signeeProfile.id,
+    );
+    if (!space.allowed) {
+      await interaction.editReply({
+        content:
+          `**${teamLabel}** can’t offer new contracts right now — **Season ${activeSeason}** is capped at **${MAX_ROSTER_PLAYERS}** players (${space.filled} signed + ${space.pendingNew} pending to players not yet on the squad). Wait for a deal to clear or ask staff to adjust the roster.`,
+      });
+      return;
+    }
+
     const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
     const teamUrl = `${siteBase}/teams/${encodeURIComponent(teamRes.teamSlug)}?season=${activeSeason}`;
     const logoUrl = await fetchTeamLogoUrl(supabase, teamRes.teamSlug, siteBase);
@@ -523,6 +587,51 @@ export async function handleContractButton(
 
       await interaction.editReply({ embeds: [embedBlock], components: [] });
       return;
+    }
+
+    const alreadyOnThisTeam = existingTeams.includes(offer.team_slug);
+    if (!alreadyOnThisTeam) {
+      const { count, error: cntErr } = await supabase
+        .from("player_team_seasons")
+        .select("*", { count: "exact", head: true })
+        .eq("team_slug", offer.team_slug)
+        .eq("season", offer.season);
+      if (cntErr) throw cntErr;
+      if ((count ?? 0) >= MAX_ROSTER_PLAYERS) {
+        const teamNames = await teamNamesPromise;
+        const logoUrl = await logoUrlPromise;
+        const teamLabel = teamNames.get(offer.team_slug) ?? offer.team_slug;
+        const teamUrl = `${siteBase}/teams/${encodeURIComponent(offer.team_slug)}?season=${offer.season}`;
+
+        const embedFull = new EmbedBuilder()
+          .setColor(0xef4444)
+          .setAuthor({
+            name: teamLabel,
+            iconURL: logoUrl ?? undefined,
+            url: teamUrl,
+          })
+          .setTitle("Roster full")
+          .setDescription(
+            [
+              `**${teamLabel}** already has **${MAX_ROSTER_PLAYERS}** players for **Season ${offer.season}**.`,
+              "Staff need to release someone before new signings.",
+            ].join("\n\n"),
+          )
+          .setThumbnail(logoUrl ?? null)
+          .setFooter({ text: `Season ${offer.season}` })
+          .setTimestamp(new Date());
+
+        await supabase
+          .from("contract_offers")
+          .update({
+            status: "denied",
+            resolved_at: new Date().toISOString(),
+          })
+          .eq("id", offerId);
+
+        await interaction.editReply({ embeds: [embedFull], components: [] });
+        return;
+      }
     }
 
     const { error: posErr } = await supabase

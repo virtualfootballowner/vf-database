@@ -57,6 +57,10 @@ import {
   handleScrimmageCommand,
   scrimmageSlashCommand,
 } from "@/bot/scrimmage/commands";
+import {
+  handleOnboardMediaCommand,
+  onboardMediaCommand,
+} from "@/bot/creator-onboard";
 
 function formatCommandError(err: unknown): string {
   if (err instanceof Error && err.message.trim()) return err.message.trim();
@@ -158,6 +162,8 @@ export const slashCommandDefinitions = [
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .toJSON(),
+
+  onboardMediaCommand,
 
   new SlashCommandBuilder()
     .setName("kick")
@@ -466,6 +472,9 @@ export async function handleSlashCommand(
       return;
     case "postverify":
       await handlePostVerifyCard(interaction);
+      return;
+    case "onboard-media":
+      await handleOnboardMediaCommand(interaction);
       return;
     case "kick":
       await handleKick(interaction);

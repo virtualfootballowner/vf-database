@@ -25,6 +25,18 @@ import {
   handleContractButton,
 } from "@/bot/contracts";
 import {
+  CREATOR_APPROVE_PREFIX,
+  CREATOR_REJECT_MODAL_PREFIX,
+  CREATOR_REJECT_PREFIX,
+  CREATOR_START_APP_BUTTON,
+} from "@/lib/creator-onboard/creator-discord-constants";
+import {
+  handleCreatorApproveButton,
+  handleCreatorRejectButton,
+  handleCreatorRejectModal,
+  handleStartCreatorAppButton,
+} from "@/bot/creator-onboard";
+import {
   RELEASE_BTN_APPROVE,
   RELEASE_BTN_DENY,
   handleReleaseStaffButton,
@@ -76,6 +88,7 @@ function oauthBotInviteUrl(clientId: string): string {
     PermissionFlagsBits.AttachFiles,
     PermissionFlagsBits.ReadMessageHistory,
     PermissionFlagsBits.ManageRoles,
+    PermissionFlagsBits.ManageNicknames,
     PermissionFlagsBits.ManageGuild,
     PermissionFlagsBits.KickMembers,
     PermissionFlagsBits.BanMembers,
@@ -128,26 +141,26 @@ client.once(Events.ClientReady, async (readyClient) => {
   logMemberOutgoingStartup();
 
   try {
-    const guild = await client.guilds.fetch(env.DISCORD_GUILD_ID);
-    if (process.env.DISCORD_FORCE_RESET_COMMANDS === "1") {
-      const existing = await guild.commands.fetch();
-      console.log(
-        `[reset] Deleting ${existing.size} existing slash command${existing.size === 1 ? "" : "s"} to wipe stale guild integration overrides…`,
-      );
-      for (const cmd of existing.values()) {
-        try {
-          await cmd.delete();
-        } catch (e) {
-          console.error(`[reset] Failed to delete /${cmd.name}:`, e);
+    const reset = process.env.DISCORD_FORCE_RESET_COMMANDS === "1";
+    for (const [, guild] of readyClient.guilds.cache) {
+      if (reset) {
+        const existing = await guild.commands.fetch();
+        console.log(
+          `[reset] ${guild.name}: deleting ${existing.size} slash command(s)…`,
+        );
+        for (const cmd of existing.values()) {
+          try {
+            await cmd.delete();
+          } catch (e) {
+            console.error(`[reset] Failed to delete /${cmd.name}:`, e);
+          }
         }
       }
+      await guild.commands.set(slashCommandDefinitions);
+      console.log(
+        `Registered ${slashCommandDefinitions.length} slash command(s) in **${guild.name}** (${guild.id}).`,
+      );
     }
-    await guild.commands.set(slashCommandDefinitions);
-    console.log(
-      `Registered ${slashCommandDefinitions.length} slash command${
-        slashCommandDefinitions.length === 1 ? "" : "s"
-      }.`,
-    );
   } catch (error) {
     console.error("Failed to register slash commands:", error);
   }
@@ -156,6 +169,20 @@ client.once(Events.ClientReady, async (readyClient) => {
     await runBackfill();
   } catch (error) {
     console.error("Backfill failed:", error);
+  }
+});
+
+client.on(Events.GuildCreate, async (guild) => {
+  try {
+    await guild.commands.set(slashCommandDefinitions);
+    console.log(
+      `[guild-join] Registered ${slashCommandDefinitions.length} slash command(s) in **${guild.name}** (${guild.id}).`,
+    );
+  } catch (error) {
+    console.error(
+      `[guild-join] Failed to register commands in ${guild.id}:`,
+      error,
+    );
   }
 });
 
@@ -263,6 +290,15 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
       return;
     }
 
+    if (interaction.isModalSubmit()) {
+      if (
+        interaction.customId.startsWith(CREATOR_REJECT_MODAL_PREFIX)
+      ) {
+        await handleCreatorRejectModal(interaction);
+      }
+      return;
+    }
+
     if (!interaction.isButton()) return;
     const customId = interaction.customId;
 
@@ -301,6 +337,27 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         interaction,
         "deny",
         customId.slice(RELEASE_BTN_DENY.length),
+      );
+      return;
+    }
+
+    if (customId === CREATOR_START_APP_BUTTON) {
+      await handleStartCreatorAppButton(interaction);
+      return;
+    }
+
+    if (customId.startsWith(CREATOR_APPROVE_PREFIX)) {
+      await handleCreatorApproveButton(
+        interaction,
+        customId.slice(CREATOR_APPROVE_PREFIX.length),
+      );
+      return;
+    }
+
+    if (customId.startsWith(CREATOR_REJECT_PREFIX)) {
+      await handleCreatorRejectButton(
+        interaction,
+        customId.slice(CREATOR_REJECT_PREFIX.length),
       );
       return;
     }

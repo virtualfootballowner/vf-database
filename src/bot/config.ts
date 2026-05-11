@@ -58,6 +58,18 @@ const envSchema = z.object({
    * lobby contract.
    */
   VF_ROBLOX_LOBBY_PLACE_ID: optionalOutgoingChannel,
+  /**
+   * Creator program: private staff channel for application review cards.
+   * The website posts here with DISCORD_BOT_TOKEN (same pattern as /verify).
+   */
+  DISCORD_CREATOR_APPROVAL_CHANNEL_ID: optionalOutgoingChannel,
+  /** Role granted when a creator application is approved (e.g. @Scout). */
+  DISCORD_SCOUT_ROLE_ID: optionalOutgoingChannel,
+  /**
+   * Guild where Scout role + nickname are applied. Defaults to DISCORD_GUILD_ID
+   * when unset (same server as league).
+   */
+  DISCORD_CREATOR_VF_GUILD_ID: optionalOutgoingChannel,
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   ROBLOX_API_BASE_URL: z.string().url().default("https://users.roblox.com"),
@@ -86,6 +98,10 @@ export const env = envSchema.parse({
   DISCORD_MEMBER_OUTGOING_CHANNEL_ID: process.env.DISCORD_MEMBER_OUTGOING_CHANNEL_ID,
   DISCORD_SCRIMMAGE_LOBBY_CHANNEL_ID: process.env.DISCORD_SCRIMMAGE_LOBBY_CHANNEL_ID,
   VF_ROBLOX_LOBBY_PLACE_ID: process.env.VF_ROBLOX_LOBBY_PLACE_ID,
+  DISCORD_CREATOR_APPROVAL_CHANNEL_ID:
+    process.env.DISCORD_CREATOR_APPROVAL_CHANNEL_ID,
+  DISCORD_SCOUT_ROLE_ID: process.env.DISCORD_SCOUT_ROLE_ID,
+  DISCORD_CREATOR_VF_GUILD_ID: process.env.DISCORD_CREATOR_VF_GUILD_ID,
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   ROBLOX_API_BASE_URL: process.env.ROBLOX_API_BASE_URL,
