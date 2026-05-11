@@ -494,9 +494,9 @@ export async function handleCreatorProfileCommand(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
   const target = interaction.options.getUser("user") ?? interaction.user;
-  const isSelf = target.id === interaction.user.id;
+  const invokerIsTarget = interaction.user.id === target.id;
 
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  await interaction.deferReply();
 
   const supabase = createBotSupabase();
   const { data, error } = await supabase
@@ -519,7 +519,7 @@ export async function handleCreatorProfileCommand(
 
   if (!data) {
     await interaction.editReply({
-      content: isSelf
+      content: invokerIsTarget
         ? "You don’t have a creator application on file. Look for the **Start application** card in the creator server."
         : `${target.tag ?? target.username ?? `<@${target.id}>`} has no creator application on file.`,
     });
@@ -534,46 +534,103 @@ export async function handleCreatorProfileCommand(
   const tiktokUrl = tt ? `https://www.tiktok.com/@${tt}` : null;
   const youtubeUrl = yt ? `https://www.youtube.com/@${yt}` : null;
 
-  const lines: string[] = [];
-  lines.push(`**Status** — ${meta.line}`);
-  if (row.roblox_username) lines.push(`**Roblox** — ${row.roblox_username}`);
-  lines.push(`**Discord** — <@${row.discord_id}>`);
-  const socials: string[] = [];
-  if (tiktokUrl && tt) socials.push(`[TikTok](${tiktokUrl}) (@${tt})`);
-  if (youtubeUrl && yt) socials.push(`[YouTube](${youtubeUrl}) (@${yt})`);
-  if (socials.length) lines.push(`**Socials** — ${socials.join(" · ")}`);
-  if (row.age != null || country) {
-    const ageStr = row.age != null ? `${row.age}` : "—";
-    lines.push(`**Age / Country** — ${ageStr} · ${country ?? "—"}`);
-  }
-
-  if (row.status === "approved" && row.approved_at) {
-    const ts = Math.floor(new Date(row.approved_at).getTime() / 1000);
-    const by = row.approved_by ? `<@${row.approved_by}>` : "staff";
-    lines.push(`**Approved** — by ${by} <t:${ts}:R>`);
-  }
-  if (row.status === "rejected" && (isSelf || row.rejection_reason)) {
-    if (row.rejection_reason && isSelf) {
-      lines.push(`**Reason** — ${row.rejection_reason}`);
-    } else if (row.rejection_reason) {
-      lines.push(`**Reviewed** — by <@${row.approved_by ?? "?"}>`);
-    }
-  }
-
+  const displayName =
+    row.discord_username?.trim() || target.globalName || target.username;
   const avatar =
     row.roblox_avatar_url?.trim() || row.discord_avatar_url?.trim() || null;
 
   const embed = new EmbedBuilder()
     .setColor(meta.color)
     .setAuthor({
-      name: `${row.discord_username ?? target.username} · ${meta.label}`,
-      iconURL: avatar ?? undefined,
+      name: "VF Creator Program",
+      iconURL: interaction.client.user?.displayAvatarURL({ size: 64 }) ?? undefined,
     })
-    .setDescription(lines.join("\n"))
-    .setFooter({ text: "VF Creator Program" })
+    .setTitle(displayName)
+    .setDescription(
+      [
+        `**${meta.label}**`,
+        "",
+        meta.line,
+        "",
+        `Requested by ${interaction.user}`,
+      ].join("\n"),
+    )
+    .addFields(
+      {
+        name: "Roblox",
+        value: row.roblox_username?.trim()
+          ? `\`${row.roblox_username.trim()}\``
+          : "*Not set*",
+        inline: true,
+      },
+      {
+        name: "Discord",
+        value: `<@${row.discord_id}>`,
+        inline: true,
+      },
+      { name: "\u200b", value: "\u200b", inline: false },
+      {
+        name: "Socials",
+        value:
+          tiktokUrl && tt
+            ? [
+                `[TikTok — @${tt}](${tiktokUrl})`,
+                youtubeUrl && yt
+                  ? `[YouTube — @${yt}](${youtubeUrl})`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join("\n\n")
+            : youtubeUrl && yt
+              ? `[YouTube — @${yt}](${youtubeUrl})`
+              : "*None on file*",
+        inline: false,
+      },
+      {
+        name: "Region",
+        value: country ? `\`${country}\`` : "*Not set*",
+        inline: true,
+      },
+    )
+    .setFooter({ text: "Profile updated" })
     .setTimestamp(new Date(row.updated_at));
 
   if (avatar) embed.setThumbnail(avatar);
 
+  if (row.status === "approved" && row.approved_at) {
+    const ts = Math.floor(new Date(row.approved_at).getTime() / 1000);
+    const by = row.approved_by ? `<@${row.approved_by}>` : "staff";
+    embed.addFields({
+      name: "Approved",
+      value: `Staff review by ${by}\n<t:${ts}:F>`,
+      inline: false,
+    });
+  }
+
+  if (row.status === "rejected") {
+    if (row.rejection_reason && invokerIsTarget) {
+      embed.addFields({
+        name: "Rejection note",
+        value: row.rejection_reason.slice(0, 1024),
+        inline: false,
+      });
+    } else if (row.approved_by) {
+      embed.addFields({
+        name: "Review",
+        value: `Processed by <@${row.approved_by}>`,
+        inline: false,
+      });
+    }
+  }
+
   await interaction.editReply({ embeds: [embed] });
+
+  // Age is never shown on the public embed. Only the person who ran the
+  // command, when viewing their own profile, gets it in a private follow-up.
+  if (invokerIsTarget && row.age != null) {
+    await interaction.followUp({
+      flags: MessageFlags.Ephemeral,
+      content: `**Private** — your age on file is **${row.age}**. Only you can see this message.`,
+    });
+  }
 }
