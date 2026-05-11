@@ -58,6 +58,8 @@ import {
   scrimmageSlashCommand,
 } from "@/bot/scrimmage/commands";
 import {
+  creatorProfileCommand,
+  handleCreatorProfileCommand,
   handleOnboardMediaCommand,
   onboardMediaCommand,
 } from "@/bot/creator-onboard";
@@ -164,6 +166,7 @@ export const slashCommandDefinitions = [
     .toJSON(),
 
   onboardMediaCommand,
+  creatorProfileCommand,
 
   new SlashCommandBuilder()
     .setName("kick")
@@ -475,6 +478,9 @@ export async function handleSlashCommand(
       return;
     case "onboard-media":
       await handleOnboardMediaCommand(interaction);
+      return;
+    case "creator":
+      await handleCreatorProfileCommand(interaction);
       return;
     case "kick":
       await handleKick(interaction);

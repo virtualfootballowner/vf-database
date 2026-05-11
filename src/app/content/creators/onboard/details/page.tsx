@@ -100,7 +100,7 @@ export default function CreatorDetailsPage() {
       totalSteps={6}
       stepLabel="Details"
       title="Your details"
-      subtitle="Tell us your Roblox username, at least one social handle (TikTok or YouTube), your age, country, and a contact email."
+      subtitle="Tell us your Roblox username, your TikTok, your age, and your country. YouTube and email are optional."
     >
       {!hydrated ? (
         <p className="text-muted-foreground text-sm">Loading…</p>
@@ -124,12 +124,13 @@ export default function CreatorDetailsPage() {
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="tiktok">TikTok handle (optional)</Label>
+            <Label htmlFor="tiktok">TikTok handle</Label>
             <Input
               id="tiktok"
               value={tiktok}
               onChange={(e) => setTiktok(e.target.value)}
               placeholder="@username"
+              required
               autoComplete="off"
             />
           </div>
@@ -174,13 +175,13 @@ export default function CreatorDetailsPage() {
             </select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Email (optional)</Label>
             <Input
               id="email"
               type="email"
-              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
               autoComplete="email"
             />
           </div>

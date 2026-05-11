@@ -4,6 +4,7 @@ import {
   ButtonInteraction,
   ButtonStyle,
   EmbedBuilder,
+  MessageFlags,
   ModalBuilder,
   PermissionFlagsBits,
   SlashCommandBuilder,
@@ -17,6 +18,7 @@ import {
 
 import { env } from "@/bot/config";
 import { createBotSupabase } from "@/bot/stats-queries";
+import { COUNTRIES } from "@/lib/creator-onboard/countries";
 import {
   CREATOR_APPROVE_PREFIX,
   CREATOR_REJECT_MODAL_PREFIX,
@@ -30,6 +32,17 @@ export const onboardMediaCommand = new SlashCommandBuilder()
     "Post the VF Creator Program onboarding card in this channel",
   )
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+  .toJSON();
+
+export const creatorProfileCommand = new SlashCommandBuilder()
+  .setName("creator")
+  .setDescription("Show a VF creator profile (defaults to you)")
+  .addUserOption((opt) =>
+    opt
+      .setName("user")
+      .setDescription("Discord member to look up")
+      .setRequired(false),
+  )
   .toJSON();
 
 function vfGuildId(): string {
@@ -423,4 +436,144 @@ export async function handleCreatorRejectModal(
   await interaction.editReply({
     content: "Rejected and user notified (if DMs are open).",
   });
+}
+
+type CreatorRow = {
+  id: string;
+  discord_id: string;
+  discord_username: string | null;
+  discord_avatar_url: string | null;
+  roblox_id: string | null;
+  roblox_username: string | null;
+  roblox_avatar_url: string | null;
+  tiktok_handle: string | null;
+  youtube_handle: string | null;
+  age: number | null;
+  country: string | null;
+  status: "draft" | "pending" | "approved" | "rejected";
+  approved_by: string | null;
+  approved_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+const STATUS_META: Record<
+  CreatorRow["status"],
+  { label: string; color: number; line: string }
+> = {
+  draft: {
+    label: "Draft",
+    color: 0x6b7280,
+    line: "Application started — not yet submitted.",
+  },
+  pending: {
+    label: "Pending review",
+    color: 0xf59e0b,
+    line: "Application submitted — awaiting staff review.",
+  },
+  approved: {
+    label: "Approved creator",
+    color: 0x10b981,
+    line: "Approved member of the VF Creator Program.",
+  },
+  rejected: {
+    label: "Rejected",
+    color: 0xef4444,
+    line: "Application was not approved.",
+  },
+};
+
+function countryName(code: string | null): string | null {
+  if (!code) return null;
+  const hit = COUNTRIES.find((c) => c.code === code.toUpperCase());
+  return hit?.name ?? code;
+}
+
+export async function handleCreatorProfileCommand(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  const target = interaction.options.getUser("user") ?? interaction.user;
+  const isSelf = target.id === interaction.user.id;
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const supabase = createBotSupabase();
+  const { data, error } = await supabase
+    .from("creator_applications")
+    .select(
+      "id, discord_id, discord_username, discord_avatar_url, roblox_id, roblox_username, roblox_avatar_url, tiktok_handle, youtube_handle, age, country, status, approved_by, approved_at, rejection_reason, created_at, updated_at",
+    )
+    .eq("discord_id", target.id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[creator] /creator lookup:", error);
+    await interaction.editReply({
+      content: "Couldn’t look up that profile right now. Try again in a minute.",
+    });
+    return;
+  }
+
+  if (!data) {
+    await interaction.editReply({
+      content: isSelf
+        ? "You don’t have a creator application on file. Look for the **Start application** card in the creator server."
+        : `${target.tag ?? target.username ?? `<@${target.id}>`} has no creator application on file.`,
+    });
+    return;
+  }
+
+  const row = data as CreatorRow;
+  const meta = STATUS_META[row.status];
+  const country = countryName(row.country);
+  const tt = row.tiktok_handle?.trim();
+  const yt = row.youtube_handle?.trim();
+  const tiktokUrl = tt ? `https://www.tiktok.com/@${tt}` : null;
+  const youtubeUrl = yt ? `https://www.youtube.com/@${yt}` : null;
+
+  const lines: string[] = [];
+  lines.push(`**Status** — ${meta.line}`);
+  if (row.roblox_username) lines.push(`**Roblox** — ${row.roblox_username}`);
+  lines.push(`**Discord** — <@${row.discord_id}>`);
+  const socials: string[] = [];
+  if (tiktokUrl && tt) socials.push(`[TikTok](${tiktokUrl}) (@${tt})`);
+  if (youtubeUrl && yt) socials.push(`[YouTube](${youtubeUrl}) (@${yt})`);
+  if (socials.length) lines.push(`**Socials** — ${socials.join(" · ")}`);
+  if (row.age != null || country) {
+    const ageStr = row.age != null ? `${row.age}` : "—";
+    lines.push(`**Age / Country** — ${ageStr} · ${country ?? "—"}`);
+  }
+
+  if (row.status === "approved" && row.approved_at) {
+    const ts = Math.floor(new Date(row.approved_at).getTime() / 1000);
+    const by = row.approved_by ? `<@${row.approved_by}>` : "staff";
+    lines.push(`**Approved** — by ${by} <t:${ts}:R>`);
+  }
+  if (row.status === "rejected" && (isSelf || row.rejection_reason)) {
+    if (row.rejection_reason && isSelf) {
+      lines.push(`**Reason** — ${row.rejection_reason}`);
+    } else if (row.rejection_reason) {
+      lines.push(`**Reviewed** — by <@${row.approved_by ?? "?"}>`);
+    }
+  }
+
+  const avatar =
+    row.roblox_avatar_url?.trim() || row.discord_avatar_url?.trim() || null;
+
+  const embed = new EmbedBuilder()
+    .setColor(meta.color)
+    .setAuthor({
+      name: `${row.discord_username ?? target.username} · ${meta.label}`,
+      iconURL: avatar ?? undefined,
+    })
+    .setDescription(lines.join("\n"))
+    .setFooter({ text: "VF Creator Program" })
+    .setTimestamp(new Date(row.updated_at));
+
+  if (avatar) embed.setThumbnail(avatar);
+
+  await interaction.editReply({ embeds: [embed] });
 }

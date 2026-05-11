@@ -39,15 +39,13 @@ export async function POST() {
     );
   }
 
-  const hasSocial =
-    (row.tiktok_handle && String(row.tiktok_handle).trim()) ||
-    (row.youtube_handle && String(row.youtube_handle).trim());
+  const hasTiktok =
+    !!row.tiktok_handle && String(row.tiktok_handle).trim().length > 0;
 
   if (
-    !hasSocial ||
+    !hasTiktok ||
     row.age == null ||
     !row.country ||
-    !row.email ||
     !row.rules_accepted_at ||
     !row.expectations_accepted_at ||
     !row.roblox_id ||

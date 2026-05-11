@@ -13,11 +13,15 @@ const bodySchema = z.object({
     .min(3, "Roblox username must be 3–20 characters.")
     .max(20, "Roblox username must be 3–20 characters.")
     .regex(/^[A-Za-z0-9_]+$/, "Letters, numbers, and underscores only."),
-  tiktok_handle: z.string().max(120).optional().nullable(),
+  tiktok_handle: z
+    .string()
+    .trim()
+    .min(1, "TikTok handle is required.")
+    .max(120),
   youtube_handle: z.string().max(120).optional().nullable(),
   age: z.number().int().min(13).max(120),
   country: z.string().length(2),
-  email: z.string().email(),
+  email: z.string().email().optional().nullable().or(z.literal("")),
 });
 
 export async function PATCH(request: Request) {
@@ -52,9 +56,9 @@ export async function PATCH(request: Request) {
 
   const tiktok = stripAtHandle(parsed.data.tiktok_handle);
   const youtube = stripAtHandle(parsed.data.youtube_handle);
-  if (!tiktok && !youtube) {
+  if (!tiktok) {
     return NextResponse.json(
-      { error: "Provide at least one of TikTok or YouTube handle." },
+      { error: "TikTok handle is required." },
       { status: 400 },
     );
   }
@@ -79,6 +83,10 @@ export async function PATCH(request: Request) {
     );
   }
 
+  const emailRaw =
+    typeof parsed.data.email === "string" ? parsed.data.email.trim() : "";
+  const email = emailRaw.length > 0 ? emailRaw : null;
+
   const { error } = await supabase
     .from("creator_applications")
     .update({
@@ -87,7 +95,7 @@ export async function PATCH(request: Request) {
       youtube_handle: youtube,
       age: parsed.data.age,
       country: parsed.data.country.toUpperCase(),
-      email: parsed.data.email.trim(),
+      email,
       updated_at: now,
     })
     .eq("id", session.applicationId);
