@@ -2,8 +2,12 @@ import Link from "next/link";
 
 import { OnboardingShell } from "@/components/onboarding/OnboardingShell";
 
+/** VF Media (creator server). Override with NEXT_PUBLIC_VF_DISCORD_INVITE_URL if needed. */
+const DEFAULT_VF_MEDIA_DISCORD_INVITE = "https://discord.gg/Bkcr2UJfed";
+
 const invite =
-  process.env.NEXT_PUBLIC_VF_DISCORD_INVITE_URL?.trim() || "https://discord.com";
+  process.env.NEXT_PUBLIC_VF_DISCORD_INVITE_URL?.trim() ||
+  DEFAULT_VF_MEDIA_DISCORD_INVITE;
 
 export default function CreatorSuccessPage() {
   return (
@@ -21,7 +25,7 @@ export default function CreatorSuccessPage() {
           rel="noopener noreferrer"
           className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 items-center justify-center rounded-md px-4 text-sm font-medium transition-colors"
         >
-          Open VF Discord
+          Open VF Media Discord
         </a>
         <Link
           href="/"
