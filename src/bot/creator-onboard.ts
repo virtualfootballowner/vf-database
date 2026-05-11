@@ -216,6 +216,35 @@ export async function handleCreatorApproveButton(
 
   const discordId = String(rec.discord_id ?? "");
   const robloxUsername = String(rec.roblox_username ?? "").trim();
+  const robloxId = String(rec.roblox_id ?? "").trim();
+
+  // Enforce one approved row per Discord / Roblox: retire older approvals before this one lands.
+  const supersedePayload = {
+    status: "rejected" as const,
+    rejection_reason: "Superseded by a newer creator application.",
+    approved_by: adminId,
+    approved_at: now,
+    updated_at: now,
+  };
+
+  if (discordId) {
+    const { error: e1 } = await supabase
+      .from("creator_applications")
+      .update(supersedePayload)
+      .eq("status", "approved")
+      .eq("discord_id", discordId)
+      .neq("id", appId);
+    if (e1) console.error("[creator] supersede discord:", e1);
+  }
+  if (robloxId) {
+    const { error: e2 } = await supabase
+      .from("creator_applications")
+      .update(supersedePayload)
+      .eq("status", "approved")
+      .eq("roblox_id", robloxId)
+      .neq("id", appId);
+    if (e2) console.error("[creator] supersede roblox:", e2);
+  }
 
   const { error: updErr } = await supabase
     .from("creator_applications")
