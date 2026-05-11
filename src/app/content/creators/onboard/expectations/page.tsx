@@ -41,8 +41,8 @@ export default function CreatorExpectationsPage() {
 
   return (
     <OnboardingShell
-      step={5}
-      totalSteps={6}
+      step={6}
+      totalSteps={7}
       stepLabel="Expectations"
       title="Creator expectations"
       subtitle="How we work together during VF’s closed test — plain language, not legal advice."

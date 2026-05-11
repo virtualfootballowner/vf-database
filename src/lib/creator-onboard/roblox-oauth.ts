@@ -5,8 +5,12 @@ const ROBLOX_AUTH = "https://apis.roblox.com/oauth/v1/authorize";
 const ROBLOX_TOKEN = "https://apis.roblox.com/oauth/v1/token";
 const ROBLOX_USERINFO = "https://apis.roblox.com/oauth/v1/userinfo";
 
+/**
+ * Single allowed Roblox redirect (same as league /verify) so the creator
+ * program does not require a second URL in the Roblox OAuth app config.
+ */
 export function creatorRobloxRedirectUri(env: CreatorWebEnv): string {
-  return `${creatorPublicBaseUrl(env)}/api/content/creators/roblox/callback`;
+  return `${creatorPublicBaseUrl(env)}/api/verify/roblox/callback`;
 }
 
 export function creatorRobloxAuthorizeUrl(

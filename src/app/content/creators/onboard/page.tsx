@@ -21,7 +21,7 @@ export default async function CreatorOnboardLanding({
     return (
       <OnboardingShell
         step={1}
-        totalSteps={6}
+        totalSteps={7}
         stepLabel="Start"
         title="Creator onboarding"
         subtitle="Open your personalized link from the VF Discord bot (Start Application). Links include your Discord ID and only work for that account."
@@ -40,10 +40,10 @@ export default async function CreatorOnboardLanding({
   return (
     <OnboardingShell
       step={1}
-      totalSteps={6}
+      totalSteps={7}
       stepLabel="Welcome"
       title="Welcome to the VF Creator Program"
-      subtitle="Early access to VF, creator challenges, and community spotlights. The next screens take about three minutes: connect Discord, share a few details, and accept the program rules."
+      subtitle="Early access to VF, creator challenges, and community spotlights. Next you’ll connect Roblox, then Discord, share a few details, and accept the program rules — about four minutes on your phone."
     >
       <div className="flex flex-col gap-4">
         <Link

@@ -6,13 +6,6 @@ import { stripAtHandle } from "@/lib/creator-onboard/validators";
 import { createCreatorSupabaseAdmin } from "@/lib/creator-onboard/supabase-creator";
 
 const bodySchema = z.object({
-  // Roblox OAuth is pending — accept manual username entry for now.
-  roblox_username: z
-    .string()
-    .trim()
-    .min(3, "Roblox username must be 3–20 characters.")
-    .max(20, "Roblox username must be 3–20 characters.")
-    .regex(/^[A-Za-z0-9_]+$/, "Letters, numbers, and underscores only."),
   tiktok_handle: z
     .string()
     .trim()
@@ -90,7 +83,6 @@ export async function PATCH(request: Request) {
   const { error } = await supabase
     .from("creator_applications")
     .update({
-      roblox_username: parsed.data.roblox_username,
       tiktok_handle: tiktok,
       youtube_handle: youtube,
       age: parsed.data.age,

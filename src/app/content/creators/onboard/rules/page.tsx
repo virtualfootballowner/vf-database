@@ -41,8 +41,8 @@ export default function CreatorRulesPage() {
 
   return (
     <OnboardingShell
-      step={4}
-      totalSteps={6}
+      step={5}
+      totalSteps={7}
       stepLabel="Rules"
       title="Program rules"
       subtitle="Read the sections below, then confirm you agree."

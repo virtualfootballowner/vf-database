@@ -1,7 +1,30 @@
-import { redirect } from "next/navigation";
+import Link from "next/link";
 
-// Roblox OAuth is pending app review — this step is temporarily disabled.
-// Anyone who lands here gets sent straight to the Discord step.
-export default function CreatorRobloxStepDisabled() {
-  redirect("/content/creators/onboard/discord");
+import { OnboardingShell } from "@/components/onboarding/OnboardingShell";
+
+export default function CreatorRobloxStep() {
+  return (
+    <OnboardingShell
+      step={2}
+      totalSteps={7}
+      stepLabel="Connect Roblox"
+      title="Connect your Roblox account"
+      subtitle="We use official Roblox OpenID to verify your profile for the creator program. You’ll be redirected back here, then connect Discord."
+    >
+      <div className="flex flex-col gap-4">
+        <Link
+          href="/api/content/creators/roblox/start"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 items-center justify-center rounded-md px-4 text-sm font-medium transition-colors"
+        >
+          Continue with Roblox
+        </Link>
+        <Link
+          href="/content/creators/onboard"
+          className="text-muted-foreground text-center text-sm underline underline-offset-2"
+        >
+          Back to welcome
+        </Link>
+      </div>
+    </OnboardingShell>
+  );
 }

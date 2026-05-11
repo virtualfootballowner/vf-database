@@ -35,6 +35,11 @@ export function clearCreatorOAuthCookies(res: NextResponse) {
   res.cookies.set(DISCORD_OAUTH_STATE, "", z);
 }
 
+/** After shared `/api/verify/roblox/callback` returns — clear only creator PKCE state. */
+export function clearCreatorRobloxOAuthStateOnResponse(res: NextResponse) {
+  res.cookies.set(ROBLOX_OAUTH_STATE, "", cookieOpts(0));
+}
+
 export async function readCreatorSessionPayload() {
   const env = loadCreatorWebEnv();
   const jar = await cookies();

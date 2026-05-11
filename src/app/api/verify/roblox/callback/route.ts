@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+import { clearCreatorRobloxOAuthStateOnResponse } from "@/lib/creator-onboard/cookie-helpers";
+import { tryCompleteCreatorRobloxOAuthViaVerifyCallback } from "@/lib/creator-onboard/handle-creator-roblox-via-verify-callback";
 import { loadVerifyEnv } from "@/lib/vfl-verify/load-verify-env";
 import { applyGuildVerification } from "@/lib/vfl-verify/apply-guild-verification";
 import { exchangeRobloxCode } from "@/lib/vfl-verify/roblox-oauth";
@@ -16,6 +18,7 @@ function clearVerifyCookies(
   const z = { httpOnly: true, secure, sameSite: "lax" as const, path: "/", maxAge: 0 };
   res.cookies.set(VERIFY_SESS, "", z);
   res.cookies.set(ROBLOX_STATE, "", z);
+  clearCreatorRobloxOAuthStateOnResponse(res);
 }
 
 export async function GET(request: Request) {
@@ -40,6 +43,15 @@ export async function GET(request: Request) {
     );
     clearVerifyCookies(res, secure);
     return res;
+  }
+
+  const creatorReturn = await tryCompleteCreatorRobloxOAuthViaVerifyCallback(
+    request,
+    code,
+    state,
+  );
+  if (creatorReturn) {
+    return creatorReturn;
   }
 
   const cookieStore = await cookies();

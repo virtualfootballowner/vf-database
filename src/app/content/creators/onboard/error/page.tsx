@@ -18,6 +18,7 @@ const MESSAGES: Record<string, string> = {
     "You must sign in with the Discord account that started this link.",
   not_found: "Application not found.",
   not_draft: "This application was already submitted or is no longer a draft.",
+  config: "Creator onboarding isn’t configured on the server. Try again later or contact staff.",
   discord_mismatch_internal: "Could not verify Discord on this application.",
 };
 
@@ -33,7 +34,7 @@ export default async function CreatorErrorPage({
   return (
     <OnboardingShell
       step={1}
-      totalSteps={6}
+      totalSteps={7}
       stepLabel="Error"
       title="We hit a snag"
       subtitle={msg}
