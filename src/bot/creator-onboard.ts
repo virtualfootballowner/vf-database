@@ -49,6 +49,20 @@ function vfGuildId(): string {
   return env.DISCORD_CREATOR_VF_GUILD_ID?.trim() || env.DISCORD_GUILD_ID;
 }
 
+/** VF Media #new-creator-checklist — override via DISCORD_CREATOR_CHECKLIST_CHANNEL_URL on Railway. */
+const DEFAULT_CREATOR_CHECKLIST_CHANNEL_URL =
+  "https://discord.com/channels/1500978557264986345/1502932833025527821";
+
+function creatorApprovalDmContent(): string {
+  const url =
+    env.DISCORD_CREATOR_CHECKLIST_CHANNEL_URL?.trim() ||
+    DEFAULT_CREATOR_CHECKLIST_CHANNEL_URL;
+  return [
+    "You're in. Welcome to **VF Creators**.",
+    `Open [**#new-creator-checklist**](${url}) to get started (or ask staff).`,
+  ].join("\n\n");
+}
+
 function truncateNick(name: string, max = 32): string {
   const t = name.trim();
   if (t.length <= max) return t;
@@ -313,8 +327,7 @@ export async function handleCreatorApproveButton(
   try {
     const u = await interaction.client.users.fetch(discordId);
     await u.send({
-      content:
-        "You're in. Welcome to **VF Creators**. Check **#new-creator-checklist** (or ask staff) to get started.",
+      content: creatorApprovalDmContent(),
     });
   } catch {
     /* DMs closed */

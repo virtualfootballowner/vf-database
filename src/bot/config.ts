@@ -70,6 +70,11 @@ const envSchema = z.object({
    * when unset (same server as league).
    */
   DISCORD_CREATOR_VF_GUILD_ID: optionalOutgoingChannel,
+  /**
+   * Full Discord client URL to #new-creator-checklist (VF Media). Shown in the
+   * approval DM. Example: https://discord.com/channels/{guild_id}/{channel_id}
+   */
+  DISCORD_CREATOR_CHECKLIST_CHANNEL_URL: optionalOutgoingChannel,
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   ROBLOX_API_BASE_URL: z.string().url().default("https://users.roblox.com"),
@@ -102,6 +107,8 @@ export const env = envSchema.parse({
     process.env.DISCORD_CREATOR_APPROVAL_CHANNEL_ID,
   DISCORD_SCOUT_ROLE_ID: process.env.DISCORD_SCOUT_ROLE_ID,
   DISCORD_CREATOR_VF_GUILD_ID: process.env.DISCORD_CREATOR_VF_GUILD_ID,
+  DISCORD_CREATOR_CHECKLIST_CHANNEL_URL:
+    process.env.DISCORD_CREATOR_CHECKLIST_CHANNEL_URL,
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   ROBLOX_API_BASE_URL: process.env.ROBLOX_API_BASE_URL,
