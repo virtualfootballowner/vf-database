@@ -54,10 +54,33 @@ export async function handleOnboardMediaCommand(
   }
 
   const channel = interaction.channel;
-  if (!channel?.isTextBased()) {
+  if (!channel?.isTextBased() || !("guild" in channel)) {
     await interaction.reply({
       ephemeral: true,
-      content: "Use this command inside a text channel.",
+      content: "Use this command inside a server text channel.",
+    });
+    return;
+  }
+
+  const guildChannel = channel as GuildTextBasedChannel;
+  const me = interaction.guild.members.me;
+  const perms = me ? guildChannel.permissionsFor(me) : null;
+  const required = [
+    { flag: PermissionFlagsBits.ViewChannel, label: "View Channel" },
+    { flag: PermissionFlagsBits.SendMessages, label: "Send Messages" },
+    { flag: PermissionFlagsBits.EmbedLinks, label: "Embed Links" },
+  ];
+  const missing = required
+    .filter((r) => !perms?.has(r.flag))
+    .map((r) => r.label);
+
+  if (missing.length > 0) {
+    await interaction.reply({
+      ephemeral: true,
+      content: [
+        `I can’t post here — I’m missing **${missing.join(", ")}** in <#${guildChannel.id}>.`,
+        "Open the channel’s settings → Permissions → add the **VF Control** bot (or its role) and grant those permissions, then run `/onboard-media` again.",
+      ].join("\n"),
     });
     return;
   }
@@ -82,15 +105,22 @@ export async function handleOnboardMediaCommand(
       .setStyle(ButtonStyle.Primary),
   );
 
-  await interaction.reply({
-    ephemeral: true,
-    content: "Posted the creator card.",
-  });
+  await interaction.deferReply({ ephemeral: true });
 
-  await (channel as GuildTextBasedChannel).send({
-    embeds: [embed],
-    components: [row],
-  });
+  try {
+    await guildChannel.send({ embeds: [embed], components: [row] });
+    await interaction.editReply({ content: "Posted the creator card." });
+  } catch (e) {
+    const err = e as { code?: number; message?: string };
+    console.error("[creator] onboard-media send failed:", err);
+    const code = err?.code === 50001 ? " (Missing Access)" : "";
+    await interaction.editReply({
+      content: [
+        `Couldn’t post the card${code}. Discord said: \`${err?.message ?? "unknown error"}\`.`,
+        "Make sure the **VF Control** bot has **View Channel**, **Send Messages**, and **Embed Links** in this channel.",
+      ].join("\n"),
+    });
+  }
 }
 
 export async function handleStartCreatorAppButton(
