@@ -19,13 +19,9 @@ export async function GET() {
     return NextResponse.json({}, { status: 503 });
   }
 
-  if (
-    !session?.expectedDiscordId ||
-    !session.applicationId ||
-    !session.robloxUserId
-  ) {
+  if (!session?.expectedDiscordId || !session.applicationId) {
     return NextResponse.redirect(
-      new URL("/content/creators/onboard/roblox", creatorPublicBaseUrl(env)),
+      new URL("/content/creators/onboard", creatorPublicBaseUrl(env)),
     );
   }
 

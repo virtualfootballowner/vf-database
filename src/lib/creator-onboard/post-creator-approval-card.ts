@@ -24,7 +24,13 @@ export async function postCreatorApprovalCardViaDiscordApi(opts: {
   const discordId = String(r.discord_id ?? "");
   const discordUser = String(r.discord_username ?? "unknown");
   const robloxUser = String(r.roblox_username ?? "");
-  const robloxId = String(r.roblox_id ?? "");
+  const robloxIdRaw = String(r.roblox_id ?? "");
+  // Drafts created while Roblox OAuth is pending approval use a
+  // `pending-{discordId}` placeholder; don't expose that to staff.
+  const robloxIsManual = robloxIdRaw.startsWith("pending-");
+  const robloxIdLine = robloxIsManual
+    ? "_manual entry — Roblox OAuth pending approval_"
+    : `\`${robloxIdRaw}\``;
   const age = r.age != null ? String(r.age) : "—";
   const country = String(r.country ?? "—");
   const tt = r.tiktok_handle ? `@${String(r.tiktok_handle)}` : "—";
@@ -42,7 +48,7 @@ export async function postCreatorApprovalCardViaDiscordApi(opts: {
       },
       {
         name: "Roblox",
-        value: `${robloxUser}\n\`${robloxId}\``,
+        value: `${robloxUser}\n${robloxIdLine}`,
         inline: false,
       },
       {

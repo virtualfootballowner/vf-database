@@ -46,11 +46,7 @@ export async function GET(request: Request) {
   }
 
   const { session } = await readCreatorSessionPayload();
-  if (
-    !session?.expectedDiscordId ||
-    !session.applicationId ||
-    !session.robloxUserId
-  ) {
+  if (!session?.expectedDiscordId || !session.applicationId) {
     return failRedirect(base, "session");
   }
 
@@ -94,7 +90,7 @@ export async function GET(request: Request) {
     applicationId: session.applicationId,
     robloxUserId: session.robloxUserId,
     robloxUsername: session.robloxUsername,
-    robloxAvatarUrl: session.robloxAvatarUrl,
+    robloxAvatarUrl: session.robloxAvatarUrl ?? null,
     discordUsername: displayLabel,
     discordAvatarUrl: exchanged.avatarUrl,
     email: exchanged.email,

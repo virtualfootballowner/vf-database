@@ -41,7 +41,7 @@ export default function CreatorExpectationsPage() {
 
   return (
     <OnboardingShell
-      step={6}
+      step={5}
       totalSteps={6}
       stepLabel="Expectations"
       title="Creator expectations"

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { createDraftDiscordOnly } from "@/lib/creator-onboard/db-draft";
 import {
   creatorPublicBaseUrl,
   loadCreatorWebEnv,
@@ -31,16 +32,33 @@ export async function GET(request: Request) {
     );
   }
 
+  // Roblox OAuth is pending approval — bootstrap the draft straight away
+  // so the rest of the flow can run end-to-end. The Roblox username is
+  // captured manually on the details page in the meantime.
+  const created = await createDraftDiscordOnly(env, { discordId });
+  if (!created.ok) {
+    const code = created.reason === "pending_exists" ? "pending" : "db";
+    return NextResponse.redirect(
+      new URL(
+        `/content/creators/onboard/error?c=${encodeURIComponent(code)}`,
+        creatorPublicBaseUrl(env),
+      ),
+    );
+  }
+
   const sealed = sealCreatorSession(
     env.CREATOR_SESSION_SECRET,
-    { expectedDiscordId: discordId },
+    {
+      expectedDiscordId: discordId,
+      applicationId: created.applicationId,
+    },
     CREATOR_SESSION_TTL_MS,
   );
 
   const secure = process.env.NODE_ENV === "production";
   const res = NextResponse.redirect(
     new URL(
-      "/content/creators/onboard/roblox",
+      "/content/creators/onboard/discord",
       creatorPublicBaseUrl(env),
     ),
   );

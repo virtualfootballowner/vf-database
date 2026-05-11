@@ -41,7 +41,7 @@ export default function CreatorRulesPage() {
 
   return (
     <OnboardingShell
-      step={5}
+      step={4}
       totalSteps={6}
       stepLabel="Rules"
       title="Program rules"

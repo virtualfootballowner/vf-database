@@ -43,7 +43,7 @@ export default async function CreatorOnboardLanding({
       totalSteps={6}
       stepLabel="Welcome"
       title="Welcome to the VF Creator Program"
-      subtitle="Early access to VF, creator challenges, and community spotlights. The next screens take about three minutes: connect Roblox, connect Discord, share a few details, and accept the program rules."
+      subtitle="Early access to VF, creator challenges, and community spotlights. The next screens take about three minutes: connect Discord, share a few details, and accept the program rules."
     >
       <div className="flex flex-col gap-4">
         <Link
