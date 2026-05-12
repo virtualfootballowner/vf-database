@@ -14,91 +14,103 @@ export const metadata: Metadata = {
 
 export default function VirtuosoGalleryPage() {
   return (
-    <div className="relative min-h-dvh min-w-0 overflow-hidden">
-      {/* Background: body's dark blue at top → soft white for the rest */}
+    <div className="relative min-h-dvh min-w-0 overflow-hidden text-white">
+      {/* Hero glow */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[520px]"
         style={{
           backgroundImage:
-            "linear-gradient(to bottom, rgba(248,250,252,0) 0px, rgba(248,250,252,0) 380px, rgba(248,250,252,0.85) 540px, #f8fafc 660px, #f8fafc 100%)",
+            "radial-gradient(ellipse 70% 60% at 50% 18%, rgba(140,180,255,0.22) 0%, rgba(140,180,255,0) 70%)",
         }}
       />
-      {/* Subtle blue glow behind the hero text */}
+      {/* Mid-page accents */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[480px]"
+        className="pointer-events-none absolute inset-x-0 top-[640px] h-[760px]"
         style={{
           backgroundImage:
-            "radial-gradient(ellipse 70% 60% at 50% 20%, rgba(120,160,255,0.18) 0%, rgba(120,160,255,0) 70%)",
+            "radial-gradient(ellipse 55% 45% at 18% 30%, rgba(70,120,220,0.22) 0%, rgba(70,120,220,0) 70%), radial-gradient(ellipse 55% 50% at 85% 75%, rgba(140,90,230,0.18) 0%, rgba(140,90,230,0) 70%)",
+        }}
+      />
+      {/* Lower warm accent */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[700px]"
+        style={{
+          backgroundImage:
+            "radial-gradient(ellipse 80% 60% at 50% 100%, rgba(255,140,80,0.10) 0%, rgba(255,140,80,0) 60%), radial-gradient(ellipse 50% 40% at 80% 95%, rgba(80,160,255,0.14) 0%, rgba(80,160,255,0) 70%)",
         }}
       />
 
       <div className="relative mx-auto max-w-6xl px-4 pt-4 pb-16 sm:px-6 lg:px-8">
-        <div className="text-white">
-          <SiteNav />
+        <SiteNav />
 
-          <header className="mt-8 space-y-4 pb-8 sm:mt-10 sm:pb-12">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
-              VF Create
-            </p>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-              Virtuoso sponsored boots
-            </h1>
-            <p className="max-w-3xl text-base leading-relaxed text-white/85 sm:text-[17px]">
-              A Virtuoso sponsored boot is a pair of Virtuoso cleats that
-              Virtual Football awards to top performers on the board — in past
-              VF seasons, the best players have received pairs this way, and
-              the same styles are also sold in-game where thousands of players
-              buy Virtuoso boots to wear in matches.
-            </p>
-            <Link
-              href="/content/creators#leaderboard"
-              className="inline-flex w-fit text-sm font-semibold text-white/90 underline-offset-4 hover:text-white hover:underline"
-            >
-              ← Back to Road to 1M
-            </Link>
-          </header>
-        </div>
+        <header className="mt-8 space-y-4 pb-8 sm:mt-10 sm:pb-12">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
+            VF Create
+          </p>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+            Virtuoso sponsored boots
+          </h1>
+          <p className="max-w-3xl text-base leading-relaxed text-white/85 sm:text-[17px]">
+            A Virtuoso sponsored boot is a pair of Virtuoso cleats that Virtual
+            Football awards to top performers on the board — in past VF seasons,
+            the best players have received pairs this way, and the same styles
+            are also sold in-game where thousands of players buy Virtuoso boots
+            to wear in matches.
+          </p>
+          <Link
+            href="/content/creators#leaderboard"
+            className="inline-flex w-fit text-sm font-semibold text-blue-200 underline-offset-4 hover:text-white hover:underline"
+          >
+            ← Back to Road to 1M
+          </Link>
+        </header>
 
-        <div className="text-zinc-900">
-          <section aria-label="Virtuoso boot gallery" className="space-y-6">
-            <h2 className="text-lg font-semibold text-zinc-900">Gallery</h2>
-            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {VIRTUOSO_GALLERY_ITEMS.map((item) => (
-                <li
-                  key={item.num}
-                  className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm"
-                >
-                  <figure className="flex flex-col">
-                    <div className="relative aspect-[4/3] w-full bg-zinc-200">
-                      {item.kind === "video" ? (
-                        <video
-                          src={item.src}
-                          controls
-                          playsInline
-                          preload="metadata"
-                          className="absolute inset-0 h-full w-full object-cover"
-                        />
-                      ) : (
-                        <Image
-                          src={item.src}
-                          alt={`Virtuoso boot reference ${item.num}`}
-                          fill
-                          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                          className="object-cover"
-                        />
-                      )}
-                    </div>
-                    <figcaption className="border-t border-zinc-100 px-3 py-2 text-center text-xs font-medium text-zinc-600">
-                      #{item.num}
-                    </figcaption>
-                  </figure>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </div>
+        <section aria-label="Virtuoso boot gallery" className="space-y-6">
+          <div className="flex items-end justify-between border-b border-white/15 pb-3">
+            <h2 className="text-lg font-semibold text-white sm:text-xl">
+              Gallery
+            </h2>
+            <p className="text-xs text-white/55">
+              {VIRTUOSO_GALLERY_ITEMS.length} references
+            </p>
+          </div>
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {VIRTUOSO_GALLERY_ITEMS.map((item) => (
+              <li
+                key={item.num}
+                className="overflow-hidden rounded-xl border border-white/15 bg-white/[0.06] shadow-[0_20px_45px_-25px_rgba(0,0,0,0.6)] backdrop-blur transition hover:border-white/25 hover:bg-white/[0.09]"
+              >
+                <figure className="flex flex-col">
+                  <div className="relative aspect-[4/3] w-full bg-black/30">
+                    {item.kind === "video" ? (
+                      <video
+                        src={item.src}
+                        controls
+                        playsInline
+                        preload="metadata"
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    ) : (
+                      <Image
+                        src={item.src}
+                        alt={`Virtuoso boot reference ${item.num}`}
+                        fill
+                        sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                        className="object-cover"
+                      />
+                    )}
+                  </div>
+                  <figcaption className="border-t border-white/10 px-3 py-2 text-center text-xs font-medium text-white/70">
+                    #{item.num}
+                  </figcaption>
+                </figure>
+              </li>
+            ))}
+          </ul>
+        </section>
       </div>
     </div>
   );

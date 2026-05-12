@@ -92,28 +92,37 @@ export default async function CreatorsChallengePage() {
     challenge.totalTrackedViews > ROAD_TO_1M_TARGET_VIEWS;
 
   return (
-    <div className="relative min-h-dvh min-w-0 overflow-hidden">
-      {/* Background: body's dark blue at top → soft white for the rest */}
+    <div className="relative min-h-dvh min-w-0 overflow-hidden text-white">
+      {/* Hero glow */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[520px]"
         style={{
           backgroundImage:
-            "linear-gradient(to bottom, rgba(248,250,252,0) 0px, rgba(248,250,252,0) 360px, rgba(248,250,252,0.85) 520px, #f8fafc 640px, #f8fafc 100%)",
+            "radial-gradient(ellipse 70% 60% at 50% 18%, rgba(140,180,255,0.22) 0%, rgba(140,180,255,0) 70%)",
         }}
       />
-      {/* Subtle blue glow behind the hero text */}
+      {/* Mid-page blue accent */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[460px]"
+        className="pointer-events-none absolute inset-x-0 top-[700px] h-[640px]"
         style={{
           backgroundImage:
-            "radial-gradient(ellipse 70% 60% at 50% 20%, rgba(120,160,255,0.18) 0%, rgba(120,160,255,0) 70%)",
+            "radial-gradient(ellipse 60% 50% at 15% 40%, rgba(70,120,220,0.22) 0%, rgba(70,120,220,0) 70%), radial-gradient(ellipse 55% 50% at 85% 70%, rgba(120,90,220,0.18) 0%, rgba(120,90,220,0) 70%)",
+        }}
+      />
+      {/* Lower warm accent */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[700px]"
+        style={{
+          backgroundImage:
+            "radial-gradient(ellipse 80% 60% at 50% 100%, rgba(255,140,80,0.10) 0%, rgba(255,140,80,0) 60%), radial-gradient(ellipse 50% 40% at 80% 95%, rgba(80,160,255,0.14) 0%, rgba(80,160,255,0) 70%)",
         }}
       />
 
       <div className="relative mx-auto max-w-6xl px-4 pt-4 pb-16 sm:px-6 lg:px-8">
-        <div className="text-white">
+        <div>
           <SiteNav />
 
           <header className="mt-8 space-y-4 pb-6 sm:mt-10 sm:pb-10">
@@ -158,7 +167,7 @@ export default async function CreatorsChallengePage() {
           </header>
         </div>
 
-        <div className="text-zinc-900">
+        <div>
         {/* Community progress */}
         <section
           className="mt-8 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-7"
@@ -174,8 +183,8 @@ export default async function CreatorsChallengePage() {
               </h2>
               <p className="mt-1 text-sm text-zinc-600">
                 {formatTargetNumber(challenge.totalTrackedViews)} /{" "}
-                {formatTargetNumber(ROAD_TO_1M_TARGET_VIEWS)} tracked views
-                &amp; plays
+                {formatTargetNumber(ROAD_TO_1M_TARGET_VIEWS)}
+                {" "}tracked views &amp; plays
                 {showOverflow ? (
                   <span className="ml-1 text-zinc-500">
                     ({formatViewCount(challenge.totalTrackedViews)} total)
@@ -213,39 +222,39 @@ export default async function CreatorsChallengePage() {
 
         {/* Leaderboard — directly under progress */}
         <section id="leaderboard" className="mt-10 scroll-mt-24">
-          <div className="flex flex-col gap-3 border-b border-zinc-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-3 border-b border-white/15 pb-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-zinc-900 sm:text-2xl">
+              <h2 className="text-xl font-semibold text-white sm:text-2xl">
                 Leaderboard
               </h2>
-              <p className="mt-1 text-sm text-zinc-500">
+              <p className="mt-1 text-sm text-white/65">
                 Sorted by total synced views / plays · updates on each page load
               </p>
             </div>
             <div className="flex flex-col gap-1.5 sm:items-end">
-              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 shadow-sm">
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm text-white/85 shadow-sm backdrop-blur">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <Image
                   src="/Robux_2019_Logo_white.svg.png"
                   alt=""
                   width={20}
                   height={20}
-                  className="size-5 shrink-0 rounded invert"
+                  className="size-5 shrink-0 rounded"
                 />
                 <span>
                   Pool:{" "}
-                  <strong className="font-semibold text-zinc-900">
+                  <strong className="font-semibold text-white">
                     {formatChallengeRobux(challenge.prizePoolRobux)}
                   </strong>
                 </span>
-                <span className="hidden text-zinc-300 sm:inline">|</span>
-                <span className="rounded border border-violet-200 bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-900">
+                <span className="hidden text-white/30 sm:inline">|</span>
+                <span className="rounded border border-violet-300/40 bg-violet-400/15 px-2 py-0.5 text-xs font-medium text-violet-100">
                   Virtuoso sponsor · top 3
                 </span>
               </div>
               <Link
                 href="/content/creators/virtuoso"
-                className="text-xs font-medium text-blue-800 underline-offset-2 hover:underline sm:text-right"
+                className="text-xs font-medium text-blue-200 underline-offset-2 hover:text-white hover:underline sm:text-right"
               >
                 What is this?
               </Link>
@@ -562,30 +571,30 @@ export default async function CreatorsChallengePage() {
           </ul>
         </section>
 
-        <footer className="mt-14 border-t border-zinc-200 pt-8 text-center text-xs text-zinc-500 sm:text-sm">
+        <footer className="mt-14 border-t border-white/15 pt-8 text-center text-xs text-white/65 sm:text-sm">
           <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
             <Link
               href="/"
-              className="text-blue-800 underline-offset-2 hover:underline"
+              className="text-blue-200 underline-offset-2 hover:text-white hover:underline"
             >
               VF home
             </Link>
-            <span>·</span>
+            <span className="text-white/30">·</span>
             <Link
               href="/content/creators/onboard"
-              className="text-blue-800 underline-offset-2 hover:underline"
+              className="text-blue-200 underline-offset-2 hover:text-white hover:underline"
             >
               Creator onboarding
             </Link>
-            <span>·</span>
+            <span className="text-white/30">·</span>
             <a
               href="#how-it-works"
-              className="text-blue-800 underline-offset-2 hover:underline"
+              className="text-blue-200 underline-offset-2 hover:text-white hover:underline"
             >
               Rules
             </a>
           </p>
-          <p className="mx-auto mt-3 max-w-xl text-[11px] leading-relaxed text-zinc-400">
+          <p className="mx-auto mt-3 max-w-xl text-[11px] leading-relaxed text-white/50">
             Numbers are indicative until VF staff confirm eligibility and
             payout. Official VF Create rules apply.
           </p>
