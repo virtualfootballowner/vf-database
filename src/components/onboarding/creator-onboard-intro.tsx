@@ -2,60 +2,80 @@ import Link from "next/link";
 
 import { SiteNav } from "@/components/site-nav";
 
-function pic(seed: string, w: number, h: number): string {
-  return `https://picsum.photos/seed/${encodeURIComponent(seed)}/${w}/${h}`;
+/** Files in `/public`: 1–17 (images + `1.mov`, `16.mp4`, `17.mov`; `3` is `3 (2).png`). */
+function vfCreatePublicPath(num: number): string {
+  const relative: Record<number, string> = {
+    1: "/1.mov",
+    2: "/2.png",
+    3: "/3 (2).png",
+    4: "/4.png",
+    5: "/5.png",
+    6: "/6.png",
+    7: "/7.png",
+    8: "/8.png",
+    9: "/9.png",
+    10: "/10.png",
+    11: "/11.png",
+    12: "/12.png",
+    13: "/13.png",
+    14: "/14.png",
+    15: "/15.jpg",
+    16: "/16.mp4",
+    17: "/17.mov",
+  };
+  const path = relative[num];
+  if (!path) throw new Error(`Missing VF Create asset mapping for ${num}`);
+  return encodeURI(path);
 }
 
-function PhotoSlot({
+function isVideoPath(path: string): boolean {
+  return /\.(mov|mp4|webm)$/i.test(path.split("?")[0] ?? path);
+}
+
+function MediaSlot({
+  src,
   label,
   className,
   aspectClass,
-  previewSrc,
+  priorityVideo,
 }: {
+  src: string;
   label: string;
   aspectClass: string;
   className?: string;
-  previewSrc?: string | null;
+  /** Hero: stronger autoplay attributes. */
+  priorityVideo?: boolean;
 }) {
-  const filled = Boolean(previewSrc);
+  const video = isVideoPath(src);
   return (
     <div
-      className={`group relative overflow-hidden rounded-2xl border border-white/15 bg-[#12326e]/48 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ${aspectClass} ${className ?? ""}`}
+      className={`relative overflow-hidden rounded-2xl border border-white/15 bg-[#12326e]/48 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ${aspectClass} ${className ?? ""}`}
     >
-      {filled && previewSrc ? (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element -- preview URLs only */}
-          <img
-            src={previewSrc}
-            alt=""
-            className="absolute inset-0 size-full object-cover"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#041a45]/90 via-[#041a45]/30 to-transparent"
-          />
-        </>
+      {video ? (
+        <video
+          src={src}
+          className="absolute inset-0 size-full object-cover"
+          muted
+          playsInline
+          loop
+          autoPlay
+          preload={priorityVideo ? "auto" : "metadata"}
+          aria-label={label}
+        />
       ) : (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-40"
-          style={{
-            background:
-              "radial-gradient(ellipse 80% 60% at 30% 20%, rgba(59,130,246,0.25), transparent 55%), radial-gradient(ellipse 70% 50% at 80% 80%, rgba(8,54,150,0.35), transparent 50%)",
-          }}
+        /* eslint-disable-next-line @next/next/no-img-element -- static public assets */
+        <img
+          src={src}
+          alt=""
+          className="absolute inset-0 size-full object-cover"
         />
       )}
       <div
-        className={`relative z-[1] flex h-full min-h-[7rem] flex-col p-3 text-center sm:min-h-0 ${filled ? "items-stretch justify-end" : "items-center justify-center gap-2 p-4"}`}
-      >
-        {!filled ? (
-          <span className="rounded-full border border-white/20 bg-black/30 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/70">
-            Photo
-          </span>
-        ) : null}
-        <p
-          className={`text-[11px] font-medium leading-snug sm:text-xs ${filled ? "text-white/95 drop-shadow-md" : "text-white/55"}`}
-        >
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#041a45]/85 via-[#041a45]/20 to-transparent"
+      />
+      <div className="relative z-[1] flex h-full min-h-[4rem] flex-col justify-end p-3 text-center sm:min-h-0">
+        <p className="text-[11px] font-medium leading-snug text-white/95 drop-shadow-md sm:text-xs">
           {label}
         </p>
       </div>
@@ -63,29 +83,47 @@ function PhotoSlot({
   );
 }
 
+const GALLERY_LAYOUT: {
+  n: number;
+  aspectClass: string;
+  className?: string;
+}[] = [
+  { n: 2, aspectClass: "aspect-[4/5]" },
+  { n: 3, aspectClass: "aspect-square" },
+  { n: 4, aspectClass: "aspect-square" },
+  {
+    n: 5,
+    aspectClass: "aspect-video",
+    className: "col-span-2 sm:col-span-2 lg:col-span-2",
+  },
+  { n: 6, aspectClass: "aspect-[3/2]" },
+  { n: 7, aspectClass: "aspect-[3/2]" },
+  {
+    n: 8,
+    aspectClass: "aspect-[21/9]",
+    className: "col-span-2 sm:col-span-3 lg:col-span-4",
+  },
+  { n: 9, aspectClass: "aspect-square" },
+  { n: 10, aspectClass: "aspect-square" },
+  {
+    n: 11,
+    aspectClass: "aspect-video",
+    className: "col-span-2 sm:col-span-2",
+  },
+  { n: 12, aspectClass: "aspect-square" },
+  { n: 13, aspectClass: "aspect-[4/5]" },
+  { n: 14, aspectClass: "aspect-square" },
+  { n: 15, aspectClass: "aspect-video" },
+  { n: 16, aspectClass: "aspect-square" },
+  { n: 17, aspectClass: "aspect-video", className: "col-span-2" },
+];
+
 export function CreatorOnboardIntro({
   bootstrapHref,
-  showPhotoPreview,
 }: {
   bootstrapHref: string | null;
-  showPhotoPreview: boolean;
 }) {
-  const demo = showPhotoPreview
-    ? {
-        hero: pic("vfcreate-hero", 960, 540),
-        g1: pic("vfcreate-g1", 640, 800),
-        g2: pic("vfcreate-g2", 640, 640),
-        g3: pic("vfcreate-g3", 640, 640),
-        g4: pic("vfcreate-g4", 1280, 720),
-        g5: pic("vfcreate-g5", 900, 600),
-        g6: pic("vfcreate-g6", 900, 600),
-        g7: pic("vfcreate-g7", 1400, 600),
-        g8: pic("vfcreate-g8", 640, 640),
-        g9: pic("vfcreate-g9", 640, 640),
-        g10: pic("vfcreate-g10", 1200, 675),
-        g11: pic("vfcreate-g11", 640, 640),
-      }
-    : null;
+  const heroSrc = vfCreatePublicPath(1);
 
   return (
     <main className="relative min-h-dvh min-w-0 overflow-x-hidden bg-[#04132f] text-white">
@@ -95,14 +133,6 @@ export function CreatorOnboardIntro({
       />
       <div className="relative mx-auto flex min-h-dvh max-w-6xl flex-col gap-8 px-4 pb-16 pt-5 sm:gap-10 sm:px-6 sm:pt-8 md:px-8 md:pt-10">
         <SiteNav />
-
-        {showPhotoPreview ? (
-          <p className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-center text-xs text-white/80">
-            <strong className="text-white">Preview mode</strong> — stock images.
-            Remove <code className="text-white/90">?preview=1</code> for empty
-            placeholders.
-          </p>
-        ) : null}
 
         {/* Above the fold: headline, rewards, CTA */}
         <header className="flex flex-col gap-6">
@@ -178,10 +208,11 @@ export function CreatorOnboardIntro({
         </header>
 
         <div className="w-full">
-          <PhotoSlot
-            label="Hero — your best clip, key art, or crowd moment (16×9)"
+          <MediaSlot
+            src={heroSrc}
+            label="VF Create · 1"
             aspectClass="aspect-video w-full"
-            previewSrc={demo?.hero}
+            priorityVideo
           />
         </div>
 
@@ -191,70 +222,20 @@ export function CreatorOnboardIntro({
               Gallery
             </h2>
             <p className="mt-1 max-w-2xl text-sm text-white/55">
-              Spots for campaign shots, winners, and spotlights as the season
-              ramps up.
+              VF Create and league moments — clips and stills from the team.
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-            <PhotoSlot
-              label="VF matchday highlight"
-              aspectClass="aspect-[4/5]"
-              previewSrc={demo?.g1}
-            />
-            <PhotoSlot
-              label="Creator spotlight"
-              aspectClass="aspect-square"
-              previewSrc={demo?.g2}
-            />
-            <PhotoSlot
-              label="Community / reactions"
-              aspectClass="aspect-square"
-              previewSrc={demo?.g3}
-            />
-            <PhotoSlot
-              label="Challenge announcement"
-              aspectClass="aspect-video"
-              className="col-span-2 sm:col-span-2 lg:col-span-2"
-              previewSrc={demo?.g4}
-            />
-            <PhotoSlot
-              label="Behind the scenes"
-              aspectClass="aspect-[3/2]"
-              previewSrc={demo?.g5}
-            />
-            <PhotoSlot
-              label="Trophy moment"
-              aspectClass="aspect-[3/2]"
-              previewSrc={demo?.g6}
-            />
-            <PhotoSlot
-              label="Full-width banner moment"
-              aspectClass="aspect-[21/9]"
-              className="col-span-2 sm:col-span-3 lg:col-span-4"
-              previewSrc={demo?.g7}
-            />
-            <PhotoSlot
-              label="Virtuoso feature still"
-              aspectClass="aspect-square"
-              previewSrc={demo?.g8}
-            />
-            <PhotoSlot
-              label="Robux rewards graphic"
-              aspectClass="aspect-square"
-              previewSrc={demo?.g9}
-            />
-            <PhotoSlot
-              label="Squad / team shoutout"
-              aspectClass="aspect-video"
-              className="col-span-2 sm:col-span-2"
-              previewSrc={demo?.g10}
-            />
-            <PhotoSlot
-              label="Season key art (square crop)"
-              aspectClass="aspect-square"
-              previewSrc={demo?.g11}
-            />
+            {GALLERY_LAYOUT.map(({ n, aspectClass, className }) => (
+              <MediaSlot
+                key={n}
+                src={vfCreatePublicPath(n)}
+                label={`VF Create · ${n}`}
+                aspectClass={aspectClass}
+                className={className}
+              />
+            ))}
           </div>
         </section>
 
