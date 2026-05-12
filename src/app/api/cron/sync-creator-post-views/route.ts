@@ -15,8 +15,12 @@ function unauthorized(): Response {
 /**
  * Daily job: refresh YouTube view counts + TikTok play counts for creator directory posts via Apify.
  *
- * Trigger from Vercel Cron (see `vercel.json`) or manually:
+ * Schedule: 12:00 UTC (`vercel.json` cron or GitHub Actions workflow).
+ *
+ * Trigger manually:
  *   curl -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/sync-creator-post-views
+ *
+ * Or run **`/update-content`** in Discord (Manage Server + `APIFY_API_TOKEN` on the bot).
  */
 export async function GET(req: Request): Promise<Response> {
   const secret = process.env.CRON_SECRET?.trim();

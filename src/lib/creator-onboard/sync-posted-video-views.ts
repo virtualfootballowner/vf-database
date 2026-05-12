@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import {
   fetchTiktokPlayCounts,
   fetchYoutubeViewCounts,
@@ -22,8 +24,9 @@ export type SyncPostedVideoViewsResult = {
   tiktokError: string | null;
 };
 
-export async function syncPostedVideoViewsForAllApproved(opts: {
-  env: CreatorWebEnv;
+/** Service-role Supabase client (e.g. from the bot or Next.js cron). */
+export async function syncPostedVideoViewsWithSupabase(opts: {
+  supabase: SupabaseClient;
   apifyToken: string;
   youtubeActorId?: string;
   tiktokActorId?: string;
@@ -38,7 +41,7 @@ export async function syncPostedVideoViewsForAllApproved(opts: {
     tiktokError: null,
   };
 
-  const supabase = createCreatorSupabaseAdmin(opts.env);
+  const { supabase } = opts;
   const { data: rows, error } = await supabase
     .from("creator_applications")
     .select("id, posted_video_links")
@@ -202,4 +205,19 @@ export async function syncPostedVideoViewsForAllApproved(opts: {
   }
 
   return result;
+}
+
+export async function syncPostedVideoViewsForAllApproved(opts: {
+  env: CreatorWebEnv;
+  apifyToken: string;
+  youtubeActorId?: string;
+  tiktokActorId?: string;
+}): Promise<SyncPostedVideoViewsResult> {
+  const supabase = createCreatorSupabaseAdmin(opts.env);
+  return syncPostedVideoViewsWithSupabase({
+    supabase,
+    apifyToken: opts.apifyToken,
+    youtubeActorId: opts.youtubeActorId,
+    tiktokActorId: opts.tiktokActorId,
+  });
 }

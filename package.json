@@ -22,7 +22,8 @@
     "db:refresh:player-goals-assists": "tsx scripts/refresh-player-goal-assist-totals.ts",
     "db:verify:repo": "tsx scripts/verify-repo-vs-db.ts",
     "db:seed:managers": "tsx scripts/apply-team-manager-seed.ts",
-    "db:ensure:manager-rows": "tsx scripts/apply-team-manager-seed.ts --ensure-rows"
+    "db:ensure:manager-rows": "tsx scripts/apply-team-manager-seed.ts --ensure-rows",
+    "cron:secret": "node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

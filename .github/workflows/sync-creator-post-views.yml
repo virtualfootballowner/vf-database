@@ -10,8 +10,8 @@ name: Sync creator post views
 
 on:
   schedule:
-    # 06:00 UTC daily (same window as the old vercel.json cron)
-    - cron: "0 6 * * *"
+    # 12:00 UTC daily — same as vercel.json (noon UTC, not local noon)
+    - cron: "0 12 * * *"
   workflow_dispatch:
 
 jobs:

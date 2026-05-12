@@ -67,6 +67,10 @@ import {
   handleOnboardMediaCommand,
   onboardMediaCommand,
 } from "@/bot/creator-onboard";
+import {
+  handleUpdateContentCommand,
+  updateContentCommand,
+} from "@/bot/creator-content-sync";
 
 function formatCommandError(err: unknown): string {
   if (err instanceof Error && err.message.trim()) return err.message.trim();
@@ -173,6 +177,7 @@ export const slashCommandDefinitions = [
   creatorProfileCommand,
   creatorPostedCommand,
   creatorPostRemoveCommand,
+  updateContentCommand,
 
   new SlashCommandBuilder()
     .setName("kick")
@@ -493,6 +498,9 @@ export async function handleSlashCommand(
       return;
     case "post-remove":
       await handleCreatorPostRemoveCommand(interaction);
+      return;
+    case "update-content":
+      await handleUpdateContentCommand(interaction);
       return;
     case "kick":
       await handleKick(interaction);
