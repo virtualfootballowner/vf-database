@@ -29,7 +29,7 @@ import {
 export const onboardMediaCommand = new SlashCommandBuilder()
   .setName("onboard-media")
   .setDescription(
-    "Post the VF Creator Program onboarding card in this channel",
+    "Post the VF Create Program onboarding card in this channel",
   )
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
   .toJSON();
@@ -58,7 +58,7 @@ function creatorApprovalDmContent(): string {
     env.DISCORD_CREATOR_CHECKLIST_CHANNEL_URL?.trim() ||
     DEFAULT_CREATOR_CHECKLIST_CHANNEL_URL;
   return [
-    "You're in. Welcome to **VF Creators**.",
+    "You're in. Welcome to **VF Create**.",
     `Open [**#new-creator-checklist**](${url}) to get started (or ask staff).`,
   ].join("\n\n");
 }
@@ -113,16 +113,16 @@ export async function handleOnboardMediaCommand(
   }
 
   const embed = new EmbedBuilder()
-    .setColor(0x083696)
-    .setTitle("VF Creator Program — Now onboarding")
+    .setColor(0xea580c)
+    .setTitle("VF Create Program — Now onboarding")
     .setDescription(
       [
-        "Want early access to **VF** and a shot at **Robux**-backed creator challenges?",
+        "Want early access to **VF**, **50,000 Robux** on the line, and **Custom VF Virtuoso Sponsorship**?",
         "",
         "Click **Start application** — we’ll **DM you** a personal link (about **3 minutes** on your phone). If DMs are closed, you’ll get the link here instead.",
       ].join("\n"),
     )
-    .setFooter({ text: "VF Creators" })
+    .setFooter({ text: "VF Create Program" })
     .setTimestamp(new Date());
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -159,7 +159,7 @@ export async function handleStartCreatorAppButton(
   try {
     await interaction.user.send({
       content: [
-        "**VF Creator Program** — your personal link (only valid for your Discord account):",
+        "**VF Create Program** — your personal link (only valid for your Discord account):",
         url,
       ].join("\n\n"),
     });
@@ -307,7 +307,7 @@ export async function handleCreatorApproveButton(
           try {
             await member.setNickname(
               truncateNick(robloxUsername),
-              "VF Creator onboarding — Roblox username",
+              "VF Create onboarding — Roblox username",
             );
           } catch (e) {
             console.error("[creator] nick:", e);
@@ -445,7 +445,7 @@ export async function handleCreatorRejectModal(
     const u = await interaction.client.users.fetch(discordId);
     await u.send({
       content:
-        "Thanks for applying to **VF Creators**. We’re not able to accept your application at this time.",
+        "Thanks for applying to **VF Create**. We’re not able to accept your application at this time.",
     });
   } catch {
     /* ignore */
@@ -517,7 +517,7 @@ const STATUS_META: Record<
   approved: {
     label: "Approved creator",
     color: 0x10b981,
-    line: "Approved member of the VF Creator Program.",
+    line: "Approved member of the VF Create Program.",
   },
   rejected: {
     label: "Rejected",
@@ -584,7 +584,7 @@ export async function handleCreatorProfileCommand(
   const embed = new EmbedBuilder()
     .setColor(meta.color)
     .setAuthor({
-      name: "VF Creator Program",
+      name: "VF Create Program",
       iconURL: interaction.client.user?.displayAvatarURL({ size: 64 }) ?? undefined,
     })
     .setTitle(displayName)

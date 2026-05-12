@@ -2,12 +2,27 @@ export function ExpectationsContent() {
   return (
     <div className="text-muted-foreground max-h-[50vh] space-y-6 overflow-y-auto pr-1 text-sm leading-relaxed sm:max-h-[min(28rem,50vh)]">
       <section>
-        <h2 className="text-foreground mb-2 font-semibold">Posting cadence</h2>
+        <h2 className="text-foreground mb-2 font-semibold">
+          Video quality and cadence
+        </h2>
         <p>
-          We expect a steady rhythm during active campaigns—roughly the
-          equivalent of a few quality posts per month when a VF beat is live.
-          Life happens; if you need a break, tell staff so we don&apos;t assume
-          you&apos;ve ghosted the program.
+          We expect{" "}
+          <strong className="text-foreground font-semibold">
+            high-quality video
+          </strong>
+          : clean capture, audio you can understand, and framing or edits that
+          don&apos;t make the game hard to follow. Blurry, overly compressed,
+          or slapped-together clips don&apos;t represent VF well—put care into
+          each upload.
+        </p>
+        <p className="mt-3">
+          During active creator beats, plan for at least{" "}
+          <strong className="text-foreground font-semibold">
+            two videos per week
+          </strong>
+          . That&apos;s a floor, not a ceiling; campaigns or challenges may ask
+          for more. If life gets in the way, tell staff early so we don&apos;t
+          assume you&apos;ve dropped out.
         </p>
       </section>
       <section>

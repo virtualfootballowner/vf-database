@@ -61,6 +61,11 @@ import {
   postMemberOutgoing,
 } from "@/bot/member-outgoing";
 import {
+  clearPlayerDiscordBanFromGuild,
+  setPlayerDiscordBanFromGuild,
+} from "@/bot/player-discord-ban-sync";
+import { createBotSupabase } from "@/bot/stats-queries";
+import {
   APPROVE_BUTTON_ID_PREFIX,
   DENY_BUTTON_ID_PREFIX,
   handleApprovedRoleAdded,
@@ -235,8 +240,29 @@ client.on(Events.GuildBanAdd, async (ban) => {
   try {
     if (ban.guild.id !== env.DISCORD_GUILD_ID) return;
     await postMemberOutgoing(ban.guild, ban.user, "banned");
+    try {
+      await setPlayerDiscordBanFromGuild(createBotSupabase(), ban.user.id, {
+        at: new Date(),
+        reason: ban.reason ?? null,
+      });
+    } catch (syncErr) {
+      console.error("GuildBanAdd player ban sync failed:", syncErr);
+    }
   } catch (error) {
     console.error("GuildBanAdd outgoing log failed:", error);
+  }
+});
+
+client.on(Events.GuildBanRemove, async (ban) => {
+  try {
+    if (ban.guild.id !== env.DISCORD_GUILD_ID) return;
+    try {
+      await clearPlayerDiscordBanFromGuild(createBotSupabase(), ban.user.id);
+    } catch (syncErr) {
+      console.error("GuildBanRemove player ban sync failed:", syncErr);
+    }
+  } catch (error) {
+    console.error("GuildBanRemove handling failed:", error);
   }
 });
 

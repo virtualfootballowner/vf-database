@@ -12,8 +12,8 @@ const invite =
 export default function CreatorSuccessPage() {
   return (
     <OnboardingShell
-      step={7}
-      totalSteps={7}
+      step={6}
+      totalSteps={6}
       stepLabel="Done"
       title="Application submitted"
       subtitle="You’ll hear back within about 48 hours via Discord DM. Keep DMs from server members open."

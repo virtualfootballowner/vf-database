@@ -78,8 +78,8 @@ export default function CreatorSubmitPage() {
 
   return (
     <OnboardingShell
-      step={7}
-      totalSteps={7}
+      step={6}
+      totalSteps={6}
       stepLabel="Review"
       title="Review your application"
       subtitle="Submit when everything looks right. Staff usually respond within 48 hours via Discord DM."

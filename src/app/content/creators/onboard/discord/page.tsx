@@ -5,8 +5,8 @@ import { OnboardingShell } from "@/components/onboarding/OnboardingShell";
 export default function CreatorDiscordStep() {
   return (
     <OnboardingShell
-      step={3}
-      totalSteps={7}
+      step={2}
+      totalSteps={6}
       stepLabel="Connect Discord"
       title="Connect your Discord account"
       subtitle="We need the same Discord you used in the VF server so we can DM you and, if you’re approved, assign your creator role."

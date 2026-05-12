@@ -100,8 +100,8 @@ export default function CreatorDetailsPage() {
 
   return (
     <OnboardingShell
-      step={4}
-      totalSteps={7}
+      step={3}
+      totalSteps={6}
       stepLabel="Details"
       title="Your details"
       subtitle="Roblox is already linked from the last step. Add your TikTok, age, and country. YouTube and email are optional."

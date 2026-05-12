@@ -12,7 +12,7 @@ import { stripAtHandle } from "@/lib/creator-onboard/validators";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "VF Creators",
+  title: "VF Create · Creators",
   description:
     "Official Virtual Football creator program members — discover who’s creating with VF.",
   robots: { index: false, follow: false },
@@ -37,7 +37,7 @@ export default async function CreatorsDirectoryPage() {
     <main className="mx-auto flex min-h-dvh min-w-0 max-w-3xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-14">
       <header className="space-y-3">
         <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-          VF Creator Program
+          VF Create Program
         </p>
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
           Creators

@@ -15,6 +15,7 @@ export type PlayerRow = {
   roblox_user_id: string | null;
   discord_username: string | null;
   position: string | null;
+  discord_banned_at?: string | null;
 };
 
 type PlayersListProps = {
@@ -111,9 +112,19 @@ export function PlayersList({ players, headshots }: PlayersListProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-base font-semibold tracking-tight text-white">
-                        {player.roblox_username}
-                      </p>
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        <p className="truncate text-base font-semibold tracking-tight text-white">
+                          {player.roblox_username}
+                        </p>
+                        {player.discord_banned_at ? (
+                          <Badge
+                            variant="outline"
+                            className="shrink-0 border-red-400/40 text-[10px] font-semibold uppercase tracking-wider text-red-200/95"
+                          >
+                            Discord banned
+                          </Badge>
+                        ) : null}
+                      </div>
                       <p className="truncate text-xs text-white/55">
                         {player.position ?? "Position unset"}
                       </p>

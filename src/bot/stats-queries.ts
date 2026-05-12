@@ -279,6 +279,8 @@ export type PlayerProfileRow = {
   appearances_total: number | null;
   trophies: unknown;
   accolades: unknown;
+  discord_banned_at: string | null;
+  discord_ban_reason: string | null;
 };
 
 export async function findPlayersByUsername(

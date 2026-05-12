@@ -40,6 +40,8 @@ type PlayerProfileRow = {
   roblox_user_id: string | null;
   discord_username: string | null;
   position: string | null;
+  discord_banned_at?: string | null;
+  discord_ban_reason?: string | null;
   goals_total?: number | null;
   assists_total?: number | null;
   avg_rating?: number | null;
@@ -170,6 +172,19 @@ export default async function PlayerDetailPage({
     accolades: player.accolades ?? [],
   };
 
+  const discordBanDate = (() => {
+    const raw = player.discord_banned_at;
+    if (!raw) return null;
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return raw;
+    return d.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  })();
+
   return (
     <main className="relative min-h-dvh min-w-0 w-full overflow-x-clip text-white">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 pb-16 pt-5 sm:px-6 sm:pt-8 md:px-8 md:pt-10">
@@ -182,6 +197,25 @@ export default async function PlayerDetailPage({
           <ArrowLeft className="size-3.5" />
           All players
         </Link>
+
+        {player.discord_banned_at ? (
+          <div
+            role="status"
+            className="rounded-xl border border-red-400/35 bg-red-950/35 px-4 py-3 text-left text-sm text-red-100/95 shadow-[0_12px_40px_-20px_rgba(239,68,68,0.5)]"
+          >
+            <p className="font-semibold tracking-tight">Banned from VF Discord</p>
+            <p className="mt-1 text-xs text-red-100/75">
+              {discordBanDate ? `Since ${discordBanDate} · ` : null}
+              This reflects a ban from the league Discord server, not Roblox or the
+              site account.
+            </p>
+            {player.discord_ban_reason?.trim() ? (
+              <p className="mt-2 rounded-md border border-red-400/20 bg-black/20 px-3 py-2 text-xs leading-relaxed text-red-50/90">
+                {player.discord_ban_reason.trim()}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <section className="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-center sm:gap-8 sm:text-left">
           <Avatar className="!size-32 shrink-0 bg-[#083696]/40 shadow-[0_16px_48px_-12px_rgba(8,54,150,0.8)] ring-2 ring-white/20 sm:!size-40">
@@ -206,6 +240,14 @@ export default async function PlayerDetailPage({
               {player.position ?? "Position unset"}
             </p>
             <div className="mt-3 flex flex-wrap justify-center gap-1.5 sm:justify-start">
+              {player.discord_banned_at ? (
+                <Badge
+                  variant="outline"
+                  className="border-red-400/40 text-[11px] font-semibold text-red-200/95"
+                >
+                  Discord banned
+                </Badge>
+              ) : null}
               {player.discord_username ? (
                 <Badge
                   variant="outline"
@@ -442,6 +484,14 @@ export default async function PlayerDetailPage({
             <div className="grid gap-2 sm:grid-cols-2">
               <Row label="Roblox" value={player.roblox_username} />
               <Row label="Roblox ID" value={player.roblox_user_id} />
+              <Row
+                label="VF Discord"
+                value={
+                  player.discord_banned_at
+                    ? `Banned${discordBanDate ? ` · ${discordBanDate}` : ""}`
+                    : "In good standing"
+                }
+              />
               <Row
                 label="Discord"
                 value={player.discord_username ?? "Not linked"}

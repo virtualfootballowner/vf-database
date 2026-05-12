@@ -34,7 +34,7 @@ export default async function CreatorErrorPage({
   return (
     <OnboardingShell
       step={1}
-      totalSteps={7}
+      totalSteps={6}
       stepLabel="Error"
       title="We hit a snag"
       subtitle={msg}

@@ -41,8 +41,8 @@ export default function CreatorRulesPage() {
 
   return (
     <OnboardingShell
-      step={5}
-      totalSteps={7}
+      step={4}
+      totalSteps={6}
       stepLabel="Rules"
       title="Program rules"
       subtitle="Read the sections below, then confirm you agree."
@@ -57,7 +57,7 @@ export default function CreatorRulesPage() {
             className="accent-primary mt-1"
           />
           <span>
-            I&apos;ve read and agree to the rules above for the VF Creator
+            I&apos;ve read and agree to the rules above for the VF Create
             Program.
           </span>
         </label>

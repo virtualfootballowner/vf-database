@@ -15,7 +15,7 @@ export function OnboardingShell(props: {
     <main className="mx-auto flex min-h-dvh min-w-0 max-w-lg flex-col gap-6 px-4 py-10 sm:px-6 sm:py-14">
       <div className="space-y-3">
         <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-          VF Creator Program
+          VF Create Program
         </p>
         <StepIndicator
           current={props.step}

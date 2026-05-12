@@ -5,8 +5,8 @@ import { OnboardingShell } from "@/components/onboarding/OnboardingShell";
 export default function CreatorRobloxStep() {
   return (
     <OnboardingShell
-      step={2}
-      totalSteps={7}
+      step={1}
+      totalSteps={6}
       stepLabel="Connect Roblox"
       title="Connect your Roblox account"
       subtitle="We use official Roblox OpenID to verify your profile for the creator program. You’ll be redirected back here, then connect Discord."
@@ -19,10 +19,10 @@ export default function CreatorRobloxStep() {
           Continue with Roblox
         </Link>
         <Link
-          href="/content/creators/onboard"
+          href="/content/creators/onboard/hype"
           className="text-muted-foreground text-center text-sm underline underline-offset-2"
         >
-          Back to welcome
+          Back
         </Link>
       </div>
     </OnboardingShell>

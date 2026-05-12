@@ -669,13 +669,27 @@ async function handlePlayer(
     const trophiesText = formatHonorList(profile.trophies, 8).slice(0, 1024);
     const accoladesText = formatHonorList(profile.accolades, 8).slice(0, 1024);
 
-    const identityLines = [
+    const identityParts = [
       `> **Roblox ID** · \`${profile.roblox_user_id}\``,
       profile.discord_username
         ? `> **Discord** · \`${profile.discord_username}\``
         : `> **Discord** · *not linked on profile*`,
       `> **Position** · ${profile.position?.trim() || "*—*"}`,
-    ].join("\n");
+    ];
+    if (profile.discord_banned_at) {
+      const d = new Date(profile.discord_banned_at);
+      const dateStr = Number.isNaN(d.getTime())
+        ? profile.discord_banned_at
+        : d.toISOString().slice(0, 10);
+      identityParts.push(`> **VF Discord** · **Banned** · ${dateStr}`);
+      const r = profile.discord_ban_reason?.trim();
+      if (r) {
+        identityParts.push(
+          `> **Ban reason** · ${r.length > 200 ? `${r.slice(0, 197)}…` : r}`,
+        );
+      }
+    }
+    const identityLines = identityParts.join("\n");
 
     const careerBlock =
       careerLines.length > 0
