@@ -119,12 +119,16 @@ const DEFAULT_CREATOR_CHECKLIST_CHANNEL_URL =
   "https://discord.com/channels/1500978557264986345/1502932833025527821";
 
 function creatorApprovalDmContent(): string {
-  const url =
+  const checklistUrl =
     env.DISCORD_CREATOR_CHECKLIST_CHANNEL_URL?.trim() ||
     DEFAULT_CREATOR_CHECKLIST_CHANNEL_URL;
+  const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
+  const leaderboardUrl = `${siteBase}/content/creators#leaderboard`;
   return [
     "You're in. Welcome to **VF Create**.",
-    `Open [**#new-creator-checklist**](${url}) to get started (or ask staff).`,
+    `**Go straight to the leaderboard →** [${leaderboardUrl}](${leaderboardUrl})`,
+    `That's where your posts will show up once you run \`/posted\`. The full beginner guide and prize pool are on the same page.`,
+    `Then open [**#new-creator-checklist**](${checklistUrl}) to get started (or ask staff).`,
   ].join("\n\n");
 }
 
@@ -182,7 +186,7 @@ export async function handleOnboardMediaCommand(
     .setTitle("VF Create Program — Now onboarding")
     .setDescription(
       [
-        "Want early access to **VF**, **50,000 Robux** on the line, and **Custom VF Virtuoso Sponsorship**?",
+        "Want early access to **VF**, **50,000 Robux** on the line, and a **Custom VF Brand Sponsorship**?",
         "",
         "Click **Start application** — we’ll **DM you** a personal link (about **3 minutes** on your phone). If DMs are closed, you’ll get the link here instead.",
       ].join("\n"),

@@ -1,11 +1,11 @@
-export type VirtuosoGalleryItem = {
+export type VfBrandGalleryItem = {
   num: number;
   src: string;
   kind: "image" | "video";
 };
 
-/** Public media for Virtuoso / sponsored boots gallery (1–17). */
-export const VIRTUOSO_GALLERY_ITEMS: VirtuosoGalleryItem[] = [
+/** Public media for the VF Brand sponsored gear gallery (1–17). */
+export const VF_BRAND_GALLERY_ITEMS: VfBrandGalleryItem[] = [
   { num: 1, src: "/1.mov", kind: "video" },
   { num: 2, src: "/2.png", kind: "image" },
   { num: 3, src: "/3%20(2).png", kind: "image" },

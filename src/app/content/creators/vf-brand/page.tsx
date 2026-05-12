@@ -3,16 +3,16 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { SiteNav } from "@/components/site-nav";
-import { VIRTUOSO_GALLERY_ITEMS } from "@/lib/creator-onboard/virtuoso-gallery";
+import { VF_BRAND_GALLERY_ITEMS } from "@/lib/creator-onboard/vf-brand-gallery";
 
 export const metadata: Metadata = {
-  title: "VF Create · Virtuoso sponsored boots",
+  title: "VF Create · VF Brand Gallery",
   description:
-    "What Virtuoso sponsored boots are and a gallery of Virtuoso footwear from the Road to 1M challenge.",
+    "What VF Brand sponsored boots are, with a gallery of past VF Brand footwear awarded through the Road to 1M challenge.",
   robots: { index: true, follow: true },
 };
 
-export default function VirtuosoGalleryPage() {
+export default function VfBrandGalleryPage() {
   return (
     <div className="relative min-h-dvh min-w-0 overflow-hidden text-white">
       {/* Hero glow */}
@@ -51,14 +51,14 @@ export default function VirtuosoGalleryPage() {
             VF Create
           </p>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-            Virtuoso sponsored boots
+            VF Brand Gallery
           </h1>
           <p className="max-w-3xl text-base leading-relaxed text-white/85 sm:text-[17px]">
-            A Virtuoso sponsored boot is a pair of Virtuoso cleats that Virtual
-            Football awards to top performers on the board — in past VF seasons,
-            the best players have received pairs this way, and the same styles
-            are also sold in-game where thousands of players buy Virtuoso boots
-            to wear in matches.
+            A VF Brand sponsored boot is a pair of in-game cleats that Virtual
+            Football awards to top performers on the board — in past VF
+            seasons, the best players have received pairs this way, and the
+            same styles are also sold in-game where thousands of players buy
+            VF Brand boots to wear in matches.
           </p>
           <Link
             href="/content/creators#leaderboard"
@@ -68,17 +68,17 @@ export default function VirtuosoGalleryPage() {
           </Link>
         </header>
 
-        <section aria-label="Virtuoso boot gallery" className="space-y-6">
+        <section aria-label="VF Brand sponsored gear gallery" className="space-y-6">
           <div className="flex items-end justify-between border-b border-white/15 pb-3">
             <h2 className="text-lg font-semibold text-white sm:text-xl">
               Gallery
             </h2>
             <p className="text-xs text-white/55">
-              {VIRTUOSO_GALLERY_ITEMS.length} references
+              {VF_BRAND_GALLERY_ITEMS.length} references
             </p>
           </div>
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {VIRTUOSO_GALLERY_ITEMS.map((item) => (
+            {VF_BRAND_GALLERY_ITEMS.map((item) => (
               <li
                 key={item.num}
                 className="overflow-hidden rounded-xl border border-white/15 bg-white/[0.06] shadow-[0_20px_45px_-25px_rgba(0,0,0,0.6)] backdrop-blur transition hover:border-white/25 hover:bg-white/[0.09]"
@@ -96,7 +96,7 @@ export default function VirtuosoGalleryPage() {
                     ) : (
                       <Image
                         src={item.src}
-                        alt={`Virtuoso boot reference ${item.num}`}
+                        alt={`VF Brand reference ${item.num}`}
                         fill
                         sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                         className="object-cover"

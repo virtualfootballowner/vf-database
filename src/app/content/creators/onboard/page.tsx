@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "VF Create Program · Onboarding",
   description:
-    "50,000 Robux prize pool and Custom VF Virtuoso Sponsorship. Start your VF Create application.",
+    "50,000 Robux prize pool and a Custom VF Brand Sponsorship. Start your VF Create application.",
   robots: { index: false, follow: false },
 };
 

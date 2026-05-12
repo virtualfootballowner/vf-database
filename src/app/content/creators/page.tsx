@@ -24,11 +24,11 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "VF Create · Road to 1M",
   description:
-    "VF Create challenge to 1M views — 50,000 Robux pool, Virtuoso sponsor prizes for top 3. Leaderboard updates as creators post.",
+    "VF Create challenge to 1M views — 50,000 Robux pool, VF Brand sponsor prizes for top 3. Leaderboard updates as creators post.",
   openGraph: {
     title: "VF Create · Road to 1M",
     description:
-      "Track the sprint to 1M views and see creator standings · Virtuoso · Robux pool.",
+      "Track the sprint to 1M views and see creator standings · VF Brand sponsor · Robux pool.",
   },
   robots: { index: true, follow: true },
 };
@@ -160,7 +160,7 @@ export default async function CreatorsChallengePage() {
               at roughly 10% of the total). The top three on the board also
               qualify for{" "}
               <strong className="font-semibold text-white">
-                Virtuoso-sponsored boots
+                VF Brand sponsored boots
               </strong>{" "}
               of their choice (staff confirm ties).
             </p>
@@ -249,11 +249,11 @@ export default async function CreatorsChallengePage() {
                 </span>
                 <span className="hidden text-white/30 sm:inline">|</span>
                 <span className="rounded border border-violet-300/40 bg-violet-400/15 px-2 py-0.5 text-xs font-medium text-violet-100">
-                  Virtuoso sponsor · top 3
+                  VF Brand sponsor · top 3
                 </span>
               </div>
               <Link
-                href="/content/creators/virtuoso"
+                href="/content/creators/vf-brand"
                 className="text-xs font-medium text-blue-200 underline-offset-2 hover:text-white hover:underline sm:text-right"
               >
                 What is this?
@@ -261,28 +261,38 @@ export default async function CreatorsChallengePage() {
             </div>
           </div>
 
-          {challenge.leaderboard.length === 0 ? (
-            <p className="mt-6 rounded-xl border border-dashed border-white/25 bg-zinc-100 px-6 py-12 text-center text-sm text-zinc-700 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)]">
-              No posts on the board yet. Approved creators: add a link with{" "}
-              <code className="rounded bg-white px-1 text-zinc-800">
-                /posted
-              </code>{" "}
-              in Discord.
-            </p>
-          ) : (
-            <div className="mt-6 space-y-3">
-              {challenge.leaderboard.map((row) => {
+          <div className="mt-6 space-y-3">
+            {challenge.leaderboard.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-white/25 bg-zinc-100 px-6 py-6 text-center text-sm text-zinc-700 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)]">
+                No posts on the board yet. Approved creators: add a link with{" "}
+                <code className="rounded bg-white px-1 text-zinc-800">
+                  /posted
+                </code>{" "}
+                in Discord. The slots below are still open — first link in
+                takes #1.
+              </p>
+            ) : null}
+            {(() => {
+              const filled = challenge.leaderboard;
+              const placeholderCount = Math.max(0, 10 - filled.length);
+              const placeholderRanks = Array.from(
+                { length: placeholderCount },
+                (_, i) => filled.length + i + 1,
+              );
+              return (
+                <>
+                  {filled.map((row) => {
                 const country = countryLabel(row.country);
                 const cRow = creatorById.get(row.id);
                 const tt = stripAtHandle(cRow?.tiktok_handle ?? null);
                 const yt = stripAtHandle(cRow?.youtube_handle ?? null);
-                const virtuosoPick = row.rank <= 3 && row.totalViews > 0;
+                const brandPick = row.rank <= 3 && row.totalViews > 0;
 
                 return (
                   <article
                     key={row.id}
                     className={`overflow-hidden rounded-xl border bg-zinc-100 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)] ${
-                      virtuosoPick
+                      brandPick
                         ? "border-blue-300/70 ring-1 ring-blue-200/50"
                         : "border-zinc-300/70"
                     }`}
@@ -383,9 +393,9 @@ export default async function CreatorsChallengePage() {
 
                       <div className="rounded-lg bg-white px-3 py-2 ring-1 ring-zinc-200">
                         <p className="text-[11px] text-zinc-500">
-                          Virtuoso sponsor
+                          VF Brand sponsor
                         </p>
-                        {virtuosoPick ? (
+                        {brandPick ? (
                           <span className="mt-1 inline-flex items-center rounded-md border border-violet-300 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-950">
                             Top {row.rank} · footwear pick
                           </span>
@@ -458,8 +468,49 @@ export default async function CreatorsChallengePage() {
                   </article>
                 );
               })}
-            </div>
-          )}
+                  {placeholderRanks.map((rank) => (
+                    <article
+                      key={`placeholder-${rank}`}
+                      className="overflow-hidden rounded-xl border border-dashed border-white/20 bg-white/[0.04] shadow-[0_12px_30px_-20px_rgba(0,0,0,0.35)] backdrop-blur-sm"
+                    >
+                      <div className="flex items-center gap-4 p-4 sm:p-5">
+                        <span
+                          className={`flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums ${
+                            rank === 2
+                              ? "bg-white/10 text-white/60"
+                              : rank === 3
+                                ? "bg-white/10 text-white/60"
+                                : "bg-white/[0.06] text-white/45"
+                          }`}
+                        >
+                          {rank}
+                        </span>
+                        <div className="flex size-12 shrink-0 items-center justify-center rounded-full border border-dashed border-white/15 bg-white/[0.03] text-white/40">
+                          ?
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-white/75 sm:text-base">
+                            Open slot · rank #{rank}
+                          </p>
+                          <p className="mt-0.5 text-xs text-white/55 sm:text-sm">
+                            {rank <= 3
+                              ? "Top 3 → claim a VF Brand sponsored boot and the biggest Robux share."
+                              : "Post a VF video and run /posted to lock in this spot."}
+                          </p>
+                        </div>
+                        <Link
+                          href="/content/creators/onboard"
+                          className="hidden shrink-0 rounded-md border border-white/20 px-3 py-1.5 text-xs font-medium text-white/85 transition hover:border-white/40 hover:bg-white/10 hover:text-white sm:inline-flex"
+                        >
+                          Apply
+                        </Link>
+                      </div>
+                    </article>
+                  ))}
+                </>
+              );
+            })()}
+          </div>
         </section>
 
         {/* Quick stats */}
@@ -496,7 +547,7 @@ export default async function CreatorsChallengePage() {
             <div className="flex items-center gap-2 text-zinc-600">
               <Trophy className="size-4" aria-hidden />
               <span className="text-sm font-medium text-zinc-700">
-                Virtuoso top 3
+                VF Brand top 3
               </span>
             </div>
             <p className="mt-2 text-sm font-semibold text-zinc-900">
@@ -527,7 +578,7 @@ export default async function CreatorsChallengePage() {
               <strong className="text-zinc-900">1,000,000 combined views</strong>{" "}
               and unlocking a{" "}
               <strong className="text-zinc-900">
-                {formatChallengeRobux(ROAD_TO_1M_PRIZE_POOL_ROBUX)} Robux
+                {formatChallengeRobux(ROAD_TO_1M_PRIZE_POOL_ROBUX)}
               </strong>{" "}
               pool. No prior experience required — this guide walks you through
               every step.
@@ -635,8 +686,8 @@ export default async function CreatorsChallengePage() {
                     /update-content
                   </code>{" "}
                   to trigger an immediate sync if something big lands.
-                  Brand-new posts show <strong>0 views</strong> until the
-                  first sync — that&apos;s normal.
+                  Brand-new posts show <strong>0 views</strong>
+                  {" "}until the first sync — that&apos;s normal.
                 </p>
               </div>
             </li>
@@ -647,8 +698,8 @@ export default async function CreatorsChallengePage() {
               </span>
               <div>
                 <p className="font-semibold text-zinc-900">
-                  How the {formatChallengeRobux(ROAD_TO_1M_PRIZE_POOL_ROBUX)}{" "}
-                  Robux pool is split
+                  How the {formatChallengeRobux(ROAD_TO_1M_PRIZE_POOL_ROBUX)}
+                  {" "}pool is split
                 </p>
                 <p className="mt-1 text-zinc-600">
                   When the community hits{" "}
@@ -657,20 +708,20 @@ export default async function CreatorsChallengePage() {
                   </strong>{" "}
                   tracked views / plays, the prize pool unlocks. It&apos;s
                   split{" "}
-                  <strong className="text-zinc-900">in proportion</strong> to
-                  each creator&apos;s share of the total. So if your videos
-                  pulled <strong>10%</strong> of all tracked views, you
-                  receive roughly{" "}
+                  <strong className="text-zinc-900">in proportion</strong>
+                  {" "}to each creator&apos;s share of the total. So if your
+                  videos pulled <strong>10%</strong> of all tracked views,
+                  you receive roughly{" "}
                   <strong className="text-emerald-700">
                     {formatChallengeRobux(
                       ROAD_TO_1M_PRIZE_POOL_ROBUX * 0.1,
-                    )}{" "}
-                    Robux
+                    )}
                   </strong>
                   . Every card on the leaderboard shows a live{" "}
-                  <strong className="text-zinc-900">Pool share %</strong> and
-                  <strong className="text-zinc-900">Est. Robux</strong> — they
-                  shift as more posts and syncs land.
+                  <strong className="text-zinc-900">Pool share %</strong>
+                  {" "}and{" "}
+                  <strong className="text-zinc-900">Est. Robux</strong>
+                  {" "}— they shift as more posts and syncs land.
                 </p>
               </div>
             </li>
@@ -681,23 +732,23 @@ export default async function CreatorsChallengePage() {
               </span>
               <div>
                 <p className="font-semibold text-zinc-900">
-                  Top 3 also win Virtuoso sponsored boots
+                  Top 3 also win VF Brand sponsored boots
                 </p>
                 <p className="mt-1 text-zinc-600">
                   In addition to the Robux pool, the{" "}
                   <strong className="text-zinc-900">top 3</strong> finishers
                   by total tracked views each choose a pair of{" "}
                   <strong className="text-zinc-900">
-                    Virtuoso-sponsored boots
+                    VF Brand sponsored boots
                   </strong>{" "}
                   — the exact in-game cleats that VF&apos;s best players have
                   received before, and that thousands of players already
                   buy. Want to see what&apos;s on offer?{" "}
                   <Link
-                    href="/content/creators/virtuoso"
+                    href="/content/creators/vf-brand"
                     className="font-medium text-blue-800 underline-offset-2 hover:underline"
                   >
-                    Browse the Virtuoso gallery
+                    Browse the VF Brand Gallery
                   </Link>
                   . Ties are settled by VF staff.
                 </p>
@@ -773,10 +824,10 @@ export default async function CreatorsChallengePage() {
             </Link>
             <span className="text-blue-800/70">or</span>
             <Link
-              href="/content/creators/virtuoso"
+              href="/content/creators/vf-brand"
               className="text-xs font-semibold text-blue-800 underline-offset-2 hover:underline"
             >
-              See the Virtuoso prize boots →
+              See the VF Brand prize boots →
             </Link>
           </div>
         </section>
