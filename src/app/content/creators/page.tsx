@@ -92,12 +92,31 @@ export default async function CreatorsChallengePage() {
     challenge.totalTrackedViews > ROAD_TO_1M_TARGET_VIEWS;
 
   return (
-    <>
-      <div className="relative min-w-0 text-white">
-        <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-6 lg:px-8">
+    <div className="relative min-h-dvh min-w-0 overflow-hidden">
+      {/* Background: body's dark blue at top → soft white for the rest */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(to bottom, rgba(248,250,252,0) 0px, rgba(248,250,252,0) 360px, rgba(248,250,252,0.85) 520px, #f8fafc 640px, #f8fafc 100%)",
+        }}
+      />
+      {/* Subtle blue glow behind the hero text */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[460px]"
+        style={{
+          backgroundImage:
+            "radial-gradient(ellipse 70% 60% at 50% 20%, rgba(120,160,255,0.18) 0%, rgba(120,160,255,0) 70%)",
+        }}
+      />
+
+      <div className="relative mx-auto max-w-6xl px-4 pt-4 pb-16 sm:px-6 lg:px-8">
+        <div className="text-white">
           <SiteNav />
 
-          <header className="mt-8 space-y-4 pb-2 sm:mt-10 sm:pb-4">
+          <header className="mt-8 space-y-4 pb-6 sm:mt-10 sm:pb-10">
             {challenge.milestoneReached ? (
               <p className="text-sm font-medium text-emerald-200">
                 Community total reached one million tracked views / plays.
@@ -138,19 +157,8 @@ export default async function CreatorsChallengePage() {
             </p>
           </header>
         </div>
-      </div>
 
-      <div
-        aria-hidden
-        className="pointer-events-none h-32 w-full sm:h-40"
-        style={{
-          backgroundImage:
-            "linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(244,244,245,0.72) 52%, #f4f4f5 100%)",
-        }}
-      />
-
-      <div className="min-h-dvh min-w-0 bg-zinc-100 text-zinc-900">
-        <div className="relative mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
+        <div className="text-zinc-900">
         {/* Community progress */}
         <section
           className="mt-8 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-7"
@@ -584,6 +592,6 @@ export default async function CreatorsChallengePage() {
         </footer>
         </div>
       </div>
-    </>
+    </div>
   );
 }

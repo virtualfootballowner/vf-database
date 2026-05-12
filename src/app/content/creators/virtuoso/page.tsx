@@ -14,12 +14,31 @@ export const metadata: Metadata = {
 
 export default function VirtuosoGalleryPage() {
   return (
-    <>
-      <div className="relative min-w-0 text-white">
-        <div className="mx-auto flex w-full max-w-6xl flex-col px-4 pt-4 pb-10 sm:px-6 sm:pb-12 md:px-8">
+    <div className="relative min-h-dvh min-w-0 overflow-hidden">
+      {/* Background: body's dark blue at top → soft white for the rest */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(to bottom, rgba(248,250,252,0) 0px, rgba(248,250,252,0) 380px, rgba(248,250,252,0.85) 540px, #f8fafc 660px, #f8fafc 100%)",
+        }}
+      />
+      {/* Subtle blue glow behind the hero text */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[480px]"
+        style={{
+          backgroundImage:
+            "radial-gradient(ellipse 70% 60% at 50% 20%, rgba(120,160,255,0.18) 0%, rgba(120,160,255,0) 70%)",
+        }}
+      />
+
+      <div className="relative mx-auto max-w-6xl px-4 pt-4 pb-16 sm:px-6 lg:px-8">
+        <div className="text-white">
           <SiteNav />
 
-          <header className="mt-8 space-y-4 sm:mt-10">
+          <header className="mt-8 space-y-4 pb-8 sm:mt-10 sm:pb-12">
             <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
               VF Create
             </p>
@@ -28,10 +47,10 @@ export default function VirtuosoGalleryPage() {
             </h1>
             <p className="max-w-3xl text-base leading-relaxed text-white/85 sm:text-[17px]">
               A Virtuoso sponsored boot is a pair of Virtuoso cleats that
-              Virtual Football awards to top performers on the board—in past VF
-              seasons, the best players have received pairs this way, and the
-              same styles are also sold in-game where thousands of players buy
-              Virtuoso boots to wear in matches.
+              Virtual Football awards to top performers on the board — in past
+              VF seasons, the best players have received pairs this way, and
+              the same styles are also sold in-game where thousands of players
+              buy Virtuoso boots to wear in matches.
             </p>
             <Link
               href="/content/creators#leaderboard"
@@ -41,19 +60,8 @@ export default function VirtuosoGalleryPage() {
             </Link>
           </header>
         </div>
-      </div>
 
-      <div
-        aria-hidden
-        className="pointer-events-none h-28 w-full sm:h-36"
-        style={{
-          backgroundImage:
-            "linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(244,244,245,0.7) 55%, #f4f4f5 100%)",
-        }}
-      />
-
-      <div className="min-w-0 bg-zinc-100 pb-16 text-zinc-900">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 md:px-8">
+        <div className="text-zinc-900">
           <section aria-label="Virtuoso boot gallery" className="space-y-6">
             <h2 className="text-lg font-semibold text-zinc-900">Gallery</h2>
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -92,6 +100,6 @@ export default function VirtuosoGalleryPage() {
           </section>
         </div>
       </div>
-    </>
+    </div>
   );
 }
