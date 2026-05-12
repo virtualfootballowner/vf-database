@@ -17,7 +17,10 @@ import {
   ROAD_TO_1M_PRIZE_POOL_ROBUX,
   ROAD_TO_1M_TARGET_VIEWS,
 } from "@/lib/creator-onboard/road-to-1m";
-import { stripAtHandle } from "@/lib/creator-onboard/validators";
+import {
+  tiktokProfileHref,
+  youtubeProfileHref,
+} from "@/lib/creator-onboard/validators";
 
 export const dynamic = "force-dynamic";
 
@@ -121,11 +124,11 @@ export default async function CreatorsChallengePage() {
         }}
       />
 
-      <div className="relative mx-auto max-w-6xl px-4 pt-4 pb-16 sm:px-6 lg:px-8">
+      <div className="relative mx-auto max-w-6xl px-3 pt-4 pb-12 sm:px-6 sm:pb-16 lg:px-8">
         <div>
           <SiteNav />
 
-          <header className="mt-8 space-y-4 pb-6 sm:mt-10 sm:pb-10">
+          <header className="mt-6 space-y-3 pb-6 sm:mt-10 sm:space-y-4 sm:pb-10">
             {challenge.milestoneReached ? (
               <p className="text-sm font-medium text-emerald-200">
                 Community total reached one million tracked views / plays.
@@ -134,17 +137,17 @@ export default async function CreatorsChallengePage() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
               VF Create
             </p>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+            <h1 className="text-[28px] font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl">
               Road to 1M
             </h1>
-            <p className="max-w-2xl text-base leading-relaxed text-white/85 sm:text-[17px]">
+            <p className="max-w-2xl text-[15px] leading-relaxed text-white/85 sm:text-[17px]">
               Approved VF Create members add posts with{" "}
-              <code className="rounded bg-white/15 px-1 py-0.5 text-sm text-white">
+              <code className="rounded bg-white/15 px-1 py-0.5 text-[13px] text-white sm:text-sm">
                 /posted
               </code>{" "}
               on Discord. YouTube views and TikTok plays sync on the daily job
               (and when staff run{" "}
-              <code className="rounded bg-white/15 px-1 py-0.5 text-sm text-white">
+              <code className="rounded bg-white/15 px-1 py-0.5 text-[13px] text-white sm:text-sm">
                 /update-content
               </code>
               ). When the community hits{" "}
@@ -170,18 +173,18 @@ export default async function CreatorsChallengePage() {
         <div>
         {/* Community progress */}
         <section
-          className="mt-8 rounded-xl border border-zinc-300/70 bg-zinc-100 p-5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)] sm:p-7"
+          className="mt-6 rounded-xl border border-zinc-300/70 bg-zinc-100 p-4 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)] sm:mt-8 sm:p-7"
           aria-labelledby="progress-heading"
         >
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+            <div className="min-w-0">
               <h2
                 id="progress-heading"
-                className="text-lg font-semibold text-zinc-900"
+                className="text-base font-semibold text-zinc-900 sm:text-lg"
               >
                 Community progress
               </h2>
-              <p className="mt-1 text-sm text-zinc-600">
+              <p className="mt-1 break-words text-[13px] leading-snug text-zinc-600 sm:text-sm sm:leading-normal">
                 {formatTargetNumber(challenge.totalTrackedViews)} /{" "}
                 {formatTargetNumber(ROAD_TO_1M_TARGET_VIEWS)}
                 {" "}tracked views &amp; plays
@@ -192,7 +195,7 @@ export default async function CreatorsChallengePage() {
                 ) : null}
               </p>
             </div>
-            <div className="text-left sm:text-right">
+            <div className="text-left sm:shrink-0 sm:text-right">
               <p className="text-2xl font-bold tabular-nums text-zinc-900 sm:text-3xl">
                 {challenge.progressPercent.toFixed(1)}%
               </p>
@@ -221,25 +224,26 @@ export default async function CreatorsChallengePage() {
         </section>
 
         {/* Leaderboard — directly under progress */}
-        <section id="leaderboard" className="mt-10 scroll-mt-24">
+        <section id="leaderboard" className="mt-8 scroll-mt-24 sm:mt-10">
           <div className="flex flex-col gap-3 border-b border-white/15 pb-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-white sm:text-2xl">
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold text-white sm:text-2xl">
                 Leaderboard
               </h2>
-              <p className="mt-1 text-sm text-white/65">
-                Sorted by total synced views / plays · updates on each page load
+              <p className="mt-1 text-[13px] leading-snug text-white/65 sm:text-sm sm:leading-normal">
+                Sorted by total synced views / plays · updates on each page
+                load
               </p>
             </div>
             <div className="flex flex-col gap-1.5 sm:items-end">
-              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm text-white/85 shadow-sm backdrop-blur">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-white/15 bg-white/10 px-2.5 py-1.5 text-[13px] text-white/85 shadow-sm backdrop-blur sm:px-3 sm:py-2 sm:text-sm">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <Image
                   src="/Robux_2019_Logo_white.svg.png"
                   alt=""
                   width={20}
                   height={20}
-                  className="size-5 shrink-0 rounded"
+                  className="size-4 shrink-0 rounded sm:size-5"
                 />
                 <span>
                   Pool:{" "}
@@ -248,13 +252,13 @@ export default async function CreatorsChallengePage() {
                   </strong>
                 </span>
                 <span className="hidden text-white/30 sm:inline">|</span>
-                <span className="rounded border border-violet-300/40 bg-violet-400/15 px-2 py-0.5 text-xs font-medium text-violet-100">
+                <span className="rounded border border-violet-300/40 bg-violet-400/15 px-2 py-0.5 text-[11px] font-medium text-violet-100 sm:text-xs">
                   VF Brand sponsor · top 3
                 </span>
               </div>
               <Link
                 href="/content/creators/vf-brand"
-                className="text-xs font-medium text-blue-200 underline-offset-2 hover:text-white hover:underline sm:text-right"
+                className="text-[11px] font-medium text-blue-200 underline-offset-2 hover:text-white hover:underline sm:text-right sm:text-xs"
               >
                 What is this?
               </Link>
@@ -284,8 +288,8 @@ export default async function CreatorsChallengePage() {
                   {filled.map((row) => {
                 const country = countryLabel(row.country);
                 const cRow = creatorById.get(row.id);
-                const tt = stripAtHandle(cRow?.tiktok_handle ?? null);
-                const yt = stripAtHandle(cRow?.youtube_handle ?? null);
+                const tiktokUrl = tiktokProfileHref(cRow?.tiktok_handle ?? null);
+                const youtubeUrl = youtubeProfileHref(cRow?.youtube_handle ?? null);
                 const brandPick = row.rank <= 3 && row.totalViews > 0;
 
                 return (
@@ -297,11 +301,11 @@ export default async function CreatorsChallengePage() {
                         : "border-zinc-300/70"
                     }`}
                   >
-                    <div className="flex flex-col gap-4 p-4 sm:p-5">
-                      <div className="flex items-start gap-3">
-                        <div className="flex shrink-0 items-center gap-3">
+                    <div className="flex flex-col gap-3 p-3.5 sm:gap-4 sm:p-5">
+                      <div className="flex items-start gap-2.5 sm:gap-3">
+                        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
                           <span
-                            className={`flex size-10 items-center justify-center rounded-full text-sm font-bold tabular-nums ${
+                            className={`flex size-8 items-center justify-center rounded-full text-[13px] font-bold tabular-nums sm:size-10 sm:text-sm ${
                               row.rank === 1
                                 ? "bg-amber-100 text-amber-900"
                                 : row.rank === 2
@@ -320,27 +324,27 @@ export default async function CreatorsChallengePage() {
                               alt=""
                               width={48}
                               height={48}
-                              className="size-12 rounded-full object-cover ring-1 ring-zinc-200"
+                              className="size-10 rounded-full object-cover ring-1 ring-zinc-200 sm:size-12"
                             />
                           ) : (
-                            <div className="flex size-12 items-center justify-center rounded-full bg-zinc-200 text-lg font-semibold text-zinc-600">
+                            <div className="flex size-10 items-center justify-center rounded-full bg-zinc-200 text-base font-semibold text-zinc-600 sm:size-12 sm:text-lg">
                               {row.displayName.slice(0, 1).toUpperCase()}
                             </div>
                           )}
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-zinc-900">
+                          <p className="truncate text-[15px] font-semibold text-zinc-900 sm:text-base">
                             {row.displayName}
                           </p>
-                          <p className="text-sm text-zinc-600">
+                          <p className="truncate text-[12px] text-zinc-600 sm:text-sm">
                             {row.robloxUsername}
                             {country ? <> · {country}</> : null}
                           </p>
-                          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                            {tt ? (
+                          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[13px] sm:mt-2 sm:gap-x-4 sm:gap-y-1 sm:text-sm">
+                            {tiktokUrl ? (
                               <a
-                                href={`https://www.tiktok.com/@${encodeURIComponent(tt)}`}
+                                href={tiktokUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-blue-700 underline-offset-2 hover:underline"
@@ -348,9 +352,9 @@ export default async function CreatorsChallengePage() {
                                 TikTok
                               </a>
                             ) : null}
-                            {yt ? (
+                            {youtubeUrl ? (
                               <a
-                                href={`https://www.youtube.com/@${encodeURIComponent(yt)}`}
+                                href={youtubeUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-blue-700 underline-offset-2 hover:underline"
@@ -363,40 +367,46 @@ export default async function CreatorsChallengePage() {
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                        <div className="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-zinc-200">
-                          <p className="text-[11px] text-zinc-500">Views</p>
-                          <p className="truncate text-base font-semibold tabular-nums text-zinc-900">
+                        <div className="min-w-0 rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-zinc-200 sm:px-3 sm:py-2">
+                          <p className="text-[10px] uppercase tracking-wide text-zinc-500 sm:text-[11px] sm:normal-case sm:tracking-normal">
+                            Views
+                          </p>
+                          <p className="truncate text-[15px] font-semibold tabular-nums text-zinc-900 sm:text-base">
                             {formatViewCount(row.totalViews)}
                           </p>
                         </div>
-                        <div className="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-zinc-200">
-                          <p className="text-[11px] text-zinc-500">Posts</p>
-                          <p className="text-base font-semibold tabular-nums text-zinc-900">
+                        <div className="min-w-0 rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-zinc-200 sm:px-3 sm:py-2">
+                          <p className="text-[10px] uppercase tracking-wide text-zinc-500 sm:text-[11px] sm:normal-case sm:tracking-normal">
+                            Posts
+                          </p>
+                          <p className="text-[15px] font-semibold tabular-nums text-zinc-900 sm:text-base">
                             {row.postCount}
                           </p>
                         </div>
-                        <div className="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-zinc-200">
-                          <p className="text-[11px] text-zinc-500">Pool share</p>
-                          <p className="truncate text-base font-semibold tabular-nums text-blue-800">
+                        <div className="min-w-0 rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-zinc-200 sm:px-3 sm:py-2">
+                          <p className="text-[10px] uppercase tracking-wide text-zinc-500 sm:text-[11px] sm:normal-case sm:tracking-normal">
+                            Pool share
+                          </p>
+                          <p className="truncate text-[15px] font-semibold tabular-nums text-blue-800 sm:text-base">
                             {formatPoolSharePercent(row.poolSharePercent)}
                           </p>
                         </div>
-                        <div className="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-zinc-200">
-                          <p className="text-[11px] text-zinc-500">
+                        <div className="min-w-0 rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-zinc-200 sm:px-3 sm:py-2">
+                          <p className="text-[10px] uppercase tracking-wide text-zinc-500 sm:text-[11px] sm:normal-case sm:tracking-normal">
                             Est. Robux
                           </p>
-                          <p className="truncate text-base font-semibold tabular-nums text-emerald-800">
+                          <p className="truncate text-[13px] font-semibold tabular-nums text-emerald-800 sm:text-base">
                             {formatChallengeRobux(row.estimatedPayoutRobux)}
                           </p>
                         </div>
                       </div>
 
-                      <div className="rounded-lg bg-white px-3 py-2 ring-1 ring-zinc-200">
-                        <p className="text-[11px] text-zinc-500">
+                      <div className="rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-zinc-200 sm:px-3 sm:py-2">
+                        <p className="text-[10px] uppercase tracking-wide text-zinc-500 sm:text-[11px] sm:normal-case sm:tracking-normal">
                           VF Brand sponsor
                         </p>
                         {brandPick ? (
-                          <span className="mt-1 inline-flex items-center rounded-md border border-violet-300 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-950">
+                          <span className="mt-1 inline-flex items-center rounded-md border border-violet-300 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-950 sm:px-2.5 sm:py-1 sm:text-xs">
                             Top {row.rank} · footwear pick
                           </span>
                         ) : (
@@ -473,9 +483,9 @@ export default async function CreatorsChallengePage() {
                       key={`placeholder-${rank}`}
                       className="overflow-hidden rounded-xl border border-dashed border-white/20 bg-white/[0.04] shadow-[0_12px_30px_-20px_rgba(0,0,0,0.35)] backdrop-blur-sm"
                     >
-                      <div className="flex items-center gap-4 p-4 sm:p-5">
+                      <div className="flex items-center gap-3 p-3.5 sm:gap-4 sm:p-5">
                         <span
-                          className={`flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums ${
+                          className={`flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold tabular-nums sm:size-10 sm:text-sm ${
                             rank === 2
                               ? "bg-white/10 text-white/60"
                               : rank === 3
@@ -485,18 +495,24 @@ export default async function CreatorsChallengePage() {
                         >
                           {rank}
                         </span>
-                        <div className="flex size-12 shrink-0 items-center justify-center rounded-full border border-dashed border-white/15 bg-white/[0.03] text-white/40">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-dashed border-white/15 bg-white/[0.03] text-white/40 sm:size-12">
                           ?
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-white/75 sm:text-base">
+                          <p className="text-[13px] font-semibold text-white/75 sm:text-base">
                             Open slot · rank #{rank}
                           </p>
-                          <p className="mt-0.5 text-xs text-white/55 sm:text-sm">
+                          <p className="mt-0.5 text-[11px] leading-snug text-white/55 sm:text-sm sm:leading-normal">
                             {rank <= 3
                               ? "Top 3 → claim a VF Brand sponsored boot and the biggest Robux share."
                               : "Post a VF video and run /posted to lock in this spot."}
                           </p>
+                          <Link
+                            href="/content/creators/onboard"
+                            className="mt-1.5 inline-flex text-[11px] font-semibold text-blue-200 underline-offset-2 hover:text-white hover:underline sm:hidden"
+                          >
+                            Apply →
+                          </Link>
                         </div>
                         <Link
                           href="/content/creators/onboard"
@@ -514,7 +530,7 @@ export default async function CreatorsChallengePage() {
         </section>
 
         {/* Quick stats */}
-        <section className="mt-10 grid gap-3 sm:grid-cols-3">
+        <section className="mt-8 grid gap-3 sm:mt-10 sm:grid-cols-3">
           <div className="rounded-xl border border-zinc-300/70 bg-zinc-100 p-4 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)]">
             <div className="flex items-center gap-2 text-zinc-600">
               <Video className="size-4" aria-hidden />
@@ -561,16 +577,16 @@ export default async function CreatorsChallengePage() {
 
         <section
           id="how-it-works"
-          className="mt-10 scroll-mt-24 rounded-xl border border-zinc-300/70 bg-zinc-100 p-6 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)] sm:p-8"
+          className="mt-8 scroll-mt-24 rounded-xl border border-zinc-300/70 bg-zinc-100 p-4 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)] sm:mt-10 sm:p-8"
         >
           <div className="space-y-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-zinc-500">
               New here? Start here
             </p>
-            <h2 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">
+            <h2 className="text-lg font-bold tracking-tight text-zinc-900 sm:text-2xl">
               VF Create · the full beginner guide
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-600 sm:text-[15px]">
+            <p className="mt-2 text-[13px] leading-relaxed text-zinc-600 sm:text-[15px]">
               VF Create is the Virtual Football content program. You make
               short videos about VF — clips, montages, reactions, guides — post
               them on TikTok and/or YouTube, then log the link with our Discord
@@ -585,7 +601,7 @@ export default async function CreatorsChallengePage() {
             </p>
           </div>
 
-          <ol className="mt-6 space-y-5 text-sm leading-relaxed text-zinc-700 sm:text-[15px]">
+          <ol className="mt-5 space-y-4 text-[13px] leading-relaxed text-zinc-700 sm:mt-6 sm:space-y-5 sm:text-[15px]">
             <li className="flex gap-3">
               <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
                 1
@@ -814,7 +830,7 @@ export default async function CreatorsChallengePage() {
             </li>
           </ol>
 
-          <div className="mt-7 flex flex-wrap items-center gap-2 rounded-lg border border-blue-300/60 bg-blue-50/80 px-4 py-3 text-sm text-blue-900">
+          <div className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-2 rounded-lg border border-blue-300/60 bg-blue-50/80 px-3 py-3 text-[13px] text-blue-900 sm:mt-7 sm:px-4 sm:text-sm">
             <span className="font-semibold">Ready to start?</span>
             <Link
               href="/content/creators/onboard"

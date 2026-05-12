@@ -6,6 +6,11 @@ import { useEffect, useState } from "react";
 
 import { OnboardingShell } from "@/components/onboarding/OnboardingShell";
 import { Button } from "@/components/ui/button";
+import {
+  socialProfileLabel,
+  tiktokProfileHref,
+  youtubeProfileHref,
+} from "@/lib/creator-onboard/validators";
 
 type Row = {
   roblox_username: string;
@@ -96,11 +101,49 @@ export default function CreatorSubmitPage() {
           </li>
           <li>
             <span className="text-foreground font-medium">TikTok:</span>{" "}
-            {row.tiktok_handle ? `@${row.tiktok_handle}` : "—"}
+            {row.tiktok_handle ? (
+              (() => {
+                const href = tiktokProfileHref(row.tiktok_handle);
+                const label = socialProfileLabel(row.tiktok_handle) ?? "Open";
+                return href ? (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="break-all text-blue-700 underline-offset-2 hover:underline"
+                  >
+                    {label}
+                  </a>
+                ) : (
+                  <span className="break-all">{row.tiktok_handle}</span>
+                );
+              })()
+            ) : (
+              "—"
+            )}
           </li>
           <li>
             <span className="text-foreground font-medium">YouTube:</span>{" "}
-            {row.youtube_handle ? `@${row.youtube_handle}` : "—"}
+            {row.youtube_handle ? (
+              (() => {
+                const href = youtubeProfileHref(row.youtube_handle);
+                const label = socialProfileLabel(row.youtube_handle) ?? "Open";
+                return href ? (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="break-all text-blue-700 underline-offset-2 hover:underline"
+                  >
+                    {label}
+                  </a>
+                ) : (
+                  <span className="break-all">{row.youtube_handle}</span>
+                );
+              })()
+            ) : (
+              "—"
+            )}
           </li>
           <li>
             <span className="text-foreground font-medium">Age:</span>{" "}

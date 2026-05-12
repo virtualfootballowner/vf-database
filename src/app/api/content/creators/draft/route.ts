@@ -2,16 +2,19 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { readCreatorSessionPayload } from "@/lib/creator-onboard/cookie-helpers";
-import { stripAtHandle } from "@/lib/creator-onboard/validators";
+import {
+  normalizeTiktokProfileUrl,
+  normalizeYoutubeProfileUrl,
+} from "@/lib/creator-onboard/validators";
 import { createCreatorSupabaseAdmin } from "@/lib/creator-onboard/supabase-creator";
 
 const bodySchema = z.object({
   tiktok_handle: z
     .string()
     .trim()
-    .min(1, "TikTok handle is required.")
-    .max(120),
-  youtube_handle: z.string().max(120).optional().nullable(),
+    .min(1, "TikTok profile link is required.")
+    .max(2048),
+  youtube_handle: z.string().max(2048).optional().nullable(),
   age: z.number().int().min(13).max(120),
   country: z.string().length(2),
   email: z.string().email().optional().nullable().or(z.literal("")),
@@ -47,13 +50,32 @@ export async function PATCH(request: Request) {
     );
   }
 
-  const tiktok = stripAtHandle(parsed.data.tiktok_handle);
-  const youtube = stripAtHandle(parsed.data.youtube_handle);
+  const tiktok = normalizeTiktokProfileUrl(parsed.data.tiktok_handle);
   if (!tiktok) {
     return NextResponse.json(
-      { error: "TikTok handle is required." },
+      {
+        error:
+          "Paste a valid TikTok profile link (e.g. https://www.tiktok.com/@yourhandle).",
+      },
       { status: 400 },
     );
+  }
+  const ytRaw =
+    typeof parsed.data.youtube_handle === "string"
+      ? parsed.data.youtube_handle.trim()
+      : "";
+  let youtube: string | null = null;
+  if (ytRaw.length > 0) {
+    youtube = normalizeYoutubeProfileUrl(ytRaw);
+    if (!youtube) {
+      return NextResponse.json(
+        {
+          error:
+            "Paste a valid YouTube channel link (e.g. https://www.youtube.com/@yourchannel) or leave it blank.",
+        },
+        { status: 400 },
+      );
+    }
   }
 
   const supabase = createCreatorSupabaseAdmin(env);

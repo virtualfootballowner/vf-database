@@ -43,17 +43,17 @@ export default function VfBrandGalleryPage() {
         }}
       />
 
-      <div className="relative mx-auto max-w-6xl px-4 pt-4 pb-16 sm:px-6 lg:px-8">
+      <div className="relative mx-auto max-w-6xl px-3 pt-4 pb-12 sm:px-6 sm:pb-16 lg:px-8">
         <SiteNav />
 
-        <header className="mt-8 space-y-4 pb-8 sm:mt-10 sm:pb-12">
+        <header className="mt-6 space-y-3 pb-6 sm:mt-10 sm:space-y-4 sm:pb-12">
           <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
             VF Create
           </p>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+          <h1 className="text-[28px] font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl">
             VF Brand Gallery
           </h1>
-          <p className="max-w-3xl text-base leading-relaxed text-white/85 sm:text-[17px]">
+          <p className="max-w-3xl text-[15px] leading-relaxed text-white/85 sm:text-[17px]">
             A VF Brand sponsored boot is a pair of in-game cleats that Virtual
             Football awards to top performers on the board — in past VF
             seasons, the best players have received pairs this way, and the
@@ -62,22 +62,22 @@ export default function VfBrandGalleryPage() {
           </p>
           <Link
             href="/content/creators#leaderboard"
-            className="inline-flex w-fit text-sm font-semibold text-blue-200 underline-offset-4 hover:text-white hover:underline"
+            className="inline-flex w-fit text-[13px] font-semibold text-blue-200 underline-offset-4 hover:text-white hover:underline sm:text-sm"
           >
             ← Back to Road to 1M
           </Link>
         </header>
 
-        <section aria-label="VF Brand sponsored gear gallery" className="space-y-6">
+        <section aria-label="VF Brand sponsored gear gallery" className="space-y-4 sm:space-y-6">
           <div className="flex items-end justify-between border-b border-white/15 pb-3">
-            <h2 className="text-lg font-semibold text-white sm:text-xl">
+            <h2 className="text-base font-semibold text-white sm:text-xl">
               Gallery
             </h2>
-            <p className="text-xs text-white/55">
+            <p className="text-[11px] text-white/55 sm:text-xs">
               {VF_BRAND_GALLERY_ITEMS.length} references
             </p>
           </div>
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
             {VF_BRAND_GALLERY_ITEMS.map((item) => (
               <li
                 key={item.num}

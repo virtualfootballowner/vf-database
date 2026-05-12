@@ -58,9 +58,11 @@ import {
   scrimmageSlashCommand,
 } from "@/bot/scrimmage/commands";
 import {
+  creatorLeaderboardCommand,
   creatorPostRemoveCommand,
   creatorPostedCommand,
   creatorProfileCommand,
+  handleCreatorLeaderboardCommand,
   handleCreatorPostRemoveCommand,
   handleCreatorPostedCommand,
   handleCreatorProfileCommand,
@@ -183,6 +185,7 @@ export const slashCommandDefinitions = [
 
   onboardMediaCommand,
   creatorProfileCommand,
+  creatorLeaderboardCommand,
   creatorPostedCommand,
   creatorPostRemoveCommand,
   updateContentCommand,
@@ -503,6 +506,9 @@ export async function handleSlashCommand(
       return;
     case "creator":
       await handleCreatorProfileCommand(interaction);
+      return;
+    case "leaderboard":
+      await handleCreatorLeaderboardCommand(interaction);
       return;
     case "posted":
       await handleCreatorPostedCommand(interaction);

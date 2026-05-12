@@ -18,7 +18,10 @@ import {
 
 import { env } from "@/bot/config";
 import { createBotSupabase } from "@/bot/stats-queries";
-import { parsePostedVideoLinks } from "@/lib/creator-onboard/approved-creators-directory";
+import {
+  listApprovedCreatorsForDirectory,
+  parsePostedVideoLinks,
+} from "@/lib/creator-onboard/approved-creators-directory";
 import { COUNTRIES } from "@/lib/creator-onboard/countries";
 import {
   CREATOR_POST_REMOVE_APPROVE_PREFIX,
@@ -28,6 +31,18 @@ import {
   CREATOR_REJECT_PREFIX,
   CREATOR_START_APP_BUTTON,
 } from "@/lib/creator-onboard/creator-discord-constants";
+import { loadCreatorWebEnv } from "@/lib/creator-onboard/env-web";
+import {
+  ROAD_TO_1M_TARGET_VIEWS,
+  buildRoadTo1MChallenge,
+  formatChallengeRobux,
+  formatPoolSharePercent,
+} from "@/lib/creator-onboard/road-to-1m";
+import {
+  socialProfileLabel,
+  tiktokProfileHref,
+  youtubeProfileHref,
+} from "@/lib/creator-onboard/validators";
 
 export const onboardMediaCommand = new SlashCommandBuilder()
   .setName("onboard-media")
@@ -35,6 +50,11 @@ export const onboardMediaCommand = new SlashCommandBuilder()
     "Post the VF Create Program onboarding card in this channel",
   )
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+  .toJSON();
+
+export const creatorLeaderboardCommand = new SlashCommandBuilder()
+  .setName("leaderboard")
+  .setDescription("Show the Top 10 VF Create · Road to 1M leaderboard")
   .toJSON();
 
 export const creatorProfileCommand = new SlashCommandBuilder()
@@ -591,6 +611,116 @@ function countryName(code: string | null): string | null {
   return hit?.name ?? code;
 }
 
+function formatViewsCompact(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "0";
+  if (n < 1000) return String(Math.round(n));
+  if (n < 1_000_000) return `${(n / 1000).toFixed(n >= 10_000 ? 0 : 1)}K`;
+  if (n < 1_000_000_000) {
+    return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
+  }
+  return `${(n / 1_000_000_000).toFixed(1)}B`;
+}
+
+const LEADERBOARD_RANK_EMOJI: Record<number, string> = {
+  1: "🥇",
+  2: "🥈",
+  3: "🥉",
+};
+
+export async function handleCreatorLeaderboardCommand(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  await interaction.deferReply();
+
+  let creators;
+  try {
+    const webEnv = loadCreatorWebEnv();
+    creators = await listApprovedCreatorsForDirectory(webEnv);
+  } catch (err) {
+    console.error("[creator] /leaderboard load:", err);
+    await interaction.editReply({
+      content:
+        "Couldn't load the leaderboard right now. Try again in a moment.",
+    });
+    return;
+  }
+
+  const challenge = buildRoadTo1MChallenge(creators);
+  const top = challenge.leaderboard.slice(0, 10);
+  const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
+  const leaderboardUrl = `${siteBase}/content/creators#leaderboard`;
+
+  const targetFormatted = new Intl.NumberFormat(undefined).format(
+    ROAD_TO_1M_TARGET_VIEWS,
+  );
+  const totalsFormatted = new Intl.NumberFormat(undefined).format(
+    challenge.totalTrackedViews,
+  );
+  const progressPctRendered = challenge.progressPercent.toFixed(1);
+
+  const embed = new EmbedBuilder()
+    .setColor(0x083696)
+    .setTitle("VF Create · Road to 1M Leaderboard")
+    .setURL(leaderboardUrl)
+    .setDescription(
+      [
+        `**Pool:** ${formatChallengeRobux(challenge.prizePoolRobux)} · split by view share when the community hits 1M.`,
+        `**Progress:** ${totalsFormatted} / ${targetFormatted} views & plays (${progressPctRendered}%)`,
+        `${challenge.participantCount} creator${challenge.participantCount === 1 ? "" : "s"} with links · ${challenge.totalPostCount} post${challenge.totalPostCount === 1 ? "" : "s"} live`,
+      ].join("\n"),
+    )
+    .setFooter({ text: "VF Create · Top 10 · web leaderboard for full details" })
+    .setTimestamp(new Date());
+
+  if (top.length === 0) {
+    embed.addFields({
+      name: "Nobody on the board yet",
+      value: [
+        "Approved creators: post a VF video on TikTok or YouTube, then run",
+        "`/posted url:<your link>` to claim a spot.",
+        "",
+        `Web leaderboard → ${leaderboardUrl}`,
+      ].join("\n"),
+      inline: false,
+    });
+  } else {
+    const lines = top.map((row) => {
+      const rankBadge =
+        LEADERBOARD_RANK_EMOJI[row.rank] ??
+        `\`#${String(row.rank).padStart(2, " ")}\``;
+      const viewsLabel = formatViewsCompact(row.totalViews);
+      const shareLabel = formatPoolSharePercent(row.poolSharePercent);
+      const robuxLabel = formatChallengeRobux(row.estimatedPayoutRobux);
+      const country = countryName(row.country);
+      const meta = country ? ` · ${country}` : "";
+      return [
+        `${rankBadge} **${row.displayName}**${meta}`,
+        `   ${viewsLabel} views · ${row.postCount} post${row.postCount === 1 ? "" : "s"} · ${shareLabel} share · est. ${robuxLabel}`,
+      ].join("\n");
+    });
+
+    // Discord embed description has a 4096 char cap; rebuild description with
+    // the leaderboard inline so each row stays together. (Adding 10 fields
+    // works too, but the inline list reads better on mobile.)
+    const headerLines = [
+      `**Pool:** ${formatChallengeRobux(challenge.prizePoolRobux)} · split by view share when the community hits 1M.`,
+      `**Progress:** ${totalsFormatted} / ${targetFormatted} views & plays (${progressPctRendered}%)`,
+      `${challenge.participantCount} creator${challenge.participantCount === 1 ? "" : "s"} with links · ${challenge.totalPostCount} post${challenge.totalPostCount === 1 ? "" : "s"} live`,
+      "",
+    ];
+    embed.setDescription([...headerLines, ...lines].join("\n").slice(0, 4096));
+  }
+
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setLabel("Open the leaderboard")
+      .setStyle(ButtonStyle.Link)
+      .setURL(leaderboardUrl),
+  );
+
+  await interaction.editReply({ embeds: [embed], components: [row] });
+}
+
 export async function handleCreatorProfileCommand(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
@@ -630,10 +760,10 @@ export async function handleCreatorProfileCommand(
   const row = data as CreatorRow;
   const meta = STATUS_META[row.status];
   const country = countryName(row.country);
-  const tt = row.tiktok_handle?.trim();
-  const yt = row.youtube_handle?.trim();
-  const tiktokUrl = tt ? `https://www.tiktok.com/@${tt}` : null;
-  const youtubeUrl = yt ? `https://www.youtube.com/@${yt}` : null;
+  const tiktokUrl = tiktokProfileHref(row.tiktok_handle);
+  const youtubeUrl = youtubeProfileHref(row.youtube_handle);
+  const tt = socialProfileLabel(row.tiktok_handle);
+  const yt = socialProfileLabel(row.youtube_handle);
 
   const displayName =
     row.discord_username?.trim() || target.globalName || target.username;
@@ -672,19 +802,16 @@ export async function handleCreatorProfileCommand(
       { name: "\u200b", value: "\u200b", inline: false },
       {
         name: "Socials",
-        value:
-          tiktokUrl && tt
-            ? [
-                `[TikTok — @${tt}](${tiktokUrl})`,
-                youtubeUrl && yt
-                  ? `[YouTube — @${yt}](${youtubeUrl})`
-                  : null,
-              ]
-                .filter(Boolean)
-                .join("\n\n")
-            : youtubeUrl && yt
-              ? `[YouTube — @${yt}](${youtubeUrl})`
-              : "*None on file*",
+        value: (() => {
+          const lines: string[] = [];
+          if (tiktokUrl) {
+            lines.push(`[TikTok — ${tt ?? "open"}](${tiktokUrl})`);
+          }
+          if (youtubeUrl) {
+            lines.push(`[YouTube — ${yt ?? "open"}](${youtubeUrl})`);
+          }
+          return lines.length > 0 ? lines.join("\n\n") : "*None on file*";
+        })(),
         inline: false,
       },
       {

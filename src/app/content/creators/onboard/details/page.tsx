@@ -104,7 +104,7 @@ export default function CreatorDetailsPage() {
       totalSteps={6}
       stepLabel="Details"
       title="Your details"
-      subtitle="Roblox is already linked from the last step. Add your TikTok, age, and country. YouTube and email are optional."
+      subtitle="Roblox is already linked from the last step. Paste a link to your TikTok profile, then your age and country. YouTube link and email are optional."
     >
       {!hydrated ? (
         <p className="text-muted-foreground text-sm">Loading…</p>
@@ -121,23 +121,30 @@ export default function CreatorDetailsPage() {
             </p>
           )}
           <div className="space-y-2">
-            <Label htmlFor="tiktok">TikTok handle</Label>
+            <Label htmlFor="tiktok">TikTok profile link</Label>
             <Input
               id="tiktok"
+              type="url"
+              inputMode="url"
               value={tiktok}
               onChange={(e) => setTiktok(e.target.value)}
-              placeholder="@username"
+              placeholder="https://www.tiktok.com/@yourhandle"
               required
               autoComplete="off"
             />
+            <p className="text-muted-foreground text-xs">
+              Paste the full URL so we can open it during review.
+            </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="youtube">YouTube handle (optional)</Label>
+            <Label htmlFor="youtube">YouTube channel link (optional)</Label>
             <Input
               id="youtube"
+              type="url"
+              inputMode="url"
               value={youtube}
               onChange={(e) => setYoutube(e.target.value)}
-              placeholder="@channel or handle"
+              placeholder="https://www.youtube.com/@yourchannel"
               autoComplete="off"
             />
           </div>

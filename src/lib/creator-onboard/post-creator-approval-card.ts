@@ -2,8 +2,29 @@ import {
   CREATOR_APPROVE_PREFIX,
   CREATOR_REJECT_PREFIX,
 } from "@/lib/creator-onboard/creator-discord-constants";
+import {
+  socialProfileLabel,
+  tiktokProfileHref,
+  youtubeProfileHref,
+} from "@/lib/creator-onboard/validators";
 
 const DISCORD_API = "https://discord.com/api/v10";
+
+function escapeMarkdown(value: string): string {
+  return value.replace(/([\\\[\]()`*_~|>])/g, "\\$1");
+}
+
+function formatSocialMarkdown(
+  href: string | null,
+  label: string | null,
+): string {
+  if (href && label) {
+    return `[${escapeMarkdown(label)}](${href})`;
+  }
+  if (href) return href;
+  if (label) return label;
+  return "—";
+}
 
 function redactEmail(email: string | null | undefined): string {
   if (!email || !email.includes("@")) return "—";
@@ -33,8 +54,17 @@ export async function postCreatorApprovalCardViaDiscordApi(opts: {
     : `\`${robloxIdRaw}\``;
   const age = r.age != null ? String(r.age) : "—";
   const country = String(r.country ?? "—");
-  const tt = r.tiktok_handle ? `@${String(r.tiktok_handle)}` : "—";
-  const yt = r.youtube_handle ? `@${String(r.youtube_handle)}` : "—";
+  const tiktokRaw = typeof r.tiktok_handle === "string" ? r.tiktok_handle : null;
+  const youtubeRaw =
+    typeof r.youtube_handle === "string" ? r.youtube_handle : null;
+  const tt = formatSocialMarkdown(
+    tiktokProfileHref(tiktokRaw),
+    socialProfileLabel(tiktokRaw),
+  );
+  const yt = formatSocialMarkdown(
+    youtubeProfileHref(youtubeRaw),
+    socialProfileLabel(youtubeRaw),
+  );
 
   const embed = {
     title: "New creator application",
@@ -57,9 +87,14 @@ export async function postCreatorApprovalCardViaDiscordApi(opts: {
         inline: true,
       },
       {
-        name: "TikTok / YouTube",
-        value: `${tt} · ${yt}`,
-        inline: false,
+        name: "TikTok",
+        value: tt,
+        inline: true,
+      },
+      {
+        name: "YouTube",
+        value: yt,
+        inline: true,
       },
       {
         name: "Email",
