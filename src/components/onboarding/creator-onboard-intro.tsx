@@ -196,11 +196,6 @@ export function CreatorOnboardIntro({
             </div>
           </div>
 
-          <p className="mx-auto max-w-2xl text-center text-base leading-relaxed text-white/70 sm:text-lg">
-            We&apos;re building something loud for Virtual Football — and we want
-            creators who can match the energy.
-          </p>
-
           <div className="flex flex-col items-center gap-4 text-center">
             {bootstrapHref ? (
               <Link
@@ -219,6 +214,10 @@ export function CreatorOnboardIntro({
                 application) so we can unlock this button for your account.
               </p>
             )}
+            <p className="mx-auto max-w-2xl text-center text-base leading-relaxed text-white/70 sm:text-lg">
+              We&apos;re building something loud for Virtual Football — and we
+              want creators who can match the energy.
+            </p>
             <Link
               href="/content/creators"
               className="text-sm text-white/50 underline underline-offset-4 hover:text-white"
