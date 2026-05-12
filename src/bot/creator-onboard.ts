@@ -155,6 +155,23 @@ function creatorApprovalDmContent(): string {
   ].join("\n\n");
 }
 
+function creatorRejectionDmContent(reason: string | null): string {
+  const detail = reason
+    ? ["**Why:**", reason].join("\n")
+    : [
+        "No written reason was saved on this rejection.",
+        "If you want feedback, reach out to staff in the VF Create server.",
+      ].join(" ");
+
+  return [
+    "Thanks for applying to **VF Create**. We’re not able to accept your creator application at this time.",
+    "",
+    detail,
+    "",
+    "You’re welcome to apply again later if things change.",
+  ].join("\n");
+}
+
 export async function handleOnboardMediaCommand(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
@@ -441,7 +458,7 @@ export async function handleCreatorRejectButton(
 
   const input = new TextInputBuilder()
     .setCustomId("rejection_reason")
-    .setLabel("Reason (optional)")
+    .setLabel("Reason (shown to applicant)")
     .setStyle(TextInputStyle.Paragraph)
     .setRequired(false)
     .setMaxLength(500);
@@ -522,8 +539,7 @@ export async function handleCreatorRejectModal(
   try {
     const u = await interaction.client.users.fetch(discordId);
     await u.send({
-      content:
-        "Thanks for applying to **VF Create**. We’re not able to accept your application at this time.",
+      content: creatorRejectionDmContent(reason),
     });
   } catch {
     /* ignore */
@@ -554,7 +570,7 @@ export async function handleCreatorRejectModal(
   }
 
   await interaction.editReply({
-    content: "Rejected and user notified (if DMs are open).",
+    content: "Rejected. Applicant was sent a DM with the details (if DMs are open).",
   });
 }
 
