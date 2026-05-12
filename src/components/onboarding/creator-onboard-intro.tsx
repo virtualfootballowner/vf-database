@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { SiteNav } from "@/components/site-nav";
 
-const ROBUX_LOGO_SRC = "/Robux_2019_Logo_Black.svg.png";
+const ROBUX_LOGO_SRC = "/Robux_2019_Logo_white.svg.png";
 
 /** Files in `/public`: 1–17 (images + `1.mov`, `16.mp4`, `17.mov`; `3` is `3 (2).png`). */
 function vfCreatePublicPath(num: number): string {
@@ -126,14 +126,14 @@ export function CreatorOnboardIntro({
         <SiteNav />
 
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-5">
-          <div className="flex w-full max-w-md items-center justify-center rounded-lg bg-white px-5 py-3 sm:w-auto sm:justify-start">
+          <div className="flex w-full max-w-md items-center justify-center sm:w-auto sm:justify-start">
             {/* eslint-disable-next-line @next/next/no-img-element -- static public asset */}
             <img
               src={ROBUX_LOGO_SRC}
               alt="Robux"
               width={280}
               height={80}
-              className="h-9 w-auto max-w-full object-contain object-left sm:h-10"
+              className="h-10 w-auto max-w-full object-contain object-left opacity-95 sm:h-12"
             />
           </div>
           <p className="max-w-md text-center text-sm leading-snug text-white/65 sm:text-left">
@@ -152,18 +152,16 @@ export function CreatorOnboardIntro({
 
           <div className="grid gap-8 border-t border-white/10 pt-8 sm:grid-cols-2 sm:gap-12">
             <div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <p className="text-sm text-white/50">Prize pool</p>
-                <div className="rounded bg-white px-1.5 py-0.5">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={ROBUX_LOGO_SRC}
-                    alt=""
-                    width={72}
-                    height={22}
-                    className="h-3.5 w-auto object-contain"
-                  />
-                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={ROBUX_LOGO_SRC}
+                  alt=""
+                  width={72}
+                  height={22}
+                  className="h-4 w-auto object-contain opacity-90"
+                />
               </div>
               <p className="mt-3 text-4xl font-semibold tabular-nums tracking-tight sm:text-5xl">
                 50K
