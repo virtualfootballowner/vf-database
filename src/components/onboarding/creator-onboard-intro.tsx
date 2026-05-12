@@ -184,9 +184,14 @@ export function CreatorOnboardIntro({
             </div>
             <div className="text-left sm:border-l sm:border-white/10 sm:pl-6 md:pl-10">
               <p className="text-sm text-white/50">Sponsorship</p>
-              <p className="mt-3 text-xl font-semibold leading-snug sm:text-2xl">
-                Custom VF Virtuoso Sponsorship
-              </p>
+              <div className="mt-3 space-y-0.5">
+                <p className="text-xl font-semibold leading-snug sm:text-2xl">
+                  Custom Virtuoso
+                </p>
+                <p className="text-base font-semibold text-white/85 sm:text-lg">
+                  Sponsorship
+                </p>
+              </div>
             </div>
           </div>
 
