@@ -1,8 +1,39 @@
 import Link from "next/link";
 
-import { SiteNav } from "@/components/site-nav";
-
 const ROBUX_LOGO_SRC = "/Robux_2019_Logo_white.svg.png";
+
+/** Screenshot strip at top: `/public/ss1.png` … `ss11.png`. */
+const SS_STRIP_IMAGES: string[] = Array.from(
+  { length: 11 },
+  (_, i) => `/ss${i + 1}.png`,
+);
+
+function SsOverlapStrip() {
+  return (
+    <div className="relative z-10 w-full">
+      <Link
+        href="/"
+        className="absolute left-2 top-2 z-20 rounded-md bg-black/35 px-2.5 py-1.5 text-xs font-semibold text-white/90 backdrop-blur-sm hover:bg-black/50 sm:left-4 sm:top-4"
+      >
+        Home
+      </Link>
+      <div className="flex justify-center overflow-x-auto overflow-y-visible px-2 pb-2 pt-10 sm:px-4 sm:pb-3 sm:pt-12 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex items-center justify-center py-2">
+          {SS_STRIP_IMAGES.map((src, i) => (
+            <div
+              key={src}
+              className={`relative h-[5.25rem] w-[4.25rem] shrink-0 overflow-hidden rounded-xl border border-white/25 bg-[#12326e] shadow-[0_10px_28px_-6px_rgba(0,0,0,0.55)] sm:h-[7rem] sm:w-[5.5rem] md:h-32 md:w-24 ${i > 0 ? "-ml-4 sm:-ml-7 md:-ml-9" : ""} `}
+              style={{ zIndex: i + 1 }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- static public assets */}
+              <img src={src} alt="" className="size-full object-cover" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /** Files in `/public`: 1–17 (images + `1.mov`, `16.mp4`, `17.mov`; `3` is `3 (2).png`). */
 function vfCreatePublicPath(num: number): string {
@@ -122,9 +153,8 @@ export function CreatorOnboardIntro({
         aria-hidden
         className="pointer-events-none fixed inset-0 bg-gradient-to-b from-[#083696]/95 via-[#061f52] to-[#040d22]"
       />
-      <div className="relative mx-auto flex min-h-dvh max-w-6xl flex-col gap-8 px-4 pb-16 pt-5 sm:gap-10 sm:px-6 sm:pt-8 md:px-8 md:pt-10">
-        <SiteNav />
-
+      <SsOverlapStrip />
+      <div className="relative mx-auto flex min-h-dvh max-w-6xl flex-col gap-8 px-4 pb-16 pt-4 sm:gap-10 sm:px-6 sm:pt-6 md:px-8 md:pt-8">
         <header className="flex flex-col gap-6">
           <div className="space-y-2">
             <p className="text-sm text-white/50">VF Create Program</p>
