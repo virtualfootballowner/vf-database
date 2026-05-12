@@ -92,48 +92,65 @@ export default async function CreatorsChallengePage() {
     challenge.totalTrackedViews > ROAD_TO_1M_TARGET_VIEWS;
 
   return (
-    <div className="min-h-dvh min-w-0 bg-zinc-100 text-zinc-900">
-      <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-4 sm:px-6 lg:px-8">
-        <SiteNav />
+    <>
+      <div className="relative min-w-0 text-white">
+        <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-6 lg:px-8">
+          <SiteNav />
 
-        <header className="mt-8 space-y-4 sm:mt-10">
-          {challenge.milestoneReached ? (
-            <p className="text-sm text-blue-800">
-              Community total reached one million tracked views / plays.
+          <header className="mt-8 space-y-4 pb-2 sm:mt-10 sm:pb-4">
+            {challenge.milestoneReached ? (
+              <p className="text-sm font-medium text-emerald-200">
+                Community total reached one million tracked views / plays.
+              </p>
+            ) : null}
+            <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
+              VF Create
             </p>
-          ) : null}
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl md:text-5xl">
-            Road to 1M
-          </h1>
-          <p className="max-w-2xl text-base leading-relaxed text-zinc-600 sm:text-[17px]">
-            Approved VF Create members add posts with{" "}
-            <code className="rounded bg-zinc-200/80 px-1 py-0.5 text-sm text-zinc-800">
-              /posted
-            </code>{" "}
-            on Discord. YouTube views and TikTok plays sync on the daily job
-            (and when staff run{" "}
-            <code className="rounded bg-zinc-200/80 px-1 py-0.5 text-sm text-zinc-800">
-              /update-content
-            </code>
-            ). When the community hits{" "}
-            <strong className="font-semibold text-zinc-900">1,000,000</strong>{" "}
-            combined, the{" "}
-            <strong className="font-semibold text-zinc-900">
-              {formatChallengeRobux(ROAD_TO_1M_PRIZE_POOL_ROBUX)}
-            </strong>{" "}
-            pool is shared by view share (example: about{" "}
-            <strong className="font-semibold text-zinc-900">
-              {formatChallengeRobux(ROAD_TO_1M_PRIZE_POOL_ROBUX * 0.1)}
-            </strong>{" "}
-            at roughly 10% of the total). The top three on the board also qualify
-            for{" "}
-            <strong className="font-semibold text-zinc-900">
-              Virtuoso-sponsored boots
-            </strong>{" "}
-            of their choice (staff confirm ties).
-          </p>
-        </header>
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+              Road to 1M
+            </h1>
+            <p className="max-w-2xl text-base leading-relaxed text-white/85 sm:text-[17px]">
+              Approved VF Create members add posts with{" "}
+              <code className="rounded bg-white/15 px-1 py-0.5 text-sm text-white">
+                /posted
+              </code>{" "}
+              on Discord. YouTube views and TikTok plays sync on the daily job
+              (and when staff run{" "}
+              <code className="rounded bg-white/15 px-1 py-0.5 text-sm text-white">
+                /update-content
+              </code>
+              ). When the community hits{" "}
+              <strong className="font-semibold text-white">1,000,000</strong>{" "}
+              combined, the{" "}
+              <strong className="font-semibold text-white">
+                {formatChallengeRobux(ROAD_TO_1M_PRIZE_POOL_ROBUX)}
+              </strong>{" "}
+              pool is shared by view share (example: about{" "}
+              <strong className="font-semibold text-white">
+                {formatChallengeRobux(ROAD_TO_1M_PRIZE_POOL_ROBUX * 0.1)}
+              </strong>{" "}
+              at roughly 10% of the total). The top three on the board also
+              qualify for{" "}
+              <strong className="font-semibold text-white">
+                Virtuoso-sponsored boots
+              </strong>{" "}
+              of their choice (staff confirm ties).
+            </p>
+          </header>
+        </div>
+      </div>
 
+      <div
+        aria-hidden
+        className="pointer-events-none h-32 w-full sm:h-40"
+        style={{
+          backgroundImage:
+            "linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(244,244,245,0.72) 52%, #f4f4f5 100%)",
+        }}
+      />
+
+      <div className="min-h-dvh min-w-0 bg-zinc-100 text-zinc-900">
+        <div className="relative mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
         {/* Community progress */}
         <section
           className="mt-8 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-7"
@@ -197,25 +214,33 @@ export default async function CreatorsChallengePage() {
                 Sorted by total synced views / plays · updates on each page load
               </p>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 shadow-sm">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <Image
-                src="/Robux_2019_Logo_white.svg.png"
-                alt=""
-                width={20}
-                height={20}
-                className="size-5 shrink-0 rounded invert"
-              />
-              <span>
-                Pool:{" "}
-                <strong className="font-semibold text-zinc-900">
-                  {formatChallengeRobux(challenge.prizePoolRobux)}
-                </strong>
-              </span>
-              <span className="text-zinc-300">|</span>
-              <span className="rounded border border-violet-200 bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-900">
-                Virtuoso sponsor · top 3
-              </span>
+            <div className="flex flex-col gap-1.5 sm:items-end">
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <Image
+                  src="/Robux_2019_Logo_white.svg.png"
+                  alt=""
+                  width={20}
+                  height={20}
+                  className="size-5 shrink-0 rounded invert"
+                />
+                <span>
+                  Pool:{" "}
+                  <strong className="font-semibold text-zinc-900">
+                    {formatChallengeRobux(challenge.prizePoolRobux)}
+                  </strong>
+                </span>
+                <span className="hidden text-zinc-300 sm:inline">|</span>
+                <span className="rounded border border-violet-200 bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-900">
+                  Virtuoso sponsor · top 3
+                </span>
+              </div>
+              <Link
+                href="/content/creators/virtuoso"
+                className="text-xs font-medium text-blue-800 underline-offset-2 hover:underline sm:text-right"
+              >
+                What is this?
+              </Link>
             </div>
           </div>
 
@@ -245,108 +270,111 @@ export default async function CreatorsChallengePage() {
                         : "border-zinc-200"
                     }`}
                   >
-                    <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5">
-                      <div className="flex shrink-0 items-center gap-3 sm:w-44">
-                        <span
-                          className={`flex size-10 items-center justify-center rounded-full text-sm font-bold tabular-nums ${
-                            row.rank === 1
-                              ? "bg-amber-100 text-amber-900"
-                              : row.rank === 2
-                                ? "bg-zinc-200 text-zinc-800"
-                                : row.rank === 3
-                                  ? "bg-orange-100 text-orange-900"
-                                  : "bg-zinc-100 text-zinc-600"
-                          }`}
-                        >
-                          {row.rank}
-                        </span>
-                        {row.robloxAvatarUrl ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img
-                            src={row.robloxAvatarUrl}
-                            alt=""
-                            width={48}
-                            height={48}
-                            className="size-12 rounded-full object-cover ring-1 ring-zinc-200"
-                          />
-                        ) : (
-                          <div className="flex size-12 items-center justify-center rounded-full bg-zinc-200 text-lg font-semibold text-zinc-600">
-                            {row.displayName.slice(0, 1).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
+                    <div className="flex flex-col gap-4 p-4 sm:p-5">
+                      <div className="flex items-start gap-3">
+                        <div className="flex shrink-0 items-center gap-3">
+                          <span
+                            className={`flex size-10 items-center justify-center rounded-full text-sm font-bold tabular-nums ${
+                              row.rank === 1
+                                ? "bg-amber-100 text-amber-900"
+                                : row.rank === 2
+                                  ? "bg-zinc-200 text-zinc-800"
+                                  : row.rank === 3
+                                    ? "bg-orange-100 text-orange-900"
+                                    : "bg-zinc-100 text-zinc-600"
+                            }`}
+                          >
+                            {row.rank}
+                          </span>
+                          {row.robloxAvatarUrl ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={row.robloxAvatarUrl}
+                              alt=""
+                              width={48}
+                              height={48}
+                              className="size-12 rounded-full object-cover ring-1 ring-zinc-200"
+                            />
+                          ) : (
+                            <div className="flex size-12 items-center justify-center rounded-full bg-zinc-200 text-lg font-semibold text-zinc-600">
+                              {row.displayName.slice(0, 1).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
 
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-zinc-900">
-                          {row.displayName}
-                        </p>
-                        <p className="text-sm text-zinc-600">
-                          {row.robloxUsername}
-                          {country ? <> · {country}</> : null}
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                          {tt ? (
-                            <a
-                              href={`https://www.tiktok.com/@${encodeURIComponent(tt)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-700 underline-offset-2 hover:underline"
-                            >
-                              TikTok
-                            </a>
-                          ) : null}
-                          {yt ? (
-                            <a
-                              href={`https://www.youtube.com/@${encodeURIComponent(yt)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-700 underline-offset-2 hover:underline"
-                            >
-                              YouTube
-                            </a>
-                          ) : null}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-zinc-900">
+                            {row.displayName}
+                          </p>
+                          <p className="text-sm text-zinc-600">
+                            {row.robloxUsername}
+                            {country ? <> · {country}</> : null}
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                            {tt ? (
+                              <a
+                                href={`https://www.tiktok.com/@${encodeURIComponent(tt)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-700 underline-offset-2 hover:underline"
+                              >
+                                TikTok
+                              </a>
+                            ) : null}
+                            {yt ? (
+                              <a
+                                href={`https://www.youtube.com/@${encodeURIComponent(yt)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-700 underline-offset-2 hover:underline"
+                              >
+                                YouTube
+                              </a>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 lg:gap-3">
-                        <div className="rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100">
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <div className="min-w-0 rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100">
                           <p className="text-[11px] text-zinc-500">Views</p>
-                          <p className="text-base font-semibold tabular-nums text-zinc-900">
+                          <p className="truncate text-base font-semibold tabular-nums text-zinc-900">
                             {formatViewCount(row.totalViews)}
                           </p>
                         </div>
-                        <div className="rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100">
+                        <div className="min-w-0 rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100">
                           <p className="text-[11px] text-zinc-500">Posts</p>
                           <p className="text-base font-semibold tabular-nums text-zinc-900">
                             {row.postCount}
                           </p>
                         </div>
-                        <div className="rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100">
+                        <div className="min-w-0 rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100">
                           <p className="text-[11px] text-zinc-500">Pool share</p>
-                          <p className="text-base font-semibold tabular-nums text-blue-800">
+                          <p className="truncate text-base font-semibold tabular-nums text-blue-800">
                             {formatPoolSharePercent(row.poolSharePercent)}
                           </p>
                         </div>
-                        <div className="rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100">
+                        <div className="min-w-0 rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100">
                           <p className="text-[11px] text-zinc-500">
                             Est. Robux
                           </p>
-                          <p className="text-base font-semibold tabular-nums text-emerald-800">
+                          <p className="truncate text-base font-semibold tabular-nums text-emerald-800">
                             {formatChallengeRobux(row.estimatedPayoutRobux)}
                           </p>
                         </div>
-                        <div className="col-span-2 rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 lg:col-span-2">
-                          <p className="text-[11px] text-zinc-500">
-                            Virtuoso sponsor
-                          </p>
-                          {virtuosoPick ? (
-                            <span className="mt-1 inline-flex items-center rounded-md border border-violet-300 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-950">
-                              Top {row.rank} · footwear pick
-                            </span>
-                          ) : (
-                            <p className="mt-1 text-sm text-zinc-400">—</p>
-                          )}
-                        </div>
+                      </div>
+
+                      <div className="rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100">
+                        <p className="text-[11px] text-zinc-500">
+                          Virtuoso sponsor
+                        </p>
+                        {virtuosoPick ? (
+                          <span className="mt-1 inline-flex items-center rounded-md border border-violet-300 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-950">
+                            Top {row.rank} · footwear pick
+                          </span>
+                        ) : (
+                          <p className="mt-1 text-sm text-zinc-400">—</p>
+                        )}
                       </div>
                     </div>
 
@@ -554,7 +582,8 @@ export default async function CreatorsChallengePage() {
             payout. Official VF Create rules apply.
           </p>
         </footer>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
