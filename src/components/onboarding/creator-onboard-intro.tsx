@@ -2,6 +2,8 @@ import Link from "next/link";
 
 import { SiteNav } from "@/components/site-nav";
 
+const ROBUX_LOGO_SRC = "/Robux_2019_Logo_Black.svg.png";
+
 /** Files in `/public`: 1–17 (images + `1.mov`, `16.mp4`, `17.mov`; `3` is `3 (2).png`). */
 function vfCreatePublicPath(num: number): string {
   const relative: Record<number, string> = {
@@ -134,6 +136,23 @@ export function CreatorOnboardIntro({
       <div className="relative mx-auto flex min-h-dvh max-w-6xl flex-col gap-8 px-4 pb-16 pt-5 sm:gap-10 sm:px-6 sm:pt-8 md:px-8 md:pt-10">
         <SiteNav />
 
+        <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-5">
+          <div className="flex w-full max-w-md items-center justify-center rounded-2xl border border-white/20 bg-white px-6 py-4 shadow-[0_16px_48px_-20px_rgba(0,0,0,0.45)] sm:w-auto sm:justify-start">
+            {/* eslint-disable-next-line @next/next/no-img-element -- static public asset */}
+            <img
+              src={ROBUX_LOGO_SRC}
+              alt="Robux"
+              width={280}
+              height={80}
+              className="h-9 w-auto max-w-full object-contain object-left sm:h-11"
+            />
+          </div>
+          <p className="max-w-md text-center text-sm font-medium leading-snug text-white/70 sm:text-left">
+            Backed by a real <span className="text-white">50K Robux</span> pool
+            for VF Create creators.
+          </p>
+        </div>
+
         {/* Above the fold: headline, rewards, CTA */}
         <header className="flex flex-col gap-6">
           <div className="space-y-3">
@@ -147,9 +166,21 @@ export function CreatorOnboardIntro({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-white/20 bg-white/[0.07] px-5 py-6 shadow-[0_20px_60px_-24px_rgba(8,54,150,0.65)] sm:py-8">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-cyan-200/90">
-                Prize pool
-              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-cyan-200/90">
+                  Prize pool
+                </p>
+                <div className="rounded-lg border border-white/15 bg-white/90 px-2 py-1">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={ROBUX_LOGO_SRC}
+                    alt=""
+                    width={72}
+                    height={22}
+                    className="h-4 w-auto object-contain"
+                  />
+                </div>
+              </div>
               <p className="mt-2 text-4xl font-black tabular-nums tracking-tight sm:text-5xl md:text-6xl">
                 50K
               </p>
