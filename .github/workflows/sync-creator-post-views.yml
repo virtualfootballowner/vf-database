@@ -1,0 +1,36 @@
+# Daily refresh of YouTube views / TikTok plays for VF Create directory posts (Apify).
+#
+# One-time repo setup: Settings → Secrets and variables → Actions → New repository secret
+#   CRON_SECRET      — same value as on Vercel (Bearer token for /api/cron/sync-creator-post-views)
+#   VFL_SITE_URL     — production origin, no trailing slash (e.g. https://www.myvirtualfootball.com)
+#
+# Manual run: Actions → "Sync creator post views" → Run workflow
+
+name: Sync creator post views
+
+on:
+  schedule:
+    # 06:00 UTC daily (same window as the old vercel.json cron)
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit sync endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BASE: ${{ secrets.VFL_SITE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_SECRET:-}" ] || [ -z "${BASE:-}" ]; then
+            echo "::error::Add repository secrets CRON_SECRET and VFL_SITE_URL (see workflow file header)."
+            exit 1
+          fi
+          URL="${BASE%/}/api/cron/sync-creator-post-views"
+          echo "GET $URL"
+          curl -sfS --max-time 290 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Accept: application/json" \
+            "$URL"
