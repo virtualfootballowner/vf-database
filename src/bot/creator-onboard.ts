@@ -21,7 +21,9 @@ import { createBotSupabase } from "@/bot/stats-queries";
 import { parsePostedVideoLinks } from "@/lib/creator-onboard/approved-creators-directory";
 import { COUNTRIES } from "@/lib/creator-onboard/countries";
 import {
-  CREATOR_APPROVE_PREFIX,
+  CREATOR_POST_REMOVE_APPROVE_PREFIX,
+  CREATOR_POST_REMOVE_REJECT_MODAL_PREFIX,
+  CREATOR_POST_REMOVE_REJECT_PREFIX,
   CREATOR_REJECT_MODAL_PREFIX,
   CREATOR_REJECT_PREFIX,
   CREATOR_START_APP_BUTTON,
@@ -59,6 +61,30 @@ export const creatorPostedCommand = new SlashCommandBuilder()
       .setMaxLength(2048),
   )
   .toJSON();
+
+export const creatorPostRemoveCommand = new SlashCommandBuilder()
+  .setName("post-remove")
+  .setDescription(
+    "Request staff approval to remove a directory post from your VF Create profile",
+  )
+  .addStringOption((opt) =>
+    opt
+      .setName("link")
+      .setDescription("Exact HTTPS URL to remove (must already be on your profile)")
+      .setRequired(true)
+      .setMaxLength(2048),
+  )
+  .toJSON();
+
+const POST_REMOVE_URL_MARKER = "**Link to remove**";
+
+function extractPostRemovalUrlFromEmbed(description: string | null | undefined): string | null {
+  const d = description?.trim() ?? "";
+  const i = d.indexOf(POST_REMOVE_URL_MARKER);
+  if (i < 0) return null;
+  const rest = d.slice(i + POST_REMOVE_URL_MARKER.length).trim();
+  return rest.length > 0 ? rest : null;
+}
 
 const MAX_POSTED_URL_LEN = 2048;
 const MAX_POSTED_LINKS_PER_CREATOR = 50;
@@ -857,5 +883,400 @@ export async function handleCreatorPostedCommand(
       "",
       `**Saved** · \`${url.length > 120 ? `${url.slice(0, 117)}…` : url}\``,
     ].join("\n"),
+  });
+}
+
+export async function handleCreatorPostRemoveCommand(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  if (!interaction.guild || !interaction.member) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Use `/post-remove` inside the VF Discord server.",
+    });
+    return;
+  }
+
+  const scoutRole = env.DISCORD_SCOUT_ROLE_ID?.trim();
+  if (!scoutRole) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content:
+        "The VF Create creator role isn’t configured on the bot yet. Ask staff to set `DISCORD_SCOUT_ROLE_ID`.",
+    });
+    return;
+  }
+
+  const member = interaction.member as GuildMember;
+  if (!member.roles.cache.has(scoutRole)) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content:
+        "You need the **VF Create** creator role to request removals.",
+    });
+    return;
+  }
+
+  const channelId = env.DISCORD_CREATOR_APPROVAL_CHANNEL_ID?.trim();
+  if (!channelId) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content:
+        "Staff approval channel isn’t configured (`DISCORD_CREATOR_APPROVAL_CHANNEL_ID`).",
+    });
+    return;
+  }
+
+  const raw = interaction.options.getString("link", true);
+  const url = validatePostedHttpsUrl(raw);
+  if (!url) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content:
+        "That doesn’t look like a valid **https://** link. Paste the exact URL from your directory profile.",
+    });
+    return;
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const supabase = createBotSupabase();
+  const { data, error } = await supabase
+    .from("creator_applications")
+    .select("id, discord_username, roblox_username, posted_video_links")
+    .eq("discord_id", interaction.user.id)
+    .eq("status", "approved")
+    .maybeSingle();
+
+  if (error) {
+    console.error("[creator] /post-remove lookup:", error);
+    await interaction.editReply({
+      content: "Couldn’t reach the database. Try again shortly.",
+    });
+    return;
+  }
+
+  if (!data) {
+    await interaction.editReply({
+      content:
+        "No **approved** VF Create profile is linked to your Discord account.",
+    });
+    return;
+  }
+
+  const appRow = data as {
+    id: string;
+    discord_username: string | null;
+    roblox_username: string | null;
+    posted_video_links: unknown;
+  };
+
+  const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
+  const directoryUrl = `${siteBase}/content/creators`;
+
+  const existing = parsePostedVideoLinks(appRow.posted_video_links);
+  if (!existing.some((e) => postedUrlsEffectivelyEqual(e.url, url))) {
+    await interaction.editReply({
+      content: [
+        "That URL isn’t on your directory profile. Copy it from **`/creator`** or the site:",
+        directoryUrl,
+        "It must match **exactly** (same tracking params, etc.).",
+      ].join("\n"),
+    });
+    return;
+  }
+
+  const description = [
+    `${interaction.user} · \`${interaction.user.tag}\` wants **staff to remove** this VF Create directory post.`,
+    "",
+    POST_REMOVE_URL_MARKER,
+    url,
+  ].join("\n");
+
+  if (description.length > 4096) {
+    await interaction.editReply({
+      content: "That URL is too long for Discord to queue for review. Ask staff to remove it manually.",
+    });
+    return;
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle("VF Create — remove directory post")
+    .setColor(0xf97316)
+    .setDescription(description)
+    .addFields(
+      {
+        name: "Application ID",
+        value: `\`${appRow.id}\``,
+        inline: true,
+      },
+      {
+        name: "Roblox",
+        value: appRow.roblox_username?.trim()
+          ? `\`${appRow.roblox_username.trim()}\``
+          : "—",
+        inline: true,
+      },
+    )
+    .setFooter({ text: "Pending staff approval — same channel as new applications" })
+    .setTimestamp(new Date());
+
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`${CREATOR_POST_REMOVE_APPROVE_PREFIX}${appRow.id}`)
+      .setLabel("Approve removal")
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`${CREATOR_POST_REMOVE_REJECT_PREFIX}${appRow.id}`)
+      .setLabel("Reject")
+      .setStyle(ButtonStyle.Danger),
+  );
+
+  try {
+    const ch = await interaction.client.channels.fetch(channelId);
+    if (!ch?.isTextBased() || !ch.isSendable()) {
+      await interaction.editReply({
+        content: "Approval channel exists but the bot can’t post there (type / permissions).",
+      });
+      return;
+    }
+    await ch.send({ embeds: [embed], components: [row] });
+  } catch (e) {
+    console.error("[creator] /post-remove channel send:", e);
+    await interaction.editReply({
+      content: "Couldn’t post the review card. Ask staff to check bot access to the approval channel.",
+    });
+    return;
+  }
+
+  await interaction.editReply({
+    content:
+      "Sent to **staff** for approval in the creator review channel. You’ll get a DM when it’s approved or rejected.",
+  });
+}
+
+export async function handleCreatorPostRemoveApproveButton(
+  interaction: ButtonInteraction,
+  applicationId: string,
+): Promise<void> {
+  if (!ensureManageRoles(interaction)) return;
+
+  await interaction.deferUpdate();
+
+  const embed0Raw = interaction.message.embeds[0];
+  if (!embed0Raw) {
+    await interaction.followUp({
+      ephemeral: true,
+      content: "This card has no embed — can’t process.",
+    });
+    return;
+  }
+
+  const url = extractPostRemovalUrlFromEmbed(embed0Raw.description);
+  if (!url) {
+    await interaction.followUp({
+      ephemeral: true,
+      content: "Could not read the URL from this card.",
+    });
+    return;
+  }
+
+  const adminId = interaction.user.id;
+  const supabase = createBotSupabase();
+  const { data: row, error: fetchErr } = await supabase
+    .from("creator_applications")
+    .select("id, discord_id, posted_video_links, status")
+    .eq("id", applicationId)
+    .maybeSingle();
+
+  if (fetchErr || !row) {
+    await interaction.followUp({
+      ephemeral: true,
+      content: "Creator application not found.",
+    });
+    return;
+  }
+
+  const rec = row as {
+    id: string;
+    discord_id: string;
+    posted_video_links: unknown;
+    status: string;
+  };
+
+  if (rec.status !== "approved") {
+    await interaction.followUp({
+      ephemeral: true,
+      content: "That application is not approved — nothing to update.",
+    });
+    return;
+  }
+
+  const links = parsePostedVideoLinks(rec.posted_video_links);
+  const idx = links.findIndex((e) => postedUrlsEffectivelyEqual(e.url, url));
+  if (idx < 0) {
+    await interaction.followUp({
+      ephemeral: true,
+      content:
+        "That URL is not on this creator’s profile anymore (already removed or URL mismatch).",
+    });
+    return;
+  }
+
+  const next = links.filter((_, i) => i !== idx);
+  const now = new Date().toISOString();
+
+  const { error: upErr } = await supabase
+    .from("creator_applications")
+    .update({
+      posted_video_links: next,
+      updated_at: now,
+    })
+    .eq("id", applicationId)
+    .eq("status", "approved");
+
+  if (upErr) {
+    console.error("[creator] post-remove approve:", upErr);
+    await interaction.followUp({
+      ephemeral: true,
+      content: "Database error while removing the link.",
+    });
+    return;
+  }
+
+  try {
+    const u = await interaction.client.users.fetch(rec.discord_id);
+    await u.send({
+      content: [
+        "**VF Create** — staff **approved** removing your directory post.",
+        "",
+        `Removed: ${url.length > 500 ? `${url.slice(0, 497)}…` : url}`,
+      ].join("\n"),
+    });
+  } catch {
+    /* DMs closed */
+  }
+
+  const builder = EmbedBuilder.from(embed0Raw);
+  builder.setColor(0x10b981).addFields({
+    name: "Approved removal",
+    value: `By <@${adminId}> at <t:${Math.floor(Date.now() / 1000)}:F>`,
+    inline: false,
+  });
+
+  await interaction.editReply({
+    embeds: [builder],
+    components: [],
+  });
+}
+
+export async function handleCreatorPostRemoveRejectButton(
+  interaction: ButtonInteraction,
+  applicationId: string,
+): Promise<void> {
+  if (!ensureManageRoles(interaction)) return;
+
+  const msgId = interaction.message.id;
+  const modal = new ModalBuilder()
+    .setCustomId(
+      `${CREATOR_POST_REMOVE_REJECT_MODAL_PREFIX}${applicationId}|${msgId}`,
+    )
+    .setTitle("Reject post removal");
+
+  const input = new TextInputBuilder()
+    .setCustomId("rejection_reason")
+    .setLabel("Reason (optional)")
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(false)
+    .setMaxLength(500);
+
+  modal.addComponents(
+    new ActionRowBuilder<TextInputBuilder>().addComponents(input),
+  );
+
+  await interaction.showModal(modal);
+}
+
+export async function handleCreatorPostRemoveRejectModal(
+  interaction: ModalSubmitInteraction,
+): Promise<void> {
+  const raw = interaction.customId.slice(
+    CREATOR_POST_REMOVE_REJECT_MODAL_PREFIX.length,
+  );
+  const pipe = raw.indexOf("|");
+  if (pipe <= 0) {
+    await interaction.reply({
+      ephemeral: true,
+      content: "Invalid modal.",
+    });
+    return;
+  }
+  const appId = raw.slice(0, pipe);
+  const messageId = raw.slice(pipe + 1);
+
+  await interaction.deferReply({ ephemeral: true });
+
+  const reason =
+    interaction.fields.getTextInputValue("rejection_reason")?.trim() || null;
+  const adminId = interaction.user.id;
+
+  const supabase = createBotSupabase();
+  const { data: row, error: fetchErr } = await supabase
+    .from("creator_applications")
+    .select("discord_id")
+    .eq("id", appId)
+    .maybeSingle();
+
+  if (fetchErr || !row) {
+    await interaction.editReply({
+      content: "Application not found.",
+    });
+    return;
+  }
+
+  const discordId = String(
+    (row as { discord_id: string | null }).discord_id ?? "",
+  );
+
+  try {
+    if (discordId) {
+      const u = await interaction.client.users.fetch(discordId);
+      await u.send({
+        content: [
+          "**VF Create** — staff **did not approve** removing your directory post.",
+          reason ? `\n\nReason: ${reason}` : "",
+        ].join(""),
+      });
+    }
+  } catch {
+    /* DMs closed */
+  }
+
+  const channelId = interaction.channelId;
+  if (channelId) {
+    try {
+      const ch = await interaction.client.channels.fetch(channelId);
+      if (ch?.isTextBased()) {
+        const msg = await ch.messages.fetch(messageId);
+        if (msg.embeds[0]) {
+          const builder = EmbedBuilder.from(msg.embeds[0]!);
+          builder.setColor(0xef4444).addFields({
+            name: "Removal rejected",
+            value: `By <@${adminId}>${reason ? `\n> ${reason}` : ""}`,
+            inline: false,
+          });
+          await msg.edit({
+            embeds: [builder],
+            components: [],
+          });
+        }
+      }
+    } catch (e) {
+      console.error("[creator] post-remove reject message edit:", e);
+    }
+  }
+
+  await interaction.editReply({
+    content: "Rejection recorded. Creator notified if DMs are open.",
   });
 }

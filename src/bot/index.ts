@@ -26,12 +26,19 @@ import {
 } from "@/bot/contracts";
 import {
   CREATOR_APPROVE_PREFIX,
+  CREATOR_POST_REMOVE_APPROVE_PREFIX,
+  CREATOR_POST_REMOVE_REJECT_MODAL_PREFIX,
+  CREATOR_POST_REMOVE_REJECT_PREFIX,
   CREATOR_REJECT_MODAL_PREFIX,
   CREATOR_REJECT_PREFIX,
   CREATOR_START_APP_BUTTON,
 } from "@/lib/creator-onboard/creator-discord-constants";
 import {
   handleCreatorApproveButton,
+  handleCreatorPostRemoveApproveButton,
+  handleCreatorPostRemoveCommand,
+  handleCreatorPostRemoveRejectButton,
+  handleCreatorPostRemoveRejectModal,
   handleCreatorRejectButton,
   handleCreatorRejectModal,
   handleStartCreatorAppButton,
@@ -318,6 +325,12 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
     if (interaction.isModalSubmit()) {
       if (
+        interaction.customId.startsWith(CREATOR_POST_REMOVE_REJECT_MODAL_PREFIX)
+      ) {
+        await handleCreatorPostRemoveRejectModal(interaction);
+        return;
+      }
+      if (
         interaction.customId.startsWith(CREATOR_REJECT_MODAL_PREFIX)
       ) {
         await handleCreatorRejectModal(interaction);
@@ -363,6 +376,21 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         interaction,
         "deny",
         customId.slice(RELEASE_BTN_DENY.length),
+      );
+      return;
+    }
+
+    if (customId.startsWith(CREATOR_POST_REMOVE_APPROVE_PREFIX)) {
+      await handleCreatorPostRemoveApproveButton(
+        interaction,
+        customId.slice(CREATOR_POST_REMOVE_APPROVE_PREFIX.length),
+      );
+      return;
+    }
+    if (customId.startsWith(CREATOR_POST_REMOVE_REJECT_PREFIX)) {
+      await handleCreatorPostRemoveRejectButton(
+        interaction,
+        customId.slice(CREATOR_POST_REMOVE_REJECT_PREFIX.length),
       );
       return;
     }
