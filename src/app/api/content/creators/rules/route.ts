@@ -43,12 +43,7 @@ export async function POST() {
   const hasSocial =
     (row.tiktok_handle && String(row.tiktok_handle).trim()) ||
     (row.youtube_handle && String(row.youtube_handle).trim());
-  if (
-    !hasSocial ||
-    row.age == null ||
-    !row.country ||
-    !row.email
-  ) {
+  if (!hasSocial || row.age == null || !row.country) {
     return NextResponse.json(
       { error: "Complete earlier steps before accepting rules." },
       { status: 400 },

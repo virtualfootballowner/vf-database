@@ -47,7 +47,6 @@ export async function POST() {
     !hasSocial ||
     row.age == null ||
     !row.country ||
-    !row.email ||
     !row.rules_accepted_at
   ) {
     return NextResponse.json(
