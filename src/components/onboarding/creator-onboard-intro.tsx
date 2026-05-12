@@ -34,7 +34,7 @@ function isVideoPath(path: string): boolean {
   return /\.(mov|mp4|webm)$/i.test(path.split("?")[0] ?? path);
 }
 
-/** Full media visible inside frame (`object-contain`); letterboxing fills with dark blue. */
+/** Tiled cards: cover crop, VF framing — no captions. */
 function MediaSlot({
   src,
   className,
@@ -49,12 +49,12 @@ function MediaSlot({
   const video = isVideoPath(src);
   return (
     <div
-      className={`relative overflow-hidden rounded-lg bg-[#0a1629] ${aspectClass} ${className ?? ""}`}
+      className={`relative overflow-hidden rounded-2xl border border-white/15 bg-[#12326e]/48 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ${aspectClass} ${className ?? ""}`}
     >
       {video ? (
         <video
           src={src}
-          className="absolute inset-0 size-full object-contain"
+          className="absolute inset-0 size-full object-cover"
           muted
           playsInline
           loop
@@ -67,7 +67,7 @@ function MediaSlot({
         <img
           src={src}
           alt=""
-          className="absolute inset-0 size-full object-contain"
+          className="absolute inset-0 size-full object-cover"
         />
       )}
     </div>
@@ -125,23 +125,6 @@ export function CreatorOnboardIntro({
       <div className="relative mx-auto flex min-h-dvh max-w-6xl flex-col gap-8 px-4 pb-16 pt-5 sm:gap-10 sm:px-6 sm:pt-8 md:px-8 md:pt-10">
         <SiteNav />
 
-        <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-5">
-          <div className="flex w-full max-w-md items-center justify-center sm:w-auto sm:justify-start">
-            {/* eslint-disable-next-line @next/next/no-img-element -- static public asset */}
-            <img
-              src={ROBUX_LOGO_SRC}
-              alt="Robux"
-              width={280}
-              height={80}
-              className="h-10 w-auto max-w-full object-contain object-left opacity-95 sm:h-12"
-            />
-          </div>
-          <p className="max-w-md text-center text-sm leading-snug text-white/65 sm:text-left">
-            Backed by a real <span className="text-white">50K Robux</span> pool
-            for VF Create creators.
-          </p>
-        </div>
-
         <header className="flex flex-col gap-6">
           <div className="space-y-2">
             <p className="text-sm text-white/50">VF Create Program</p>
@@ -187,16 +170,16 @@ export function CreatorOnboardIntro({
             creators who can match the energy.
           </p>
 
-          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex flex-col items-center gap-4 text-center">
             {bootstrapHref ? (
               <Link
                 href={bootstrapHref}
-                className="inline-flex min-h-[3.75rem] items-center justify-center rounded-md bg-white px-12 py-4 text-lg font-semibold text-[#083696] transition-colors hover:bg-neutral-100"
+                className="inline-flex min-h-[3.75rem] w-full max-w-md items-center justify-center rounded-md bg-white px-12 py-4 text-lg font-semibold text-[#083696] transition-colors hover:bg-neutral-100 sm:w-auto"
               >
                 Start application
               </Link>
             ) : (
-              <p className="text-sm text-white/65">
+              <p className="max-w-md text-sm text-white/65">
                 Use your personal link from the VF Discord bot (Start
                 application) so we can unlock this button for your account.
               </p>
@@ -231,7 +214,7 @@ export function CreatorOnboardIntro({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
             {GALLERY_LAYOUT.map(({ n, aspectClass, className }) => (
               <MediaSlot
                 key={n}
