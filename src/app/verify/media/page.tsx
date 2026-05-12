@@ -71,16 +71,9 @@ export default function VerifyMediaPage() {
             </code>{" "}
             is optional (defaults to the existing VF Media verified role). The
             bot needs <strong>Manage Nicknames</strong> and{" "}
-            <strong>Manage Roles</strong> in that server, and the Discord +
-            Roblox OAuth apps must include the redirect URIs{" "}
-            <code className="text-foreground/90">
-              /api/verify/media/discord/callback
-            </code>{" "}
-            and{" "}
-            <code className="text-foreground/90">
-              /api/verify/media/roblox/callback
-            </code>
-            .
+            <strong>Manage Roles</strong> in that server. No extra Discord /
+            Roblox OAuth redirect URIs are required — this flow piggybacks on
+            the league verify URIs that are already registered.
           </p>
         </div>
       )}

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { clearCreatorRobloxOAuthStateOnResponse } from "@/lib/creator-onboard/cookie-helpers";
 import { tryCompleteCreatorRobloxOAuthViaVerifyCallback } from "@/lib/creator-onboard/handle-creator-roblox-via-verify-callback";
+import { tryCompleteMediaRobloxViaVerifyCallback } from "@/lib/vfl-verify/handle-media-via-verify-callbacks";
 import { loadVerifyEnv } from "@/lib/vfl-verify/load-verify-env";
 import { applyGuildVerification } from "@/lib/vfl-verify/apply-guild-verification";
 import { exchangeRobloxCode } from "@/lib/vfl-verify/roblox-oauth";
@@ -52,6 +53,19 @@ export async function GET(request: Request) {
   );
   if (creatorReturn) {
     return creatorReturn;
+  }
+
+  /**
+   * Media verify flow piggybacks on this same redirect URI — dispatch before
+   * the default league-flow handling.
+   */
+  const mediaReturn = await tryCompleteMediaRobloxViaVerifyCallback(
+    request,
+    code,
+    state,
+  );
+  if (mediaReturn) {
+    return mediaReturn;
   }
 
   const cookieStore = await cookies();

@@ -7,8 +7,12 @@ import {
   mediaVerifyEnvAsVerifyEnv,
 } from "@/lib/vfl-verify/load-media-verify-env";
 
+/**
+ * Media verify flow reuses the **same** Discord + Roblox OAuth redirect URIs
+ * as the league verify flow (no extra OAuth-app config required). The shared
+ * callbacks dispatch on the media-flow cookies set here.
+ */
 const MEDIA_DISCORD_STATE_COOKIE = "vfl_md_state";
-const MEDIA_DISCORD_REDIRECT_PATH = "/api/verify/media/discord/callback";
 const MAX_AGE_SECONDS = 600;
 
 export async function GET() {
@@ -23,11 +27,7 @@ export async function GET() {
   }
 
   const state = randomBytes(24).toString("hex");
-  const url = discordAuthorizeUrl(
-    mediaVerifyEnvAsVerifyEnv(env),
-    state,
-    MEDIA_DISCORD_REDIRECT_PATH,
-  );
+  const url = discordAuthorizeUrl(mediaVerifyEnvAsVerifyEnv(env), state);
   const res = NextResponse.redirect(url);
   res.cookies.set(MEDIA_DISCORD_STATE_COOKIE, state, {
     httpOnly: true,

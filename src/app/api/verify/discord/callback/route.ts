@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 
 import { loadVerifyEnv } from "@/lib/vfl-verify/load-verify-env";
 import { exchangeDiscordCode } from "@/lib/vfl-verify/discord-oauth";
+import { tryCompleteMediaDiscordViaVerifyCallback } from "@/lib/vfl-verify/handle-media-via-verify-callbacks";
 import { generatePkcePair } from "@/lib/vfl-verify/pkce";
 import { robloxAuthorizeUrl } from "@/lib/vfl-verify/roblox-oauth";
 import { sealVerifySession } from "@/lib/vfl-verify/signed-session";
@@ -31,6 +32,17 @@ export async function GET(request: Request) {
   if (err || !code || !state) {
     return NextResponse.redirect(new URL("/verify/done?err=discord_denied", request.url));
   }
+
+  /**
+   * Media verify flow piggybacks on this same redirect URI — dispatch first
+   * so it doesn't get classified as a league-flow state mismatch.
+   */
+  const mediaResp = await tryCompleteMediaDiscordViaVerifyCallback(
+    request,
+    code,
+    state,
+  );
+  if (mediaResp) return mediaResp;
 
   const cookieStore = await cookies();
   const storedState = cookieStore.get(DISCORD_STATE)?.value ?? null;
