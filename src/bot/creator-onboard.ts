@@ -96,6 +96,20 @@ export const creatorPostRemoveCommand = new SlashCommandBuilder()
   )
   .toJSON();
 
+export const creatorRemoveFromDbCommand = new SlashCommandBuilder()
+  .setName("creator-remove")
+  .setDescription(
+    "Delete all VF Create application data for a Discord user (staff only)",
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
+  .addUserOption((opt) =>
+    opt
+      .setName("user")
+      .setDescription("Discord member whose creator_applications rows to delete")
+      .setRequired(true),
+  )
+  .toJSON();
+
 const POST_REMOVE_URL_MARKER = "**Link to remove**";
 
 function extractPostRemovalUrlFromEmbed(description: string | null | undefined): string | null {
@@ -735,6 +749,97 @@ export async function handleCreatorLeaderboardCommand(
   );
 
   await interaction.editReply({ embeds: [embed], components: [row] });
+}
+
+export async function handleCreatorRemoveFromDbCommand(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  if (!interaction.guild || !interaction.member) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Use this command inside the server.",
+    });
+    return;
+  }
+
+  if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageRoles)) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "You need **Manage Roles** to remove creator database rows.",
+    });
+    return;
+  }
+
+  const target = interaction.options.getUser("user", true);
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const targetId = target.id;
+  const supabase = createBotSupabase();
+
+  const { data: rows, error: selErr } = await supabase
+    .from("creator_applications")
+    .select("id")
+    .eq("discord_id", targetId);
+
+  if (selErr) {
+    console.error("[creator] creator-remove select:", selErr);
+    await interaction.editReply({
+      content: "Database error while looking up applications.",
+    });
+    return;
+  }
+
+  const count = rows?.length ?? 0;
+  if (count === 0) {
+    await interaction.editReply({
+      content: `${target} has no **creator_applications** rows — nothing to delete.`,
+    });
+    return;
+  }
+
+  const { error: delErr } = await supabase
+    .from("creator_applications")
+    .delete()
+    .eq("discord_id", targetId);
+
+  if (delErr) {
+    console.error("[creator] creator-remove delete:", delErr);
+    await interaction.editReply({
+      content: "Database error while deleting applications.",
+    });
+    return;
+  }
+
+  let roleNote = "";
+  const scoutRole = env.DISCORD_SCOUT_ROLE_ID?.trim();
+  if (scoutRole) {
+    try {
+      const guild = await interaction.client.guilds.fetch(vfGuildId());
+      const member = await guild.members.fetch(targetId).catch(() => null);
+      if (member?.roles.cache.has(scoutRole)) {
+        await member.roles.remove(
+          scoutRole,
+          `Creator records removed by ${interaction.user.tag}`,
+        );
+        roleNote =
+          " Removed their **VF Create** role in the creator Discord server.";
+      } else if (member) {
+        roleNote =
+          " They were not wearing the VF Create role in the creator Discord server.";
+      } else {
+        roleNote =
+          " They are not in the creator Discord server — role left unchanged.";
+      }
+    } catch (e) {
+      console.error("[creator] creator-remove role:", e);
+      roleNote =
+        " Could not update Discord roles — check bot **Manage Roles** in the creator server.";
+    }
+  }
+
+  await interaction.editReply({
+    content: `Deleted **${count}** row(s) from \`creator_applications\` for ${target}.${roleNote}`,
+  });
 }
 
 export async function handleCreatorProfileCommand(

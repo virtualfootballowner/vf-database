@@ -62,10 +62,12 @@ import {
   creatorPostRemoveCommand,
   creatorPostedCommand,
   creatorProfileCommand,
+  creatorRemoveFromDbCommand,
   handleCreatorLeaderboardCommand,
   handleCreatorPostRemoveCommand,
   handleCreatorPostedCommand,
   handleCreatorProfileCommand,
+  handleCreatorRemoveFromDbCommand,
   handleOnboardMediaCommand,
   onboardMediaCommand,
 } from "@/bot/creator-onboard";
@@ -188,6 +190,7 @@ export const slashCommandDefinitions = [
   creatorLeaderboardCommand,
   creatorPostedCommand,
   creatorPostRemoveCommand,
+  creatorRemoveFromDbCommand,
   updateContentCommand,
 
   new SlashCommandBuilder()
@@ -515,6 +518,9 @@ export async function handleSlashCommand(
       return;
     case "post-remove":
       await handleCreatorPostRemoveCommand(interaction);
+      return;
+    case "creator-remove":
+      await handleCreatorRemoveFromDbCommand(interaction);
       return;
     case "update-content":
       await handleUpdateContentCommand(interaction);
