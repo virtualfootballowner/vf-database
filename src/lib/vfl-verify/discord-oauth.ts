@@ -1,11 +1,14 @@
 import type { VerifyEnv } from "@/lib/vfl-verify/load-verify-env";
 import { verifyPublicBaseUrl } from "@/lib/vfl-verify/load-verify-env";
 
+const DEFAULT_DISCORD_REDIRECT_PATH = "/api/verify/discord/callback";
+
 export function discordAuthorizeUrl(
   env: VerifyEnv,
   state: string,
+  redirectPath: string = DEFAULT_DISCORD_REDIRECT_PATH,
 ): string {
-  const redirectUri = `${verifyPublicBaseUrl(env)}/api/verify/discord/callback`;
+  const redirectUri = `${verifyPublicBaseUrl(env)}${redirectPath}`;
   const u = new URL("https://discord.com/api/oauth2/authorize");
   u.searchParams.set("client_id", env.DISCORD_CLIENT_ID);
   u.searchParams.set("redirect_uri", redirectUri);
@@ -27,8 +30,9 @@ export type DiscordExchangeFailure = {
 export async function exchangeDiscordCode(
   env: VerifyEnv,
   code: string,
+  redirectPath: string = DEFAULT_DISCORD_REDIRECT_PATH,
 ): Promise<{ discordUserId: string } | { failure: DiscordExchangeFailure }> {
-  const redirectUri = `${verifyPublicBaseUrl(env)}/api/verify/discord/callback`;
+  const redirectUri = `${verifyPublicBaseUrl(env)}${redirectPath}`;
   const body = new URLSearchParams({
     client_id: env.DISCORD_CLIENT_ID,
     client_secret: env.DISCORD_CLIENT_SECRET,

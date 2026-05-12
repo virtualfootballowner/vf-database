@@ -173,6 +173,14 @@ export const slashCommandDefinitions = [
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .toJSON(),
 
+  new SlashCommandBuilder()
+    .setName("postverify-media")
+    .setDescription(
+      "Post the VF Media nickname-verify card (rename only, no roles or DB)",
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .toJSON(),
+
   onboardMediaCommand,
   creatorProfileCommand,
   creatorPostedCommand,
@@ -486,6 +494,9 @@ export async function handleSlashCommand(
       return;
     case "postverify":
       await handlePostVerifyCard(interaction);
+      return;
+    case "postverify-media":
+      await handlePostVerifyMediaCard(interaction);
       return;
     case "onboard-media":
       await handleOnboardMediaCommand(interaction);
@@ -1063,6 +1074,63 @@ async function handlePostVerifyCard(
     console.error("/postverify: failed to post card:", err);
     await interaction.editReply({
       content: "Could not post the verification card in this channel (check bot Send Messages / Embed Links).",
+    });
+  }
+}
+
+async function handlePostVerifyMediaCard(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  if (
+    !interaction.guild ||
+    !interaction.channel?.isTextBased() ||
+    !interaction.channel.isSendable()
+  ) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Use this command in a sendable text channel inside the server.",
+    });
+    return;
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+    await interaction.editReply({
+      content: "You need **Manage Server** to post the verification card.",
+    });
+    return;
+  }
+
+  const verifyUrl = `${env.VFL_SITE_URL.replace(/\/$/, "")}/verify/media`;
+  const embed = new EmbedBuilder()
+    .setColor(0x083696)
+    .setTitle("Verify your nickname")
+    .setDescription(
+      [
+        "**Click below**, then sign in with **Discord** and **Roblox**.",
+        "",
+        "All this does is rename you in this server to match your Roblox username — no roles, no review, no database. Quick one-tap fix so people can see who you are.",
+      ].join("\n"),
+    )
+    .setFooter({ text: "VF Media · Nickname verification" })
+    .setTimestamp(new Date());
+
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setLabel("Click to verify")
+      .setStyle(ButtonStyle.Link)
+      .setURL(verifyUrl),
+  );
+
+  try {
+    await interaction.channel.send({ embeds: [embed], components: [row] });
+    await interaction.editReply({ content: "Posted." });
+  } catch (err) {
+    console.error("/postverify-media: failed to post card:", err);
+    await interaction.editReply({
+      content:
+        "Could not post the verification card in this channel (check bot Send Messages / Embed Links).",
     });
   }
 }

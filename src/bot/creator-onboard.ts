@@ -132,12 +132,6 @@ function creatorApprovalDmContent(): string {
   ].join("\n\n");
 }
 
-function truncateNick(name: string, max = 32): string {
-  const t = name.trim();
-  if (t.length <= max) return t;
-  return t.slice(0, max - 1) + "…";
-}
-
 export async function handleOnboardMediaCommand(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
@@ -298,7 +292,6 @@ export async function handleCreatorApproveButton(
   }
 
   const discordId = String(rec.discord_id ?? "");
-  const robloxUsername = String(rec.roblox_username ?? "").trim();
   const robloxId = String(rec.roblox_id ?? "").trim();
 
   // Enforce one approved row per Discord / Roblox: retire older approvals before this one lands.
@@ -372,17 +365,10 @@ export async function handleCreatorApproveButton(
         } catch (e) {
           console.error("[creator] role add:", e);
         }
-        if (robloxUsername) {
-          try {
-            await member.setNickname(
-              truncateNick(robloxUsername),
-              "VF Create onboarding — Roblox username",
-            );
-          } catch (e) {
-            console.error("[creator] nick:", e);
-            memberNote = " (nickname not set — permissions or hierarchy)";
-          }
-        }
+        // Nickname is left alone here — every member self-verifies through
+        // `/verify-media` (or the league `/verify` flow) which already sets
+        // their nickname to their Roblox username. Approval only adds the
+        // Creator role on top of an already-verified member.
       } else {
         memberNote =
           " User is not in the VF server yet — role/nickname skipped until they join.";
