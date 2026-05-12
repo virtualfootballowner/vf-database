@@ -38,8 +38,8 @@ export default function VerifyMediaPage() {
       </h1>
       <p className="text-muted-foreground text-sm leading-relaxed">
         Link your Discord with Roblox in two quick steps. We&apos;ll set your
-        nickname in the VF Media server to your Roblox username — that&apos;s
-        the only thing this page does. No roles, no review, no database.
+        nickname in the VF Media server to your Roblox username and give you
+        the verified role — that&apos;s it. No staff review, no database.
       </p>
       <ol className="text-muted-foreground list-decimal space-y-2 pl-5 text-sm">
         <li>Sign in with Discord (the account you use in the VF Media server).</li>
@@ -65,9 +65,14 @@ export default function VerifyMediaPage() {
           </ul>
           <p className="text-muted-foreground text-xs leading-relaxed">
             <code className="text-foreground/90">DISCORD_MEDIA_GUILD_ID</code>{" "}
-            must be the VF Media guild. The bot needs Manage Nicknames in
-            that server, and the Discord + Roblox OAuth apps must include the
-            redirect URIs{" "}
+            must be the VF Media guild.{" "}
+            <code className="text-foreground/90">
+              DISCORD_MEDIA_VERIFIED_ROLE_ID
+            </code>{" "}
+            is optional (defaults to the existing VF Media verified role). The
+            bot needs <strong>Manage Nicknames</strong> and{" "}
+            <strong>Manage Roles</strong> in that server, and the Discord +
+            Roblox OAuth apps must include the redirect URIs{" "}
             <code className="text-foreground/90">
               /api/verify/media/discord/callback
             </code>{" "}

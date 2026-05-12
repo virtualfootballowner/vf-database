@@ -18,10 +18,13 @@ function clampNick(raw: string): string {
 }
 
 /**
- * Renames a member in the **media** Discord guild to their Roblox username.
+ * Verifies a member in the **media** Discord guild:
+ *  1. Renames them to their Roblox username
+ *  2. Grants the configured "media verified" role
+ *     (`DISCORD_MEDIA_VERIFIED_ROLE_ID`)
  *
- * Does NOT touch any database, does NOT add any role — by design, completely
- * isolated from the league verify + creator onboarding flows.
+ * Does NOT touch any database — by design, completely isolated from the
+ * league verify + creator onboarding flows.
  */
 export async function applyMediaGuildRename(
   env: MediaVerifyEnv,
@@ -37,13 +40,16 @@ export async function applyMediaGuildRename(
     };
   }
 
+  const headersBot = {
+    Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+    "Content-Type": "application/json",
+  };
+
+  // 1) Set nickname
   const patchUrl = `${DISCORD_API}/guilds/${env.DISCORD_MEDIA_GUILD_ID}/members/${discordUserId}`;
   const patchRes = await fetch(patchUrl, {
     method: "PATCH",
-    headers: {
-      Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
-      "Content-Type": "application/json",
-    },
+    headers: headersBot,
     body: JSON.stringify({ nick }),
   });
 
@@ -56,6 +62,23 @@ export async function applyMediaGuildRename(
       ok: false,
       code: patchRes.status === 403 ? "nick_failed" : "discord_error",
       status: patchRes.status,
+      detail: text.slice(0, 500),
+    };
+  }
+
+  // 2) Grant the media verified role
+  const roleUrl = `${DISCORD_API}/guilds/${env.DISCORD_MEDIA_GUILD_ID}/members/${discordUserId}/roles/${env.DISCORD_MEDIA_VERIFIED_ROLE_ID}`;
+  const putRes = await fetch(roleUrl, {
+    method: "PUT",
+    headers: { Authorization: `Bot ${env.DISCORD_BOT_TOKEN}` },
+  });
+
+  if (!putRes.ok && putRes.status !== 204) {
+    const text = await putRes.text().catch(() => "");
+    return {
+      ok: false,
+      code: "discord_error",
+      status: putRes.status,
       detail: text.slice(0, 500),
     };
   }

@@ -1105,12 +1105,12 @@ async function handlePostVerifyMediaCard(
   const verifyUrl = `${env.VFL_SITE_URL.replace(/\/$/, "")}/verify/media`;
   const embed = new EmbedBuilder()
     .setColor(0x083696)
-    .setTitle("Verify your nickname")
+    .setTitle("Verify your account")
     .setDescription(
       [
         "**Click below**, then sign in with **Discord** and **Roblox**.",
         "",
-        "All this does is rename you in this server to match your Roblox username — no roles, no review, no database. Quick one-tap fix so people can see who you are.",
+        "You'll be renamed to match your Roblox username and given the verified role — that's it. No staff review, no database.",
       ].join("\n"),
     )
     .setFooter({ text: "VF Media · Nickname verification" })

@@ -12,9 +12,20 @@ import type { VerifyEnv } from "@/lib/vfl-verify/load-verify-env";
  * Tracks no database, gives no role, requires no env beyond what's already
  * needed for the existing verify.
  */
+/**
+ * Default verified role id granted by the media verify flow when
+ * `DISCORD_MEDIA_VERIFIED_ROLE_ID` is not set in the environment.
+ * (Existing VF Media "verified" role.)
+ */
+const DEFAULT_MEDIA_VERIFIED_ROLE_ID = "1502942053305159690";
+
 const schema = z.object({
   DISCORD_BOT_TOKEN: z.string().min(1),
   DISCORD_MEDIA_GUILD_ID: z.string().min(1).transform((s) => s.trim()),
+  DISCORD_MEDIA_VERIFIED_ROLE_ID: z
+    .string()
+    .min(1)
+    .transform((s) => s.trim()),
   DISCORD_CLIENT_ID: z.string().min(1).transform((s) => s.trim()),
   DISCORD_CLIENT_SECRET: z.string().min(1),
   ROBLOX_OAUTH_CLIENT_ID: z.string().min(1).transform((s) => s.trim()),
@@ -43,9 +54,14 @@ function resolveMediaGuildId(): string | undefined {
 }
 
 export function loadMediaVerifyEnv(): MediaVerifyEnv {
+  const verifiedRoleId =
+    process.env.DISCORD_MEDIA_VERIFIED_ROLE_ID?.trim() ||
+    DEFAULT_MEDIA_VERIFIED_ROLE_ID;
+
   return schema.parse({
     DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN,
     DISCORD_MEDIA_GUILD_ID: resolveMediaGuildId(),
+    DISCORD_MEDIA_VERIFIED_ROLE_ID: verifiedRoleId,
     DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID,
     DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET,
     ROBLOX_OAUTH_CLIENT_ID: process.env.ROBLOX_OAUTH_CLIENT_ID,
@@ -65,7 +81,7 @@ export function mediaVerifyEnvAsVerifyEnv(env: MediaVerifyEnv): VerifyEnv {
   return {
     DISCORD_BOT_TOKEN: env.DISCORD_BOT_TOKEN,
     DISCORD_GUILD_ID: env.DISCORD_MEDIA_GUILD_ID,
-    DISCORD_ROVER_VERIFIED_ROLE_ID: "unused-for-media-flow",
+    DISCORD_ROVER_VERIFIED_ROLE_ID: env.DISCORD_MEDIA_VERIFIED_ROLE_ID,
     DISCORD_CLIENT_ID: env.DISCORD_CLIENT_ID,
     DISCORD_CLIENT_SECRET: env.DISCORD_CLIENT_SECRET,
     ROBLOX_OAUTH_CLIENT_ID: env.ROBLOX_OAUTH_CLIENT_ID,

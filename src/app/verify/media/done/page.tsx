@@ -4,7 +4,7 @@ const MESSAGES: Record<string, { title: string; body: string }> = {
   ok: {
     title: "You're verified in VF Media",
     body:
-      "Your nickname in the VF Media server is now your Roblox username. That's it — nothing else changed and no data was stored.",
+      "Your nickname in the VF Media server is now your Roblox username and the verified role has been added. That's it — no data was stored.",
   },
   not_in_guild: {
     title: "Join the VF Media server first",
@@ -55,7 +55,7 @@ const MESSAGES: Record<string, { title: string; body: string }> = {
   discord_api: {
     title: "Discord API error",
     body:
-      "Something went wrong updating your nickname. Try again or ask staff to check bot permissions (Manage Nicknames).",
+      "Something went wrong updating your member. Try again or ask staff to check bot permissions (Manage Nicknames + Manage Roles).",
   },
   config: {
     title: "Not configured",
