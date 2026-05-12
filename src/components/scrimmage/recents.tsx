@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
+  formatScrimmageRosterLabel,
   getRecentScrimmageMatches,
   type ScrimmageMatchSummary,
 } from "@/lib/scrimmage/queries";
@@ -108,6 +109,11 @@ function RecentRow({ match }: { match: ScrimmageMatchSummary }) {
   const pill = statusPill(match.status);
   const t1 = match.team1Score;
   const t2 = match.team2Score;
+  const rosterLabel = formatScrimmageRosterLabel(
+    match.team1RosterSize,
+    match.team2RosterSize,
+    match.playerCount,
+  );
   const showScore = match.status !== "live" && t1 != null && t2 != null;
   const isLive = match.status === "live";
   const linkedDot = match.isLinkedToRoblox ? (
@@ -150,9 +156,7 @@ function RecentRow({ match }: { match: ScrimmageMatchSummary }) {
               {linkedDot}
               <p className="text-[11px] text-white/55">
                 {timeAgo(match.playedAt)}
-                {match.playerCount
-                  ? ` · ${match.playerCount}v${match.playerCount}`
-                  : ""}
+                {rosterLabel ? ` · ${rosterLabel}` : ""}
               </p>
             </div>
             <p className="mt-0.5 truncate text-xs text-white/75 sm:text-sm">

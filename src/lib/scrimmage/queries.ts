@@ -80,11 +80,30 @@ export type ScrimmageMatchSummary = {
   team1CaptainName: string | null;
   team2CaptainName: string | null;
   playerCount: number | null;
+  /** Counts from `scrimmage_players` for this match (for correct 10v10 vs total-20 display). */
+  team1RosterSize: number;
+  team2RosterSize: number;
   /** Best wall-clock to display: result_confirmed_at → match_started_at → queue_started_at. */
   playedAt: string;
   /** True iff there's at least one match.start event for this match. */
   isLinkedToRoblox: boolean;
 };
+
+/** "10v10" style label: uses per-team counts when present; otherwise splits total player_count (full match size). */
+export function formatScrimmageRosterLabel(
+  team1Count: number,
+  team2Count: number,
+  playerCountTotal: number | null,
+): string | null {
+  if (team1Count > 0 || team2Count > 0) {
+    return `${team1Count}v${team2Count}`;
+  }
+  const t = playerCountTotal;
+  if (t == null || t <= 0) return null;
+  const half = t / 2;
+  if (Number.isInteger(half)) return `${half}v${half}`;
+  return `${Math.floor(half)}v${Math.ceil(half)}`;
+}
 
 export type ScrimmageEvent = {
   id: string;
@@ -632,6 +651,23 @@ export async function getRecentScrimmageMatches(
     }
   }
 
+  const rosterSizesByMatchId = new Map<string, { t1: number; t2: number }>();
+  if (matchIds.length > 0) {
+    const { data: rosterRows } = await supabase
+      .from("scrimmage_players")
+      .select("match_id, team")
+      .in("match_id", matchIds);
+    for (const row of (rosterRows ?? []) as {
+      match_id: string;
+      team: 1 | 2;
+    }[]) {
+      const cur = rosterSizesByMatchId.get(row.match_id) ?? { t1: 0, t2: 0 };
+      if (row.team === 1) cur.t1 += 1;
+      else cur.t2 += 1;
+      rosterSizesByMatchId.set(row.match_id, cur);
+    }
+  }
+
   return sliced.map((r) => ({
     matchCode: r.match_code,
     status: r.status,
@@ -642,6 +678,8 @@ export async function getRecentScrimmageMatches(
     team2CaptainName:
       (r.team2_captain_id && namesById.get(r.team2_captain_id)) ?? null,
     playerCount: r.player_count,
+    team1RosterSize: rosterSizesByMatchId.get(r.id)?.t1 ?? 0,
+    team2RosterSize: rosterSizesByMatchId.get(r.id)?.t2 ?? 0,
     playedAt:
       r.result_confirmed_at ??
       r.match_started_at ??

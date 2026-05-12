@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { getRobloxHeadshots } from "@/lib/roblox";
 import {
+  formatScrimmageRosterLabel,
   getScrimmageMatchByCode,
   type ScrimmageMatchDetail,
   type ScrimmageMatchPlayer,
@@ -149,6 +150,12 @@ export default async function FaceitMatchPage({
         : 2
     : null;
 
+  const rosterLabel = formatScrimmageRosterLabel(
+    match.team1.length,
+    match.team2.length,
+    match.playerCount,
+  );
+
   return (
     <main className="relative min-h-dvh min-w-0 w-full overflow-x-clip text-white">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 pb-16 pt-5 sm:px-6 sm:pt-8 md:px-8 md:pt-10">
@@ -180,12 +187,10 @@ export default async function FaceitMatchPage({
               <CalendarDays className="size-3.5" />
               {formatDateTime(match.playedAt)}
             </span>
-            {match.playerCount ? (
+            {rosterLabel ? (
               <>
                 <span className="text-white/25">·</span>
-                <span>
-                  {match.playerCount}v{match.playerCount} match
-                </span>
+                <span>{rosterLabel} match</span>
               </>
             ) : null}
             {match.hostName ? (
