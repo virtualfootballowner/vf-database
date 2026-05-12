@@ -6,8 +6,8 @@ import type {
 /** Community milestone (aggregate tracked views / plays). */
 export const ROAD_TO_1M_TARGET_VIEWS = 1_000_000;
 
-/** Total USD split proportionally by tracked views at payout. */
-export const ROAD_TO_1M_PRIZE_POOL_USD = 5_000;
+/** Total Robux split proportionally by tracked views at payout. */
+export const ROAD_TO_1M_PRIZE_POOL_ROBUX = 50_000;
 
 export type ChallengeLeaderboardEntry = {
   rank: number;
@@ -22,18 +22,16 @@ export type ChallengeLeaderboardEntry = {
   totalViews: number;
   /** Share of current pool (sums to ~100% across rows). */
   poolSharePercent: number;
-  estimatedPayoutUsd: number;
+  estimatedPayoutRobux: number;
   posts: PostedVideoLink[];
 };
 
 export type RoadTo1MChallenge = {
   targetViews: number;
-  prizePoolUsd: number;
+  prizePoolRobux: number;
   totalTrackedViews: number;
-  /** 0–100 for UI bar (capped at 100 for display). */
   progressPercent: number;
   milestoneReached: boolean;
-  /** Creators with at least one posted link. */
   participantCount: number;
   totalPostCount: number;
   leaderboard: ChallengeLeaderboardEntry[];
@@ -55,14 +53,14 @@ function sumPostViews(links: PostedVideoLink[]): {
 }
 
 /**
- * Proportional pool: each creator’s estimated $ share = (their views / total views) × pool.
- * When aggregate hits 1M, 100k views ≈ 10% ≈ $500 of $5k.
+ * Proportional pool: each creator’s estimated Robux = (their views / total views) × pool.
+ * When aggregate hits 1M, 100k views ≈ 10% ≈ 5k of 50k Robux.
  */
 export function buildRoadTo1MChallenge(
   creators: ApprovedCreatorDirectoryRow[],
 ): RoadTo1MChallenge {
   const targetViews = ROAD_TO_1M_TARGET_VIEWS;
-  const prizePoolUsd = ROAD_TO_1M_PRIZE_POOL_USD;
+  const prizePoolRobux = ROAD_TO_1M_PRIZE_POOL_ROBUX;
 
   let totalTrackedViews = 0;
   let totalPostCount = 0;
@@ -117,7 +115,7 @@ export function buildRoadTo1MChallenge(
   const leaderboard: ChallengeLeaderboardEntry[] = rows
     .map((r) => {
       const poolSharePercent = (r.totalViews / denominator) * 100;
-      const estimatedPayoutUsd = (r.totalViews / denominator) * prizePoolUsd;
+      const estimatedPayoutRobux = (r.totalViews / denominator) * prizePoolRobux;
       return {
         rank: 0,
         id: r.id,
@@ -130,7 +128,7 @@ export function buildRoadTo1MChallenge(
         postsWithMetrics: r.postsWithMetrics,
         totalViews: r.totalViews,
         poolSharePercent,
-        estimatedPayoutUsd,
+        estimatedPayoutRobux,
         posts: r.posts,
       };
     })
@@ -148,7 +146,7 @@ export function buildRoadTo1MChallenge(
 
   return {
     targetViews,
-    prizePoolUsd,
+    prizePoolRobux,
     totalTrackedViews,
     progressPercent,
     milestoneReached,
@@ -158,14 +156,11 @@ export function buildRoadTo1MChallenge(
   };
 }
 
-export function formatChallengeUsd(n: number): string {
-  if (!Number.isFinite(n)) return "$0";
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: n >= 100 ? 0 : 2,
-  }).format(n);
+export function formatChallengeRobux(n: number): string {
+  if (!Number.isFinite(n)) return "0";
+  const rounded = Math.round(n);
+  const formatted = new Intl.NumberFormat(undefined).format(rounded);
+  return `${formatted} Robux`;
 }
 
 export function formatPoolSharePercent(n: number): string {
