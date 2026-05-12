@@ -1,7 +1,16 @@
 import { createCreatorSupabaseAdmin } from "@/lib/creator-onboard/supabase-creator";
 import type { CreatorWebEnv } from "@/lib/creator-onboard/env-web";
 
-export type PostedVideoLink = { url: string; posted_at: string };
+export type PostedVideoLink = {
+  url: string;
+  posted_at: string;
+  /** Latest known view/play count from daily sync (YouTube views, TikTok plays). */
+  view_count?: number;
+  views_fetched_at?: string;
+  views_source?: "youtube" | "tiktok" | "apify";
+  /** Set when the last sync failed for this URL. */
+  views_error?: string;
+};
 
 /** Normalize JSONB from Postgres for directory + bot handlers. */
 export function parsePostedVideoLinks(value: unknown): PostedVideoLink[] {
@@ -14,7 +23,21 @@ export function parsePostedVideoLinks(value: unknown): PostedVideoLink[] {
     const posted_at =
       typeof o.posted_at === "string" ? o.posted_at.trim() : "";
     if (!url || !posted_at) continue;
-    out.push({ url, posted_at });
+
+    const link: PostedVideoLink = { url, posted_at };
+    if (typeof o.view_count === "number" && Number.isFinite(o.view_count)) {
+      link.view_count = Math.max(0, Math.floor(o.view_count));
+    }
+    if (typeof o.views_fetched_at === "string" && o.views_fetched_at.trim()) {
+      link.views_fetched_at = o.views_fetched_at.trim();
+    }
+    if (typeof o.views_error === "string" && o.views_error.trim()) {
+      link.views_error = o.views_error.trim();
+    }
+    if (o.views_source === "youtube" || o.views_source === "tiktok") {
+      link.views_source = o.views_source;
+    }
+    out.push(link);
   }
   return out;
 }

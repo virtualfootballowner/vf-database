@@ -42,6 +42,13 @@ function formatPostedDate(iso: string): string {
   });
 }
 
+function formatViewCount(n: number): string {
+  if (n < 1000) return String(n);
+  if (n < 1_000_000) return `${(n / 1000).toFixed(n >= 10_000 ? 0 : 1)}K`;
+  if (n < 1_000_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
+  return `${(n / 1_000_000_000).toFixed(1)}B`;
+}
+
 export default async function CreatorsDirectoryPage() {
   let creators: ApprovedCreatorDirectoryRow[] = [];
   try {
@@ -150,23 +157,43 @@ export default async function CreatorsDirectoryPage() {
                       <ul className="flex list-none flex-col gap-1.5 text-sm">
                         {posts.map((p) => {
                           const dateLabel = formatPostedDate(p.posted_at);
+                          const viewsLabel =
+                            typeof p.view_count === "number"
+                              ? formatViewCount(p.view_count)
+                              : null;
                           return (
                             <li key={`${c.id}-${p.posted_at}-${p.url}`}>
-                              <a
-                                href={p.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary inline-flex flex-wrap items-baseline gap-x-2 underline-offset-2 hover:underline"
-                              >
-                                <span className="font-medium">
-                                  {postHostLabel(p.url)}
-                                </span>
-                                {dateLabel ? (
-                                  <span className="text-muted-foreground text-xs font-normal tabular-nums">
-                                    {dateLabel}
+                              <div className="flex flex-col gap-0.5">
+                                <a
+                                  href={p.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-primary inline-flex flex-wrap items-baseline gap-x-2 underline-offset-2 hover:underline"
+                                >
+                                  <span className="font-medium">
+                                    {postHostLabel(p.url)}
+                                  </span>
+                                  {dateLabel ? (
+                                    <span className="text-muted-foreground text-xs font-normal tabular-nums">
+                                      {dateLabel}
+                                    </span>
+                                  ) : null}
+                                </a>
+                                {viewsLabel ? (
+                                  <span className="text-muted-foreground pl-0 text-xs tabular-nums">
+                                    {p.views_source === "tiktok"
+                                      ? `${viewsLabel} plays`
+                                      : `${viewsLabel} views`}
+                                    {p.views_fetched_at ? (
+                                      <>
+                                        {" "}
+                                        · synced{" "}
+                                        {formatPostedDate(p.views_fetched_at)}
+                                      </>
+                                    ) : null}
                                   </span>
                                 ) : null}
-                              </a>
+                              </div>
                             </li>
                           );
                         })}

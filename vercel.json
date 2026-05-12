@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/sync-creator-post-views",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}
