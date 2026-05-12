@@ -170,7 +170,7 @@ export default async function CreatorsChallengePage() {
         <div>
         {/* Community progress */}
         <section
-          className="mt-8 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-7"
+          className="mt-8 rounded-xl border border-zinc-300/70 bg-zinc-100 p-5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)] sm:p-7"
           aria-labelledby="progress-heading"
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -262,9 +262,9 @@ export default async function CreatorsChallengePage() {
           </div>
 
           {challenge.leaderboard.length === 0 ? (
-            <p className="mt-6 rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-12 text-center text-sm text-zinc-600">
+            <p className="mt-6 rounded-xl border border-dashed border-white/25 bg-zinc-100 px-6 py-12 text-center text-sm text-zinc-700 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)]">
               No posts on the board yet. Approved creators: add a link with{" "}
-              <code className="rounded bg-zinc-100 px-1 text-zinc-800">
+              <code className="rounded bg-white px-1 text-zinc-800">
                 /posted
               </code>{" "}
               in Discord.
@@ -281,10 +281,10 @@ export default async function CreatorsChallengePage() {
                 return (
                   <article
                     key={row.id}
-                    className={`overflow-hidden rounded-xl border bg-white shadow-sm ${
+                    className={`overflow-hidden rounded-xl border bg-zinc-100 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)] ${
                       virtuosoPick
-                        ? "border-blue-300 ring-1 ring-blue-100"
-                        : "border-zinc-200"
+                        ? "border-blue-300/70 ring-1 ring-blue-200/50"
+                        : "border-zinc-300/70"
                     }`}
                   >
                     <div className="flex flex-col gap-4 p-4 sm:p-5">
@@ -353,25 +353,25 @@ export default async function CreatorsChallengePage() {
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                        <div className="min-w-0 rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100">
+                        <div className="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-zinc-200">
                           <p className="text-[11px] text-zinc-500">Views</p>
                           <p className="truncate text-base font-semibold tabular-nums text-zinc-900">
                             {formatViewCount(row.totalViews)}
                           </p>
                         </div>
-                        <div className="min-w-0 rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100">
+                        <div className="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-zinc-200">
                           <p className="text-[11px] text-zinc-500">Posts</p>
                           <p className="text-base font-semibold tabular-nums text-zinc-900">
                             {row.postCount}
                           </p>
                         </div>
-                        <div className="min-w-0 rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100">
+                        <div className="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-zinc-200">
                           <p className="text-[11px] text-zinc-500">Pool share</p>
                           <p className="truncate text-base font-semibold tabular-nums text-blue-800">
                             {formatPoolSharePercent(row.poolSharePercent)}
                           </p>
                         </div>
-                        <div className="min-w-0 rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100">
+                        <div className="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-zinc-200">
                           <p className="text-[11px] text-zinc-500">
                             Est. Robux
                           </p>
@@ -381,7 +381,7 @@ export default async function CreatorsChallengePage() {
                         </div>
                       </div>
 
-                      <div className="rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100">
+                      <div className="rounded-lg bg-white px-3 py-2 ring-1 ring-zinc-200">
                         <p className="text-[11px] text-zinc-500">
                           Virtuoso sponsor
                         </p>
@@ -395,7 +395,7 @@ export default async function CreatorsChallengePage() {
                       </div>
                     </div>
 
-                    <details className="group border-t border-zinc-100 bg-zinc-50/80">
+                    <details className="group border-t border-zinc-200 bg-zinc-200/60">
                       <summary className="cursor-pointer list-none px-4 py-2.5 text-sm text-blue-800 hover:underline sm:px-5">
                         View posts ({row.postCount})
                         <span className="text-zinc-400 group-open:hidden">
@@ -407,7 +407,7 @@ export default async function CreatorsChallengePage() {
                           · collapse
                         </span>
                       </summary>
-                      <ul className="space-y-1 border-t border-zinc-200/80 px-4 pb-3 pt-2 sm:px-5">
+                      <ul className="space-y-1 border-t border-zinc-300/70 px-4 pb-3 pt-2 sm:px-5">
                         {row.posts.map((p) => {
                           const dateLabel = formatPostedDate(p.posted_at);
                           const viewsLabel =
@@ -464,7 +464,7 @@ export default async function CreatorsChallengePage() {
 
         {/* Quick stats */}
         <section className="mt-10 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-zinc-300/70 bg-zinc-100 p-4 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)]">
             <div className="flex items-center gap-2 text-zinc-600">
               <Video className="size-4" aria-hidden />
               <span className="text-sm font-medium text-zinc-700">
@@ -478,7 +478,7 @@ export default async function CreatorsChallengePage() {
               {challenge.participantCount} creators with links
             </p>
           </div>
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-zinc-300/70 bg-zinc-100 p-4 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)]">
             <div className="flex items-center gap-2 text-zinc-600">
               <Users className="size-4" aria-hidden />
               <span className="text-sm font-medium text-zinc-700">
@@ -492,7 +492,7 @@ export default async function CreatorsChallengePage() {
               At least one challenge post
             </p>
           </div>
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-zinc-300/70 bg-zinc-100 p-4 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)]">
             <div className="flex items-center gap-2 text-zinc-600">
               <Trophy className="size-4" aria-hidden />
               <span className="text-sm font-medium text-zinc-700">
@@ -510,65 +510,275 @@ export default async function CreatorsChallengePage() {
 
         <section
           id="how-it-works"
-          className="mt-10 scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-7"
+          className="mt-10 scroll-mt-24 rounded-xl border border-zinc-300/70 bg-zinc-100 p-6 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)] sm:p-8"
         >
-          <h2 className="text-lg font-semibold text-zinc-900">
-            How Robux and Virtuoso work
-          </h2>
-          <ul className="mt-4 space-y-3 text-sm leading-relaxed text-zinc-600">
+          <div className="space-y-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-zinc-500">
+              New here? Start here
+            </p>
+            <h2 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">
+              VF Create · the full beginner guide
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-600 sm:text-[15px]">
+              VF Create is the Virtual Football content program. You make
+              short videos about VF — clips, montages, reactions, guides — post
+              them on TikTok and/or YouTube, then log the link with our Discord
+              bot. The community is racing to{" "}
+              <strong className="text-zinc-900">1,000,000 combined views</strong>{" "}
+              and unlocking a{" "}
+              <strong className="text-zinc-900">
+                {formatChallengeRobux(ROAD_TO_1M_PRIZE_POOL_ROBUX)} Robux
+              </strong>{" "}
+              pool. No prior experience required — this guide walks you through
+              every step.
+            </p>
+          </div>
+
+          <ol className="mt-6 space-y-5 text-sm leading-relaxed text-zinc-700 sm:text-[15px]">
             <li className="flex gap-3">
-              <span className="tabular-nums text-zinc-400">1.</span>
-              <span>
-                Tracked{" "}
-                <strong className="font-medium text-zinc-900">
-                  YouTube views
-                </strong>{" "}
-                and{" "}
-                <strong className="font-medium text-zinc-900">
-                  TikTok plays
-                </strong>{" "}
-                come from links submitted with{" "}
-                <code className="rounded bg-zinc-100 px-1">/posted</code>.
+              <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                1
               </span>
+              <div>
+                <p className="font-semibold text-zinc-900">
+                  Get approved as a VF Creator
+                </p>
+                <p className="mt-1 text-zinc-600">
+                  Apply through{" "}
+                  <Link
+                    href="/content/creators/onboard"
+                    className="font-medium text-blue-800 underline-offset-2 hover:underline"
+                  >
+                    Creator onboarding
+                  </Link>
+                  . You&apos;ll link your Discord, your Roblox account, and
+                  drop your TikTok / YouTube handle so we know who&apos;s
+                  posting. Staff review and approve — once you&apos;re in,
+                  you get the{" "}
+                  <strong className="text-zinc-900">Creator</strong> role on
+                  Discord and unlock the{" "}
+                  <code className="rounded bg-white px-1 py-0.5 text-[12px] text-zinc-800 ring-1 ring-zinc-200">
+                    /posted
+                  </code>{" "}
+                  command.
+                </p>
+              </div>
             </li>
+
             <li className="flex gap-3">
-              <span className="tabular-nums text-zinc-400">2.</span>
-              <span>
-                At{" "}
-                <strong className="font-medium text-zinc-900">
-                  1M combined
-                </strong>{" "}
-                tracked views/plays, the{" "}
-                <strong className="font-medium text-zinc-900">
-                  {formatChallengeRobux(ROAD_TO_1M_PRIZE_POOL_ROBUX)}
-                </strong>{" "}
-                pool is split{" "}
-                <strong className="font-medium text-zinc-900">
-                  in proportion
-                </strong>{" "}
-                to each creator&apos;s share of the total (same idea as 10% of
-                views ≈{" "}
-                {formatChallengeRobux(ROAD_TO_1M_PRIZE_POOL_ROBUX * 0.1)}).
+              <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                2
               </span>
+              <div>
+                <p className="font-semibold text-zinc-900">
+                  Make a VF video and post it publicly
+                </p>
+                <p className="mt-1 text-zinc-600">
+                  Anything VF-themed counts — gameplay clips, match
+                  highlights, edits, tutorials, reactions, comedy. Upload it
+                  to your{" "}
+                  <strong className="text-zinc-900">TikTok</strong> or{" "}
+                  <strong className="text-zinc-900">YouTube</strong> channel
+                  (the same one you registered during onboarding). Make sure
+                  the post is public so we can read view / play counts.
+                </p>
+              </div>
             </li>
+
             <li className="flex gap-3">
-              <span className="tabular-nums text-zinc-400">3.</span>
-              <span>
-                The table above shows each creator&apos;s current share and
-                estimated Robux; numbers move as more posts and syncs land.
+              <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                3
               </span>
+              <div>
+                <p className="font-semibold text-zinc-900">
+                  Log it with{" "}
+                  <code className="rounded bg-white px-1 py-0.5 text-[13px] text-zinc-800 ring-1 ring-zinc-200">
+                    /posted
+                  </code>{" "}
+                  on Discord
+                </p>
+                <p className="mt-1 text-zinc-600">
+                  In any channel the bot can see, type{" "}
+                  <code className="rounded bg-white px-1 py-0.5 text-[12px] text-zinc-800 ring-1 ring-zinc-200">
+                    /posted url:&lt;your link&gt;
+                  </code>{" "}
+                  and paste the full URL of the video. The bot saves it
+                  against your creator profile and adds it to the
+                  leaderboard. Repeat for every new video you drop — there&apos;s
+                  no cap on how many you can submit.
+                </p>
+                <p className="mt-2 text-xs text-zinc-500">
+                  Made a mistake or want to pull a link?{" "}
+                  <code className="rounded bg-white px-1 py-0.5 text-[12px] text-zinc-800 ring-1 ring-zinc-200">
+                    /post-remove
+                  </code>{" "}
+                  removes it (staff also approves edge cases in the
+                  staff channel).
+                </p>
+              </div>
             </li>
+
             <li className="flex gap-3">
-              <span className="tabular-nums text-zinc-400">4.</span>
-              <span>
-                <strong className="font-medium text-zinc-900">
-                  Virtuoso sponsor
-                </strong>{" "}
-                rewards: top three finishers on views can choose Virtuoso
-                footwear, in addition to pool math — final calls by VF staff.
+              <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                4
               </span>
+              <div>
+                <p className="font-semibold text-zinc-900">
+                  Views sync automatically — and you can force a refresh
+                </p>
+                <p className="mt-1 text-zinc-600">
+                  Once a day the bot pulls fresh view / play counts from
+                  YouTube and TikTok for every logged link, and the
+                  leaderboard updates on the next page load. Staff can also
+                  run{" "}
+                  <code className="rounded bg-white px-1 py-0.5 text-[12px] text-zinc-800 ring-1 ring-zinc-200">
+                    /update-content
+                  </code>{" "}
+                  to trigger an immediate sync if something big lands.
+                  Brand-new posts show <strong>0 views</strong> until the
+                  first sync — that&apos;s normal.
+                </p>
+              </div>
             </li>
-          </ul>
+
+            <li className="flex gap-3">
+              <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                5
+              </span>
+              <div>
+                <p className="font-semibold text-zinc-900">
+                  How the {formatChallengeRobux(ROAD_TO_1M_PRIZE_POOL_ROBUX)}{" "}
+                  Robux pool is split
+                </p>
+                <p className="mt-1 text-zinc-600">
+                  When the community hits{" "}
+                  <strong className="text-zinc-900">
+                    1,000,000 combined
+                  </strong>{" "}
+                  tracked views / plays, the prize pool unlocks. It&apos;s
+                  split{" "}
+                  <strong className="text-zinc-900">in proportion</strong> to
+                  each creator&apos;s share of the total. So if your videos
+                  pulled <strong>10%</strong> of all tracked views, you
+                  receive roughly{" "}
+                  <strong className="text-emerald-700">
+                    {formatChallengeRobux(
+                      ROAD_TO_1M_PRIZE_POOL_ROBUX * 0.1,
+                    )}{" "}
+                    Robux
+                  </strong>
+                  . Every card on the leaderboard shows a live{" "}
+                  <strong className="text-zinc-900">Pool share %</strong> and
+                  <strong className="text-zinc-900">Est. Robux</strong> — they
+                  shift as more posts and syncs land.
+                </p>
+              </div>
+            </li>
+
+            <li className="flex gap-3">
+              <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                6
+              </span>
+              <div>
+                <p className="font-semibold text-zinc-900">
+                  Top 3 also win Virtuoso sponsored boots
+                </p>
+                <p className="mt-1 text-zinc-600">
+                  In addition to the Robux pool, the{" "}
+                  <strong className="text-zinc-900">top 3</strong> finishers
+                  by total tracked views each choose a pair of{" "}
+                  <strong className="text-zinc-900">
+                    Virtuoso-sponsored boots
+                  </strong>{" "}
+                  — the exact in-game cleats that VF&apos;s best players have
+                  received before, and that thousands of players already
+                  buy. Want to see what&apos;s on offer?{" "}
+                  <Link
+                    href="/content/creators/virtuoso"
+                    className="font-medium text-blue-800 underline-offset-2 hover:underline"
+                  >
+                    Browse the Virtuoso gallery
+                  </Link>
+                  . Ties are settled by VF staff.
+                </p>
+              </div>
+            </li>
+
+            <li className="flex gap-3">
+              <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-xs font-bold text-white">
+                ?
+              </span>
+              <div>
+                <p className="font-semibold text-zinc-900">
+                  Quick FAQ for new creators
+                </p>
+                <ul className="mt-1 space-y-1.5 text-zinc-600">
+                  <li>
+                    <strong className="text-zinc-900">
+                      Do I need a big following?
+                    </strong>{" "}
+                    No. Every approved creator earns a share — even small
+                    accounts add to the community total and get a slice if
+                    the goal hits.
+                  </li>
+                  <li>
+                    <strong className="text-zinc-900">
+                      Does YouTube Shorts count?
+                    </strong>{" "}
+                    Yes — Shorts, regular YouTube videos, and TikTok posts
+                    all count. We read public view / play counts.
+                  </li>
+                  <li>
+                    <strong className="text-zinc-900">
+                      How often does the leaderboard update?
+                    </strong>{" "}
+                    On every page load. The view numbers themselves refresh
+                    on the daily sync (or sooner if staff run{" "}
+                    <code className="rounded bg-white px-1 text-[12px] text-zinc-800 ring-1 ring-zinc-200">
+                      /update-content
+                    </code>
+                    ).
+                  </li>
+                  <li>
+                    <strong className="text-zinc-900">
+                      Can I delete a post I&apos;m not happy with?
+                    </strong>{" "}
+                    Use{" "}
+                    <code className="rounded bg-white px-1 text-[12px] text-zinc-800 ring-1 ring-zinc-200">
+                      /post-remove
+                    </code>{" "}
+                    on Discord. If a video is removed from TikTok / YouTube
+                    its views stop counting on the next sync.
+                  </li>
+                  <li>
+                    <strong className="text-zinc-900">
+                      When do I get paid?
+                    </strong>{" "}
+                    Payouts go out once the 1M goal is hit and VF staff
+                    confirm eligibility (no fake views, post is still up,
+                    creator profile in good standing).
+                  </li>
+                </ul>
+              </div>
+            </li>
+          </ol>
+
+          <div className="mt-7 flex flex-wrap items-center gap-2 rounded-lg border border-blue-300/60 bg-blue-50/80 px-4 py-3 text-sm text-blue-900">
+            <span className="font-semibold">Ready to start?</span>
+            <Link
+              href="/content/creators/onboard"
+              className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700"
+            >
+              Apply as a creator
+            </Link>
+            <span className="text-blue-800/70">or</span>
+            <Link
+              href="/content/creators/virtuoso"
+              className="text-xs font-semibold text-blue-800 underline-offset-2 hover:underline"
+            >
+              See the Virtuoso prize boots →
+            </Link>
+          </div>
         </section>
 
         <footer className="mt-14 border-t border-white/15 pt-8 text-center text-xs text-white/65 sm:text-sm">
