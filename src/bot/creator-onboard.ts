@@ -124,11 +124,14 @@ function creatorApprovalDmContent(): string {
     DEFAULT_CREATOR_CHECKLIST_CHANNEL_URL;
   const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
   const leaderboardUrl = `${siteBase}/content/creators#leaderboard`;
+  // Discord doesn't render [label](url) masked links in plain message
+  // content (only inside embeds), so use bare URLs here and let Discord
+  // auto-link them. The Open Graph embed will preview the page below.
   return [
     "You're in. Welcome to **VF Create**.",
-    `**Go straight to the leaderboard →** [${leaderboardUrl}](${leaderboardUrl})`,
+    `**Go straight to the leaderboard →** ${leaderboardUrl}`,
     `That's where your posts will show up once you run \`/posted\`. The full beginner guide and prize pool are on the same page.`,
-    `Then open [**#new-creator-checklist**](${checklistUrl}) to get started (or ask staff).`,
+    `Then jump into the checklist: ${checklistUrl}`,
   ].join("\n\n");
 }
 
