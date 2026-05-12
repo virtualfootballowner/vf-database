@@ -19,7 +19,7 @@ export default function CreatorRobloxStep() {
           Continue with Roblox
         </Link>
         <Link
-          href="/content/creators/onboard/hype"
+          href="/content/creators/onboard"
           className="text-muted-foreground text-center text-sm underline underline-offset-2"
         >
           Back
