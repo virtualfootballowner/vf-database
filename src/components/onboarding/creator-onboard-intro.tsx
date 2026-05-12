@@ -34,53 +34,42 @@ function isVideoPath(path: string): boolean {
   return /\.(mov|mp4|webm)$/i.test(path.split("?")[0] ?? path);
 }
 
+/** Full media visible inside frame (`object-contain`); letterboxing fills with dark blue. */
 function MediaSlot({
   src,
-  label,
   className,
   aspectClass,
   priorityVideo,
 }: {
   src: string;
-  label: string;
   aspectClass: string;
   className?: string;
-  /** Hero: stronger autoplay attributes. */
   priorityVideo?: boolean;
 }) {
   const video = isVideoPath(src);
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border border-white/15 bg-[#12326e]/48 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ${aspectClass} ${className ?? ""}`}
+      className={`relative overflow-hidden rounded-lg bg-[#0a1629] ${aspectClass} ${className ?? ""}`}
     >
       {video ? (
         <video
           src={src}
-          className="absolute inset-0 size-full object-cover"
+          className="absolute inset-0 size-full object-contain"
           muted
           playsInline
           loop
           autoPlay
           preload={priorityVideo ? "auto" : "metadata"}
-          aria-label={label}
+          aria-label="Clip"
         />
       ) : (
         /* eslint-disable-next-line @next/next/no-img-element -- static public assets */
         <img
           src={src}
           alt=""
-          className="absolute inset-0 size-full object-cover"
+          className="absolute inset-0 size-full object-contain"
         />
       )}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#041a45]/85 via-[#041a45]/20 to-transparent"
-      />
-      <div className="relative z-[1] flex h-full min-h-[4rem] flex-col justify-end p-3 text-center sm:min-h-0">
-        <p className="text-[11px] font-medium leading-snug text-white/95 drop-shadow-md sm:text-xs">
-          {label}
-        </p>
-      </div>
     </div>
   );
 }
@@ -137,111 +126,100 @@ export function CreatorOnboardIntro({
         <SiteNav />
 
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-5">
-          <div className="flex w-full max-w-md items-center justify-center rounded-2xl border border-white/20 bg-white px-6 py-4 shadow-[0_16px_48px_-20px_rgba(0,0,0,0.45)] sm:w-auto sm:justify-start">
+          <div className="flex w-full max-w-md items-center justify-center rounded-lg bg-white px-5 py-3 sm:w-auto sm:justify-start">
             {/* eslint-disable-next-line @next/next/no-img-element -- static public asset */}
             <img
               src={ROBUX_LOGO_SRC}
               alt="Robux"
               width={280}
               height={80}
-              className="h-9 w-auto max-w-full object-contain object-left sm:h-11"
+              className="h-9 w-auto max-w-full object-contain object-left sm:h-10"
             />
           </div>
-          <p className="max-w-md text-center text-sm font-medium leading-snug text-white/70 sm:text-left">
+          <p className="max-w-md text-center text-sm leading-snug text-white/65 sm:text-left">
             Backed by a real <span className="text-white">50K Robux</span> pool
             for VF Create creators.
           </p>
         </div>
 
-        {/* Above the fold: headline, rewards, CTA */}
         <header className="flex flex-col gap-6">
-          <div className="space-y-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
-              VF Create Program
-            </p>
+          <div className="space-y-2">
+            <p className="text-sm text-white/50">VF Create Program</p>
             <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl">
               This is your shot.
             </h1>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-white/20 bg-white/[0.07] px-5 py-6 shadow-[0_20px_60px_-24px_rgba(8,54,150,0.65)] sm:py-8">
-              <div className="flex flex-wrap items-center gap-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-cyan-200/90">
-                  Prize pool
-                </p>
-                <div className="rounded-lg border border-white/15 bg-white/90 px-2 py-1">
+          <div className="grid gap-8 border-t border-white/10 pt-8 sm:grid-cols-2 sm:gap-12">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm text-white/50">Prize pool</p>
+                <div className="rounded bg-white px-1.5 py-0.5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={ROBUX_LOGO_SRC}
                     alt=""
                     width={72}
                     height={22}
-                    className="h-4 w-auto object-contain"
+                    className="h-3.5 w-auto object-contain"
                   />
                 </div>
               </div>
-              <p className="mt-2 text-4xl font-black tabular-nums tracking-tight sm:text-5xl md:text-6xl">
+              <p className="mt-3 text-4xl font-semibold tabular-nums tracking-tight sm:text-5xl">
                 50K
               </p>
-              <p className="mt-1 text-lg font-semibold text-white sm:text-xl">
-                Robux on the line
-              </p>
-              <p className="mt-2 text-sm text-white/65">
-                Real competition rewards for VF Create creators.
+              <p className="mt-1 text-lg text-white/90">Robux on the line</p>
+              <p className="mt-2 text-sm text-white/55">
+                Competition rewards for VF Create creators.
               </p>
             </div>
-            <div className="rounded-2xl border border-white/20 bg-white/[0.07] px-5 py-6 shadow-[0_20px_60px_-24px_rgba(8,54,150,0.65)] sm:py-8">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-cyan-200/90">
-                Sponsorship
-              </p>
-              <p className="mt-3 text-2xl font-bold leading-tight sm:text-3xl md:text-4xl">
+            <div className="sm:border-l sm:border-white/10 sm:pl-12">
+              <p className="text-sm text-white/50">Sponsorship</p>
+              <p className="mt-3 text-xl font-semibold leading-snug sm:text-2xl">
                 Custom VF Virtuoso Sponsorship
               </p>
-              <p className="mt-3 text-sm text-white/65">
-                Partner-tier visibility with Virtual Football — tailored for
-                standout creators.
+              <p className="mt-3 text-sm text-white/55 leading-relaxed">
+                Visibility with Virtual Football for standout creators.
               </p>
             </div>
           </div>
 
-          <p className="max-w-2xl text-base leading-relaxed text-white/75 sm:text-lg">
+          <p className="max-w-2xl text-base leading-relaxed text-white/70 sm:text-lg">
             We&apos;re building something loud for Virtual Football — and we want
             creators who can match the energy.
           </p>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
             {bootstrapHref ? (
               <Link
                 href={bootstrapHref}
-                className="inline-flex h-14 min-h-[3.5rem] items-center justify-center rounded-lg bg-white px-8 text-base font-bold text-[#083696] shadow-[0_16px_48px_-12px_rgba(255,255,255,0.35)] transition hover:bg-white/90"
+                className="inline-flex min-h-[3.75rem] items-center justify-center rounded-md bg-white px-12 py-4 text-lg font-semibold text-[#083696] transition-colors hover:bg-neutral-100"
               >
                 Start application
               </Link>
             ) : (
-              <p className="text-sm text-white/70">
+              <p className="text-sm text-white/65">
                 Use your personal link from the VF Discord bot (Start
                 application) so we can unlock this button for your account.
               </p>
             )}
             <Link
               href="/content/creators"
-              className="text-center text-xs font-semibold uppercase tracking-wider text-white/55 underline-offset-4 hover:text-white hover:underline sm:text-left"
+              className="text-sm text-white/50 underline underline-offset-4 hover:text-white"
             >
               VF Create directory
             </Link>
           </div>
 
-          <p className="text-xs text-white/50">
-            Next: link Roblox and Discord, your details, then program rules —
-            same Discord as this link.
+          <p className="text-xs text-white/45">
+            Next: Roblox, Discord, your details, then rules — same Discord as
+            this link.
           </p>
         </header>
 
         <div className="w-full">
           <MediaSlot
             src={heroSrc}
-            label="VF Create · 1"
             aspectClass="aspect-video w-full"
             priorityVideo
           />
@@ -249,20 +227,17 @@ export function CreatorOnboardIntro({
 
         <section className="space-y-4">
           <div>
-            <h2 className="text-lg font-semibold tracking-tight text-white">
-              Gallery
-            </h2>
-            <p className="mt-1 max-w-2xl text-sm text-white/55">
-              VF Create and league moments — clips and stills from the team.
+            <h2 className="text-base font-semibold text-white">Gallery</h2>
+            <p className="mt-1 max-w-2xl text-sm text-white/50">
+              VF Create and league moments.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
             {GALLERY_LAYOUT.map(({ n, aspectClass, className }) => (
               <MediaSlot
                 key={n}
                 src={vfCreatePublicPath(n)}
-                label={`VF Create · ${n}`}
                 aspectClass={aspectClass}
                 className={className}
               />
