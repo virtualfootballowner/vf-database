@@ -165,7 +165,7 @@ export function CreatorOnboardIntro({
             </div>
           </div>
 
-          <p className="max-w-2xl text-base leading-relaxed text-white/70 sm:text-lg">
+          <p className="mx-auto max-w-2xl text-center text-base leading-relaxed text-white/70 sm:text-lg">
             We&apos;re building something loud for Virtual Football — and we want
             creators who can match the energy.
           </p>
