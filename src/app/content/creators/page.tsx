@@ -24,6 +24,24 @@ function countryLabel(code: string | null): string | null {
   return hit?.name ?? code;
 }
 
+function postHostLabel(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "Link";
+  }
+}
+
+function formatPostedDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export default async function CreatorsDirectoryPage() {
   let creators: ApprovedCreatorDirectoryRow[] = [];
   try {
@@ -43,8 +61,9 @@ export default async function CreatorsDirectoryPage() {
           Creators
         </h1>
         <p className="text-muted-foreground max-w-xl text-sm leading-relaxed">
-          People approved for the VF creator program. This page isn’t linked from
-          the main site menu — share the URL if you want someone to find it.
+          Approved VF Create members and the posts they add from Discord{" "}
+          <span className="text-foreground/80 font-mono text-xs">/posted</span>.
+          Competition scoring comes later — this is the public post log.
         </p>
       </header>
 
@@ -60,6 +79,11 @@ export default async function CreatorsDirectoryPage() {
             const tt = stripAtHandle(c.tiktok_handle);
             const yt = stripAtHandle(c.youtube_handle);
             const country = countryLabel(c.country);
+            const posts = [...(c.posted_video_links ?? [])].sort(
+              (a, b) =>
+                new Date(b.posted_at).getTime() -
+                new Date(a.posted_at).getTime(),
+            );
             return (
               <li
                 key={c.id}
@@ -118,6 +142,37 @@ export default async function CreatorsDirectoryPage() {
                       <span className="text-muted-foreground/80">—</span>
                     ) : null}
                   </div>
+                  {posts.length > 0 ? (
+                    <div className="border-border/80 mt-3 border-t pt-3">
+                      <p className="text-muted-foreground mb-1.5 text-xs font-medium tracking-wide uppercase">
+                        Posted
+                      </p>
+                      <ul className="flex list-none flex-col gap-1.5 text-sm">
+                        {posts.map((p) => {
+                          const dateLabel = formatPostedDate(p.posted_at);
+                          return (
+                            <li key={`${c.id}-${p.posted_at}-${p.url}`}>
+                              <a
+                                href={p.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary inline-flex flex-wrap items-baseline gap-x-2 underline-offset-2 hover:underline"
+                              >
+                                <span className="font-medium">
+                                  {postHostLabel(p.url)}
+                                </span>
+                                {dateLabel ? (
+                                  <span className="text-muted-foreground text-xs font-normal tabular-nums">
+                                    {dateLabel}
+                                  </span>
+                                ) : null}
+                              </a>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ) : null}
                 </div>
               </li>
             );

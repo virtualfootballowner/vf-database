@@ -18,6 +18,7 @@ import {
 
 import { env } from "@/bot/config";
 import { createBotSupabase } from "@/bot/stats-queries";
+import { parsePostedVideoLinks } from "@/lib/creator-onboard/approved-creators-directory";
 import { COUNTRIES } from "@/lib/creator-onboard/countries";
 import {
   CREATOR_APPROVE_PREFIX,
@@ -44,6 +45,44 @@ export const creatorProfileCommand = new SlashCommandBuilder()
       .setRequired(false),
   )
   .toJSON();
+
+export const creatorPostedCommand = new SlashCommandBuilder()
+  .setName("posted")
+  .setDescription(
+    "Add a competition post URL to your VF Create directory profile",
+  )
+  .addStringOption((opt) =>
+    opt
+      .setName("link")
+      .setDescription("Full HTTPS URL (TikTok, YouTube, etc.)")
+      .setRequired(true)
+      .setMaxLength(2048),
+  )
+  .toJSON();
+
+const MAX_POSTED_URL_LEN = 2048;
+const MAX_POSTED_LINKS_PER_CREATOR = 50;
+
+function validatePostedHttpsUrl(raw: string): string | null {
+  const t = raw.trim();
+  if (!t || t.length > MAX_POSTED_URL_LEN) return null;
+  let u: URL;
+  try {
+    u = new URL(t);
+  } catch {
+    return null;
+  }
+  if (u.protocol !== "https:" || !u.hostname) return null;
+  return u.href;
+}
+
+function postedUrlsEffectivelyEqual(a: string, b: string): boolean {
+  try {
+    return new URL(a).href === new URL(b).href;
+  } catch {
+    return a === b;
+  }
+}
 
 function vfGuildId(): string {
   return env.DISCORD_CREATOR_VF_GUILD_ID?.trim() || env.DISCORD_GUILD_ID;
@@ -496,6 +535,7 @@ type CreatorRow = {
   approved_by: string | null;
   approved_at: string | null;
   rejection_reason: string | null;
+  posted_video_links: unknown;
   created_at: string;
   updated_at: string;
 };
@@ -544,7 +584,7 @@ export async function handleCreatorProfileCommand(
   const { data, error } = await supabase
     .from("creator_applications")
     .select(
-      "id, discord_id, discord_username, discord_avatar_url, roblox_id, roblox_username, roblox_avatar_url, tiktok_handle, youtube_handle, age, country, status, approved_by, approved_at, rejection_reason, created_at, updated_at",
+      "id, discord_id, discord_username, discord_avatar_url, roblox_id, roblox_username, roblox_avatar_url, tiktok_handle, youtube_handle, age, country, status, approved_by, approved_at, rejection_reason, posted_video_links, created_at, updated_at",
     )
     .eq("discord_id", target.id)
     .order("updated_at", { ascending: false })
@@ -647,6 +687,30 @@ export async function handleCreatorProfileCommand(
       value: `Staff review by ${by}\n<t:${ts}:F>`,
       inline: false,
     });
+    const posted = parsePostedVideoLinks(row.posted_video_links);
+    if (posted.length > 0) {
+      const lines = [...posted]
+        .sort(
+          (a, b) =>
+            new Date(b.posted_at).getTime() - new Date(a.posted_at).getTime(),
+        )
+        .slice(0, 6)
+        .map((l) => {
+          let host = "Post";
+          try {
+            host = new URL(l.url).hostname.replace(/^www\./, "");
+          } catch {
+            /* keep label */
+          }
+          return `▸ [${host}](${l.url})`;
+        })
+        .join("\n");
+      embed.addFields({
+        name: "Directory posts",
+        value: lines.slice(0, 1024),
+        inline: false,
+      });
+    }
   }
 
   if (row.status === "rejected") {
@@ -675,4 +739,123 @@ export async function handleCreatorProfileCommand(
       content: `**Private** — your age on file is **${row.age}**. Only you can see this message.`,
     });
   }
+}
+
+export async function handleCreatorPostedCommand(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  if (!interaction.guild || !interaction.member) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Use `/posted` inside the VF Discord server.",
+    });
+    return;
+  }
+
+  const scoutRole = env.DISCORD_SCOUT_ROLE_ID?.trim();
+  if (!scoutRole) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content:
+        "The VF Create creator role isn’t configured on the bot yet. Ask staff to set `DISCORD_SCOUT_ROLE_ID`.",
+    });
+    return;
+  }
+
+  const member = interaction.member as GuildMember;
+  if (!member.roles.cache.has(scoutRole)) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content:
+        "You need the **VF Create** creator role to add directory posts. If you’re approved and don’t have it yet, ask staff.",
+    });
+    return;
+  }
+
+  const raw = interaction.options.getString("link", true);
+  const url = validatePostedHttpsUrl(raw);
+  if (!url) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content:
+        "That doesn’t look like a valid **https://** link. Paste the full URL from the address bar or share sheet.",
+    });
+    return;
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const supabase = createBotSupabase();
+  const { data, error } = await supabase
+    .from("creator_applications")
+    .select("id, posted_video_links")
+    .eq("discord_id", interaction.user.id)
+    .eq("status", "approved")
+    .maybeSingle();
+
+  if (error) {
+    console.error("[creator] /posted lookup:", error);
+    await interaction.editReply({
+      content: "Couldn’t update your profile right now. Try again shortly.",
+    });
+    return;
+  }
+
+  if (!data) {
+    await interaction.editReply({
+      content:
+        "No **approved** VF Create profile is linked to your Discord account. Finish onboarding and get approved first.",
+    });
+    return;
+  }
+
+  const row = data as { id: string; posted_video_links: unknown };
+  const existing = parsePostedVideoLinks(row.posted_video_links);
+  if (existing.some((e) => postedUrlsEffectivelyEqual(e.url, url))) {
+    await interaction.editReply({
+      content: "That URL is already on your directory profile.",
+    });
+    return;
+  }
+
+  if (existing.length >= MAX_POSTED_LINKS_PER_CREATOR) {
+    await interaction.editReply({
+      content: `You already have **${MAX_POSTED_LINKS_PER_CREATOR}** links saved. Ask staff if you need to clear old ones.`,
+    });
+    return;
+  }
+
+  const next: { url: string; posted_at: string }[] = [
+    ...existing,
+    { url, posted_at: new Date().toISOString() },
+  ];
+  const updatedAt = new Date().toISOString();
+
+  const { error: upErr } = await supabase
+    .from("creator_applications")
+    .update({
+      posted_video_links: next,
+      updated_at: updatedAt,
+    })
+    .eq("id", row.id);
+
+  if (upErr) {
+    console.error("[creator] /posted update:", upErr);
+    await interaction.editReply({
+      content: "Couldn’t save that link. Try again or ask staff to check the database.",
+    });
+    return;
+  }
+
+  const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
+  const directoryUrl = `${siteBase}/content/creators`;
+
+  await interaction.editReply({
+    content: [
+      "Added to your **VF Create directory** profile.",
+      `<${directoryUrl}>`,
+      "",
+      `**Saved** · \`${url.length > 120 ? `${url.slice(0, 117)}…` : url}\``,
+    ].join("\n"),
+  });
 }
