@@ -308,9 +308,19 @@ export async function handleFriendly(
 
   if (logoUrl) embed.setThumbnail(logoUrl);
 
+  const managerRoleId = env.DISCORD_TEAM_MANAGER_ROLE_ID;
+  const pingContent = `<@&${managerRoleId}> — new friendly request from ${interaction.user}`;
+
   let posted;
   try {
-    posted = await channel.send({ embeds: [embed] });
+    posted = await channel.send({
+      content: pingContent,
+      embeds: [embed],
+      // Explicitly authorize the manager-role ping so Discord delivers the
+      // notification (only this role can be mentioned; @everyone / @here
+      // and arbitrary user pings stay disabled).
+      allowedMentions: { parse: [], roles: [managerRoleId] },
+    });
   } catch (err) {
     console.error("/friendly send failed:", err);
     await interaction.editReply({
@@ -321,7 +331,7 @@ export async function handleFriendly(
   }
 
   await interaction.editReply({
-    content: `Posted in <#${channel.id}>: ${posted.url}`,
+    content: `Posted in <#${channel.id}> and pinged managers: ${posted.url}`,
   });
 }
 
