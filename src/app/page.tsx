@@ -304,7 +304,7 @@ export default function Home() {
                 href="/content/creators"
                 className="transition hover:text-zinc-950"
               >
-                VF Create directory
+                VF Create · Road to 1M
               </Link>
               <Link
                 href="/content/creators/onboard"
