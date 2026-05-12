@@ -181,17 +181,11 @@ export function CreatorOnboardIntro({
               <p className="mt-3 text-4xl font-semibold tabular-nums tracking-tight sm:text-5xl">
                 50K
               </p>
-              <p className="mt-2 text-sm text-white/55">
-                Competition rewards for VF Create creators.
-              </p>
             </div>
             <div className="text-left sm:border-l sm:border-white/10 sm:pl-6 md:pl-10">
               <p className="text-sm text-white/50">Sponsorship</p>
               <p className="mt-3 text-xl font-semibold leading-snug sm:text-2xl">
                 Custom VF Virtuoso Sponsorship
-              </p>
-              <p className="mt-3 text-sm text-white/55 leading-relaxed">
-                Visibility with Virtual Football for standout creators.
               </p>
             </div>
           </div>
