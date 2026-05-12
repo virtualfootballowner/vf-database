@@ -181,7 +181,6 @@ export function CreatorOnboardIntro({
               <p className="mt-3 text-4xl font-semibold tabular-nums tracking-tight sm:text-5xl">
                 50K
               </p>
-              <p className="mt-1 text-lg text-white/90">Robux on the line</p>
               <p className="mt-2 text-sm text-white/55">
                 Competition rewards for VF Create creators.
               </p>
