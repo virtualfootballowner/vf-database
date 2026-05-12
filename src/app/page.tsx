@@ -300,6 +300,12 @@ export default function Home() {
           <footer className="flex flex-col items-start gap-4 border-t border-zinc-200 pt-8 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-[100%]">VF League Database · A display layer for the VF database.</p>
             <div className="flex w-full min-w-0 flex-wrap items-center gap-x-4 gap-y-2 sm:w-auto sm:justify-end">
+              <Link
+                href="/content/creators/onboard"
+                className="transition hover:text-zinc-950"
+              >
+                VF Create onboarding
+              </Link>
               <a
                 href={SOCIAL_LINKS.youtube}
                 target="_blank"
