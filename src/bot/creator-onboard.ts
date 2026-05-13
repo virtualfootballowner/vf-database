@@ -1141,6 +1141,51 @@ export async function handleCreatorPostedCommand(
       `**Saved** · \`${url.length > 120 ? `${url.slice(0, 117)}…` : url}\``,
     ].join("\n"),
   });
+
+  const logChannelId = env.DISCORD_CREATOR_POSTED_LOG_CHANNEL_ID?.trim();
+  if (logChannelId) {
+    const totalPosts = next.length;
+    const logEmbed = new EmbedBuilder()
+      .setColor(0x3b82f6)
+      .setTitle("New VF Create post")
+      .setDescription(
+        [
+          `${interaction.user} added a directory post.`,
+          "",
+          `**Link** · ${url}`,
+        ].join("\n"),
+      )
+      .addFields(
+        {
+          name: "Creator",
+          value: `<@${interaction.user.id}>\n\`${interaction.user.tag}\``,
+          inline: true,
+        },
+        {
+          name: "Posts on profile",
+          value: `\`${totalPosts}\``,
+          inline: true,
+        },
+        {
+          name: "Profile",
+          value: `[Open directory](${directoryUrl})`,
+          inline: false,
+        },
+      )
+      .setFooter({ text: "VF Create · /posted log" })
+      .setTimestamp(new Date());
+
+    void (async () => {
+      try {
+        const ch = await interaction.client.channels.fetch(logChannelId);
+        if (ch?.isTextBased() && ch.isSendable()) {
+          await ch.send({ embeds: [logEmbed] });
+        }
+      } catch (e) {
+        console.error("[creator] /posted log post:", e);
+      }
+    })();
+  }
 }
 
 export async function handleCreatorPostRemoveCommand(

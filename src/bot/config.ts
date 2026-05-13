@@ -89,6 +89,15 @@ const envSchema = z.object({
     const s = String(raw).trim();
     return s.length > 0 ? s : "1503912250702823524";
   }, z.string().min(1)),
+  /**
+   * Admin-only log channel notified whenever a VF Create creator runs
+   * `/posted` to add a new directory link. Defaults in code when unset.
+   */
+  DISCORD_CREATOR_POSTED_LOG_CHANNEL_ID: z.preprocess((raw) => {
+    if (raw == null || raw === "") return "1503965608390164520";
+    const s = String(raw).trim();
+    return s.length > 0 ? s : "1503965608390164520";
+  }, z.string().min(1)),
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   ROBLOX_API_BASE_URL: z.string().url().default("https://users.roblox.com"),
@@ -126,6 +135,8 @@ export const env = envSchema.parse({
   DISCORD_CREATOR_PRIVATE_TESTING_INVITE_URL:
     process.env.DISCORD_CREATOR_PRIVATE_TESTING_INVITE_URL,
   DISCORD_MEDIA_STAFF_ROLE_ID: process.env.DISCORD_MEDIA_STAFF_ROLE_ID,
+  DISCORD_CREATOR_POSTED_LOG_CHANNEL_ID:
+    process.env.DISCORD_CREATOR_POSTED_LOG_CHANNEL_ID,
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   ROBLOX_API_BASE_URL: process.env.ROBLOX_API_BASE_URL,
