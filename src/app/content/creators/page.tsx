@@ -267,55 +267,60 @@ export default async function CreatorsChallengePage() {
         </section>
 
         {/* Leaderboard — directly under progress */}
-        <section id="leaderboard" className="mt-10 scroll-mt-24 sm:mt-14">
-          <div className="flex flex-col gap-5 border-b border-white/10 pb-7 sm:flex-row sm:items-end sm:justify-between">
-            <div className="min-w-0 space-y-2">
-              <p className="inline-flex items-center gap-2 rounded-full border border-amber-300/40 bg-amber-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-100">
-                <span aria-hidden>🏆</span> Standings
+        <section id="leaderboard" className="mt-12 scroll-mt-24 sm:mt-16">
+          <div className="flex flex-col gap-6 pb-6 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/45">
+                Standings
               </p>
-              <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl md:text-4xl">
+              <h2 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
                 Leaderboard
               </h2>
-              <p className="max-w-xl text-sm leading-relaxed text-white/65 sm:text-base sm:leading-relaxed">
-                Sorted by total synced views / plays · updates on each page
-                load
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/55 sm:text-[15px]">
+                Ranked by total synced views &amp; plays. Refreshes every page load.
               </p>
             </div>
-            <div className="flex flex-col gap-2 sm:items-end">
-              <div className="inline-flex flex-wrap items-center gap-2.5 rounded-2xl border border-emerald-300/30 bg-gradient-to-br from-emerald-400/15 via-cyan-400/10 to-violet-400/15 px-4 py-3 text-sm font-semibold text-white shadow-[0_15px_45px_-20px_rgba(16,185,129,0.55)] backdrop-blur sm:px-5 sm:py-3.5">
+            <div className="flex flex-col gap-2 text-left sm:items-end sm:text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/40">
+                Prize pool
+              </p>
+              <p className="flex items-center gap-2 sm:justify-end">
                 <Image
                   src="/Robux_2019_Logo_white.svg.png"
                   alt=""
                   width={28}
                   height={28}
-                  className="size-6 shrink-0 drop-shadow-[0_0_8px_rgba(16,185,129,0.55)] sm:size-7"
+                  className="size-6 shrink-0 sm:size-7"
                 />
-                <span className="text-white/85">Pool:</span>
-                <span className="bg-gradient-to-r from-emerald-200 via-emerald-100 to-amber-100 bg-clip-text text-lg font-black tabular-nums text-transparent sm:text-xl">
-                  {formatChallengeRobux(challenge.prizePoolRobux)}
+                <span className="text-2xl font-bold tabular-nums text-white sm:text-3xl">
+                  {formatChallengeRobux(challenge.prizePoolRobux).replace(
+                    " Robux",
+                    "",
+                  )}
                 </span>
-              </div>
-              <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-violet-300/40 bg-violet-400/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-violet-100 sm:self-end sm:text-xs">
-                <span aria-hidden>👟</span> VF Brand sponsor · top 3
-              </span>
-              <Link
-                href="/content/creators/vf-brand"
-                className="text-[11px] font-medium text-blue-200 underline-offset-2 hover:text-white hover:underline sm:text-right sm:text-xs"
-              >
-                What is this?
-              </Link>
+                <span className="text-sm text-white/55 sm:text-base">Robux</span>
+              </p>
+              <p className="text-xs text-white/45">
+                Top 3 also get{" "}
+                <Link
+                  href="/content/creators/vf-brand"
+                  className="text-white/80 underline-offset-2 hover:text-white hover:underline"
+                >
+                  VF Brand sponsored boots
+                </Link>
+              </p>
             </div>
           </div>
+          <div className="h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
 
-          <div className="mt-8 space-y-5 sm:mt-10 sm:space-y-6">
+          <div className="mt-6 space-y-2.5 sm:mt-8 sm:space-y-3">
             {challenge.leaderboard.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-white/25 bg-white/[0.04] px-6 py-8 text-center text-sm leading-relaxed text-white/75 backdrop-blur sm:px-8 sm:py-10 sm:text-base">
+              <p className="rounded-2xl border border-white/10 bg-white/[0.02] px-6 py-8 text-center text-sm leading-relaxed text-white/65 sm:px-8 sm:py-10 sm:text-[15px]">
                 No posts on the board yet. Approved creators: add a link with{" "}
                 <code className="rounded bg-white/10 px-1.5 py-0.5 text-white">
                   /posted
                 </code>{" "}
-                in Discord. The slots below are still open — first link in
-                takes #1.
+                in Discord — first link in takes #1.
               </p>
             ) : null}
             {(() => {
@@ -325,303 +330,309 @@ export default async function CreatorsChallengePage() {
                 { length: placeholderCount },
                 (_, i) => filled.length + i + 1,
               );
-              const rankMedal = (rank: number): string | null => {
-                if (rank === 1) return "🥇";
-                if (rank === 2) return "🥈";
-                if (rank === 3) return "🥉";
-                return null;
-              };
               const rankAccent = (rank: number) => {
-                if (rank === 1) {
+                if (rank === 1)
                   return {
-                    border: "border-amber-300/40",
-                    glow: "shadow-[0_30px_80px_-30px_rgba(251,191,36,0.55)]",
-                    gradient:
-                      "bg-gradient-to-br from-amber-400/[0.18] via-amber-500/[0.06] to-transparent",
-                    badge:
-                      "bg-gradient-to-br from-amber-300 to-orange-500 text-amber-950 shadow-[0_0_25px_rgba(251,191,36,0.6)]",
-                    ring: "ring-amber-300/50",
+                    bar: "bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600",
+                    rankText: "text-amber-300",
+                    label: "1st",
+                    chipBorder: "border-amber-300/35",
+                    chipText: "text-amber-200/90",
                   };
-                }
-                if (rank === 2) {
+                if (rank === 2)
                   return {
-                    border: "border-zinc-200/30",
-                    glow: "shadow-[0_30px_80px_-30px_rgba(229,231,235,0.35)]",
-                    gradient:
-                      "bg-gradient-to-br from-zinc-100/[0.12] via-zinc-200/[0.04] to-transparent",
-                    badge:
-                      "bg-gradient-to-br from-zinc-200 to-zinc-400 text-zinc-900 shadow-[0_0_22px_rgba(229,231,235,0.4)]",
-                    ring: "ring-zinc-200/40",
+                    bar: "bg-gradient-to-b from-zinc-200 via-zinc-300 to-zinc-500",
+                    rankText: "text-zinc-200",
+                    label: "2nd",
+                    chipBorder: "border-zinc-300/30",
+                    chipText: "text-zinc-200/85",
                   };
-                }
-                if (rank === 3) {
+                if (rank === 3)
                   return {
-                    border: "border-orange-300/35",
-                    glow: "shadow-[0_30px_80px_-30px_rgba(251,146,60,0.45)]",
-                    gradient:
-                      "bg-gradient-to-br from-orange-400/[0.14] via-orange-500/[0.05] to-transparent",
-                    badge:
-                      "bg-gradient-to-br from-orange-300 to-amber-700 text-orange-950 shadow-[0_0_22px_rgba(251,146,60,0.5)]",
-                    ring: "ring-orange-300/40",
+                    bar: "bg-gradient-to-b from-orange-300 via-orange-400 to-orange-700",
+                    rankText: "text-orange-300",
+                    label: "3rd",
+                    chipBorder: "border-orange-300/30",
+                    chipText: "text-orange-200/90",
                   };
-                }
                 return {
-                  border: "border-white/10",
-                  glow: "shadow-[0_20px_50px_-30px_rgba(0,0,0,0.55)]",
-                  gradient:
-                    "bg-gradient-to-br from-white/[0.04] via-white/[0.02] to-transparent",
-                  badge: "bg-white/10 text-white/80",
-                  ring: "ring-white/15",
+                  bar: "bg-white/[0.08]",
+                  rankText: "text-white/45",
+                  label: "",
+                  chipBorder: "border-white/10",
+                  chipText: "text-white/55",
                 };
               };
+              const formatRankNum = (n: number) =>
+                n < 10 ? `0${n}` : String(n);
               return (
                 <>
                   {filled.map((row) => {
-                const country = countryLabel(row.country);
-                const cRow = creatorById.get(row.id);
-                const tiktokUrl = tiktokProfileHref(cRow?.tiktok_handle ?? null);
-                const youtubeUrl = youtubeProfileHref(cRow?.youtube_handle ?? null);
-                const brandPick = row.rank <= 3 && row.totalViews > 0;
-                const accent = rankAccent(row.rank);
-                const medal = rankMedal(row.rank);
+                    const country = countryLabel(row.country);
+                    const cRow = creatorById.get(row.id);
+                    const tiktokUrl = tiktokProfileHref(
+                      cRow?.tiktok_handle ?? null,
+                    );
+                    const youtubeUrl = youtubeProfileHref(
+                      cRow?.youtube_handle ?? null,
+                    );
+                    const brandPick = row.rank <= 3 && row.totalViews > 0;
+                    const accent = rankAccent(row.rank);
 
-                return (
-                  <article
-                    key={row.id}
-                    className={`group relative overflow-hidden rounded-3xl border ${accent.border} ${accent.glow} bg-white/[0.03] backdrop-blur-xl`}
-                  >
-                    <div
-                      aria-hidden
-                      className={`pointer-events-none absolute inset-0 ${accent.gradient}`}
-                    />
-                    <div className="relative flex flex-col gap-6 p-5 sm:gap-7 sm:p-7 md:p-8">
-                      <div className="flex items-start gap-4 sm:gap-6">
-                        <div className="flex shrink-0 items-center gap-3 sm:gap-5">
-                          <span
-                            className={`flex size-14 items-center justify-center rounded-2xl text-2xl font-black tabular-nums sm:size-16 sm:rounded-3xl sm:text-3xl ${accent.badge}`}
-                          >
-                            {medal ?? `#${row.rank}`}
-                          </span>
-                          {row.robloxAvatarUrl ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img
-                              src={row.robloxAvatarUrl}
-                              alt=""
-                              width={64}
-                              height={64}
-                              className={`size-14 rounded-2xl object-cover ring-2 ${accent.ring} sm:size-16`}
-                            />
-                          ) : (
-                            <div
-                              className={`flex size-14 items-center justify-center rounded-2xl bg-white/5 text-xl font-bold text-white ring-2 ${accent.ring} sm:size-16 sm:text-2xl`}
-                            >
-                              {row.displayName.slice(0, 1).toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="min-w-0 flex-1 space-y-1.5">
-                          <p className="truncate text-lg font-bold text-white sm:text-2xl">
-                            {row.displayName}
-                          </p>
-                          <p className="truncate text-sm leading-relaxed text-white/60 sm:text-base">
-                            <span className="font-medium text-white/80">
-                              {row.robloxUsername}
-                            </span>
-                            {country ? (
-                              <>
-                                {" "}
-                                <span className="text-white/40">·</span> {country}
-                              </>
-                            ) : null}
-                          </p>
-                          <div className="flex flex-wrap gap-2 pt-2 text-xs sm:text-sm">
-                            {tiktokUrl ? (
-                              <a
-                                href={tiktokUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 rounded-full border border-pink-300/40 bg-pink-400/15 px-2.5 py-1 font-semibold text-pink-100 transition hover:border-pink-300/70 hover:bg-pink-400/25"
-                              >
-                                <span aria-hidden>🎵</span> TikTok
-                              </a>
-                            ) : null}
-                            {youtubeUrl ? (
-                              <a
-                                href={youtubeUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 rounded-full border border-red-400/40 bg-red-500/15 px-2.5 py-1 font-semibold text-red-100 transition hover:border-red-400/70 hover:bg-red-500/25"
-                              >
-                                <span aria-hidden>▶️</span> YouTube
-                              </a>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-                        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-sky-500/10 via-white/[0.03] to-transparent p-4 sm:p-5">
-                          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-sky-200 sm:text-xs">
-                            <span aria-hidden>👀</span> Views
-                          </div>
-                          <p className="mt-2 truncate text-3xl font-black tabular-nums text-white sm:text-4xl">
-                            {formatViewCount(row.totalViews)}
-                          </p>
-                        </div>
-                        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-violet-500/10 via-white/[0.03] to-transparent p-4 sm:p-5">
-                          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-violet-200 sm:text-xs">
-                            <span aria-hidden>🎬</span> Posts
-                          </div>
-                          <p className="mt-2 text-3xl font-black tabular-nums text-white sm:text-4xl">
-                            {row.postCount}
-                          </p>
-                        </div>
-                        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-500/10 via-white/[0.03] to-transparent p-4 sm:p-5">
-                          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-cyan-200 sm:text-xs">
-                            <span aria-hidden>📊</span> Pool share
-                          </div>
-                          <p className="mt-2 truncate text-3xl font-black tabular-nums text-cyan-100 sm:text-4xl">
-                            {formatPoolSharePercent(row.poolSharePercent)}
-                          </p>
-                        </div>
-                        <div className="relative overflow-hidden rounded-2xl border border-emerald-300/30 bg-gradient-to-br from-emerald-400/20 via-emerald-500/10 to-amber-400/10 p-4 shadow-[0_15px_45px_-25px_rgba(16,185,129,0.7)] sm:p-5">
-                          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-200 sm:text-xs">
-                            <span aria-hidden>💰</span> Est. Robux
-                          </div>
-                          <div className="mt-2 flex items-center gap-2">
-                            <Image
-                              src="/Robux_2019_Logo_white.svg.png"
-                              alt=""
-                              width={28}
-                              height={28}
-                              className="size-6 shrink-0 drop-shadow-[0_0_8px_rgba(16,185,129,0.6)] sm:size-7"
-                            />
-                            <p className="truncate bg-gradient-to-r from-emerald-200 via-emerald-100 to-amber-100 bg-clip-text text-2xl font-black tabular-nums text-transparent sm:text-3xl">
-                              {formatChallengeRobux(row.estimatedPayoutRobux)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {brandPick ? (
-                        <div className="relative overflow-hidden rounded-2xl border border-violet-300/40 bg-gradient-to-r from-violet-500/20 via-fuchsia-500/15 to-amber-400/15 p-4 shadow-[0_15px_45px_-25px_rgba(168,85,247,0.7)] sm:p-5">
-                          <div className="flex items-center gap-3">
-                            <span className="text-3xl sm:text-4xl" aria-hidden>
-                              👟
-                            </span>
-                            <div>
-                              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-violet-200 sm:text-xs">
-                                VF Brand sponsor
-                              </p>
-                              <p className="mt-0.5 text-base font-bold text-white sm:text-lg">
-                                Top {row.rank} · sponsored boot pick
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <details className="group/d relative border-t border-white/10 bg-black/20">
-                      <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-semibold text-white/80 transition hover:bg-white/[0.04] hover:text-white sm:px-7 sm:py-4 sm:text-base">
-                        <span className="inline-flex items-center gap-2">
-                          <span aria-hidden>📂</span>
-                          View posts ({row.postCount})
-                        </span>
-                        <span className="text-white/40 transition group-open/d:rotate-180" aria-hidden>
-                          ▾
-                        </span>
-                      </summary>
-                      <ul className="space-y-1 border-t border-white/10 px-5 pb-4 pt-3 sm:px-7 sm:pb-5 sm:pt-4">
-                        {row.posts.map((p) => {
-                          const dateLabel = formatPostedDate(p.posted_at);
-                          const viewsLabel =
-                            typeof p.view_count === "number"
-                              ? formatViewCount(p.view_count)
-                              : null;
-                          return (
-                            <li
-                              key={`${row.id}-${p.posted_at}-${p.url}`}
-                              className="flex flex-col gap-1 border-b border-white/[0.06] py-3 last:border-b-0 last:pb-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-2.5"
-                            >
-                              <a
-                                href={p.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="font-medium text-sky-200 underline-offset-2 hover:underline"
-                              >
-                                {postHostLabel(p.url)}
-                                {dateLabel ? (
-                                  <span className="ml-2 text-xs font-normal text-white/45">
-                                    {dateLabel}
-                                  </span>
+                    return (
+                      <article
+                        key={row.id}
+                        className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025] transition hover:border-white/20 hover:bg-white/[0.04]"
+                      >
+                        <div className="flex">
+                          <div
+                            aria-hidden
+                            className={`w-1 shrink-0 ${accent.bar}`}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-4 px-4 py-4 sm:gap-5 sm:px-6 sm:py-5">
+                              <div className="flex w-10 shrink-0 flex-col items-center sm:w-14">
+                                <span
+                                  className={`text-2xl font-bold tabular-nums tracking-tight sm:text-3xl ${accent.rankText}`}
+                                >
+                                  {formatRankNum(row.rank)}
+                                </span>
+                              </div>
+                              {row.robloxAvatarUrl ? (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img
+                                  src={row.robloxAvatarUrl}
+                                  alt=""
+                                  width={48}
+                                  height={48}
+                                  className="size-11 shrink-0 rounded-full object-cover ring-1 ring-white/15 sm:size-12"
+                                />
+                              ) : (
+                                <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white/80 ring-1 ring-white/15 sm:size-12 sm:text-base">
+                                  {row.displayName.slice(0, 1).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-base font-semibold text-white sm:text-lg">
+                                  {row.displayName}
+                                </p>
+                                <p className="mt-0.5 truncate text-xs text-white/55 sm:text-sm">
+                                  {row.robloxUsername}
+                                  {country ? (
+                                    <span className="text-white/35"> · {country}</span>
+                                  ) : null}
+                                  {tiktokUrl ? (
+                                    <>
+                                      <span className="text-white/25"> · </span>
+                                      <a
+                                        href={tiktokUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-white/70 underline-offset-2 hover:text-white hover:underline"
+                                      >
+                                        TikTok
+                                      </a>
+                                    </>
+                                  ) : null}
+                                  {youtubeUrl ? (
+                                    <>
+                                      <span className="text-white/25"> · </span>
+                                      <a
+                                        href={youtubeUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-white/70 underline-offset-2 hover:text-white hover:underline"
+                                      >
+                                        YouTube
+                                      </a>
+                                    </>
+                                  ) : null}
+                                </p>
+                                {brandPick ? (
+                                  <p
+                                    className={`mt-1.5 inline-flex items-center gap-1.5 rounded-full border ${accent.chipBorder} bg-white/[0.03] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${accent.chipText}`}
+                                  >
+                                    <span aria-hidden>—</span> {accent.label} · VF Brand boot
+                                  </p>
                                 ) : null}
-                              </a>
-                              <span className="text-xs tabular-nums text-white/55">
-                                {viewsLabel ? (
-                                  <>
-                                    <span className="font-semibold text-white/80">
-                                      {viewsLabel}
-                                    </span>{" "}
-                                    {p.views_source === "tiktok"
-                                      ? "plays"
-                                      : "views"}
-                                    {p.views_fetched_at ? (
-                                      <>
-                                        {" "}
-                                        · sync{" "}
-                                        {formatPostedDate(p.views_fetched_at)}
-                                      </>
-                                    ) : null}
-                                  </>
-                                ) : (
-                                  "Awaiting sync"
-                                )}
-                              </span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </details>
-                  </article>
-                );
-              })}
+                              </div>
+                              <div className="hidden shrink-0 items-baseline gap-2 text-right sm:flex">
+                                <Image
+                                  src="/Robux_2019_Logo_white.svg.png"
+                                  alt=""
+                                  width={20}
+                                  height={20}
+                                  className="size-4 self-center opacity-80"
+                                />
+                                <p className="text-xl font-bold tabular-nums text-white sm:text-2xl">
+                                  {formatChallengeRobux(
+                                    row.estimatedPayoutRobux,
+                                  ).replace(" Robux", "")}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 divide-x divide-white/10 border-t border-white/10 sm:grid-cols-4">
+                              <div className="px-4 py-3 sm:px-6 sm:py-3.5">
+                                <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-white/40">
+                                  Views
+                                </p>
+                                <p className="mt-1 text-base font-semibold tabular-nums text-white sm:text-lg">
+                                  {formatViewCount(row.totalViews)}
+                                </p>
+                              </div>
+                              <div className="px-4 py-3 sm:px-6 sm:py-3.5">
+                                <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-white/40">
+                                  Posts
+                                </p>
+                                <p className="mt-1 text-base font-semibold tabular-nums text-white sm:text-lg">
+                                  {row.postCount}
+                                </p>
+                              </div>
+                              <div className="px-4 py-3 sm:px-6 sm:py-3.5">
+                                <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-white/40">
+                                  Share
+                                </p>
+                                <p className="mt-1 text-base font-semibold tabular-nums text-white sm:text-lg">
+                                  {formatPoolSharePercent(row.poolSharePercent)}
+                                </p>
+                              </div>
+                              <div className="px-4 py-3 sm:hidden">
+                                <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-white/40">
+                                  Reward
+                                </p>
+                                <p className="mt-1 flex items-center gap-1.5 text-base font-semibold tabular-nums text-white">
+                                  <Image
+                                    src="/Robux_2019_Logo_white.svg.png"
+                                    alt=""
+                                    width={16}
+                                    height={16}
+                                    className="size-3.5 opacity-80"
+                                  />
+                                  {formatChallengeRobux(
+                                    row.estimatedPayoutRobux,
+                                  ).replace(" Robux", "")}
+                                </p>
+                              </div>
+                              <div className="hidden px-4 py-3 sm:block sm:px-6 sm:py-3.5">
+                                <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-white/40">
+                                  Reward
+                                </p>
+                                <p className="mt-1 flex items-center gap-1.5 text-base font-semibold tabular-nums text-white sm:text-lg">
+                                  <Image
+                                    src="/Robux_2019_Logo_white.svg.png"
+                                    alt=""
+                                    width={18}
+                                    height={18}
+                                    className="size-4 opacity-80"
+                                  />
+                                  {formatChallengeRobux(
+                                    row.estimatedPayoutRobux,
+                                  ).replace(" Robux", "")}
+                                </p>
+                              </div>
+                            </div>
+
+                            <details className="group/d border-t border-white/10">
+                              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-xs font-medium text-white/55 transition hover:text-white sm:px-6 sm:text-sm">
+                                <span>
+                                  View {row.postCount} post
+                                  {row.postCount === 1 ? "" : "s"}
+                                </span>
+                                <span
+                                  className="text-white/35 transition group-open/d:rotate-180"
+                                  aria-hidden
+                                >
+                                  ▾
+                                </span>
+                              </summary>
+                              <ul className="border-t border-white/10 px-4 pb-3 pt-2 sm:px-6 sm:pb-4">
+                                {row.posts.map((p) => {
+                                  const dateLabel = formatPostedDate(
+                                    p.posted_at,
+                                  );
+                                  const viewsLabel =
+                                    typeof p.view_count === "number"
+                                      ? formatViewCount(p.view_count)
+                                      : null;
+                                  return (
+                                    <li
+                                      key={`${row.id}-${p.posted_at}-${p.url}`}
+                                      className="flex flex-col gap-0.5 border-b border-white/[0.06] py-2.5 text-xs last:border-b-0 last:pb-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:text-sm"
+                                    >
+                                      <a
+                                        href={p.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="font-medium text-white/85 underline-offset-2 hover:text-white hover:underline"
+                                      >
+                                        {postHostLabel(p.url)}
+                                        {dateLabel ? (
+                                          <span className="ml-2 font-normal text-white/40">
+                                            {dateLabel}
+                                          </span>
+                                        ) : null}
+                                      </a>
+                                      <span className="tabular-nums text-white/50">
+                                        {viewsLabel ? (
+                                          <>
+                                            <span className="text-white/75">
+                                              {viewsLabel}
+                                            </span>{" "}
+                                            {p.views_source === "tiktok"
+                                              ? "plays"
+                                              : "views"}
+                                            {p.views_fetched_at ? (
+                                              <span className="text-white/35">
+                                                {" "}
+                                                · sync{" "}
+                                                {formatPostedDate(
+                                                  p.views_fetched_at,
+                                                )}
+                                              </span>
+                                            ) : null}
+                                          </>
+                                        ) : (
+                                          "Awaiting sync"
+                                        )}
+                                      </span>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </details>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
                   {placeholderRanks.map((rank) => (
                     <article
                       key={`placeholder-${rank}`}
-                      className="group/p relative overflow-hidden rounded-3xl border border-dashed border-white/15 bg-white/[0.02] backdrop-blur-sm transition hover:border-white/30 hover:bg-white/[0.04]"
+                      className="flex items-center gap-4 rounded-2xl border border-dashed border-white/10 bg-white/[0.015] px-4 py-3 transition hover:border-white/25 hover:bg-white/[0.03] sm:gap-5 sm:px-6 sm:py-4"
                     >
-                      <div className="flex items-center gap-4 p-5 sm:gap-6 sm:p-6">
-                        <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-white/[0.06] text-xl font-black tabular-nums text-white/55 sm:size-16 sm:rounded-3xl sm:text-2xl">
-                          #{rank}
-                        </span>
-                        <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.02] text-2xl text-white/35 sm:size-16 sm:text-3xl">
-                          ?
-                        </div>
-                        <div className="min-w-0 flex-1 space-y-1.5">
-                          <p className="text-base font-bold text-white/75 sm:text-lg md:text-xl">
-                            Open slot · rank #{rank}
-                          </p>
-                          <p className="text-xs leading-relaxed text-white/55 sm:text-sm sm:leading-relaxed">
-                            {rank <= 3
-                              ? "Top 3 → claim a VF Brand sponsored boot 👟 and the biggest Robux share."
-                              : "Post a VF video and run /posted to lock in this spot."}
-                          </p>
-                          <Link
-                            href="/content/creators/onboard"
-                            className="mt-1.5 inline-flex text-xs font-bold text-amber-200 underline-offset-2 hover:text-amber-100 hover:underline sm:hidden"
-                          >
-                            Apply →
-                          </Link>
-                        </div>
-                        <Link
-                          href="/content/creators/onboard"
-                          className="hidden shrink-0 rounded-xl border border-amber-300/40 bg-amber-400/15 px-4 py-2 text-sm font-bold text-amber-100 transition hover:border-amber-300/70 hover:bg-amber-400/25 hover:text-white sm:inline-flex"
-                        >
-                          Apply
-                        </Link>
+                      <span className="w-10 shrink-0 text-center text-xl font-bold tabular-nums text-white/30 sm:w-14 sm:text-2xl">
+                        {formatRankNum(rank)}
+                      </span>
+                      <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-dashed border-white/15 text-base text-white/30 sm:size-12 sm:text-lg">
+                        —
                       </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-white/70 sm:text-base">
+                          Open slot
+                        </p>
+                        <p className="mt-0.5 text-xs text-white/45 sm:text-[13px]">
+                          {rank <= 3
+                            ? "Top 3 also claim a VF Brand sponsored boot."
+                            : "Post a VF video and run /posted to lock in this spot."}
+                        </p>
+                      </div>
+                      <Link
+                        href="/content/creators/onboard"
+                        className="shrink-0 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-medium text-white/80 transition hover:border-white/30 hover:bg-white/5 hover:text-white sm:px-4 sm:py-2 sm:text-sm"
+                      >
+                        Apply
+                      </Link>
                     </article>
                   ))}
                 </>
@@ -631,76 +642,62 @@ export default async function CreatorsChallengePage() {
         </section>
 
         {/* Quick stats */}
-        <section className="mt-8 grid gap-4 sm:mt-12 sm:grid-cols-3">
-          <div className="relative overflow-hidden rounded-2xl border border-sky-300/25 bg-gradient-to-br from-sky-500/10 via-white/[0.03] to-transparent p-5 shadow-[0_20px_50px_-30px_rgba(14,165,233,0.5)]">
-            <div className="flex items-center gap-2 text-sky-200">
-              <span className="text-2xl" aria-hidden>
-                🎬
-              </span>
-              <span className="text-xs font-bold uppercase tracking-[0.14em]">
-                Posts live
-              </span>
-            </div>
-            <p className="mt-3 text-4xl font-black tabular-nums text-white sm:text-5xl">
+        <section className="mt-10 grid divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] sm:mt-12 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="px-5 py-5 sm:px-6 sm:py-6">
+            <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/45">
+              Posts live
+            </p>
+            <p className="mt-2 text-3xl font-bold tabular-nums text-white sm:text-4xl">
               {challenge.totalPostCount}
             </p>
-            <p className="mt-1.5 text-xs text-white/55 sm:text-sm">
-              {challenge.participantCount} creators with links
+            <p className="mt-1.5 text-xs text-white/45 sm:text-[13px]">
+              from {challenge.participantCount} creator
+              {challenge.participantCount === 1 ? "" : "s"}
             </p>
           </div>
-          <div className="relative overflow-hidden rounded-2xl border border-violet-300/25 bg-gradient-to-br from-violet-500/10 via-white/[0.03] to-transparent p-5 shadow-[0_20px_50px_-30px_rgba(139,92,246,0.5)]">
-            <div className="flex items-center gap-2 text-violet-200">
-              <span className="text-2xl" aria-hidden>
-                👥
-              </span>
-              <span className="text-xs font-bold uppercase tracking-[0.14em]">
-                On leaderboard
-              </span>
-            </div>
-            <p className="mt-3 text-4xl font-black tabular-nums text-white sm:text-5xl">
+          <div className="px-5 py-5 sm:px-6 sm:py-6">
+            <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/45">
+              On leaderboard
+            </p>
+            <p className="mt-2 text-3xl font-bold tabular-nums text-white sm:text-4xl">
               {challenge.leaderboard.length}
             </p>
-            <p className="mt-1.5 text-xs text-white/55 sm:text-sm">
-              At least one challenge post
+            <p className="mt-1.5 text-xs text-white/45 sm:text-[13px]">
+              with at least one post
             </p>
           </div>
-          <div className="relative overflow-hidden rounded-2xl border border-amber-300/30 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-transparent p-5 shadow-[0_20px_50px_-30px_rgba(251,146,60,0.55)]">
-            <div className="flex items-center gap-2 text-amber-200">
-              <span className="text-2xl" aria-hidden>
-                👟
-              </span>
-              <span className="text-xs font-bold uppercase tracking-[0.14em]">
-                VF Brand top 3
-              </span>
-            </div>
-            <p className="mt-3 bg-gradient-to-r from-amber-200 to-orange-300 bg-clip-text text-2xl font-black text-transparent sm:text-3xl">
-              Sponsored boots
+          <div className="px-5 py-5 sm:px-6 sm:py-6">
+            <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/45">
+              Top 3 reward
             </p>
-            <p className="mt-1.5 text-xs text-white/55 sm:text-sm">
-              Highest view totals (staff confirm)
+            <p className="mt-2 text-xl font-semibold text-white sm:text-2xl">
+              VF Brand sponsored boots
+            </p>
+            <p className="mt-1.5 text-xs text-white/45 sm:text-[13px]">
+              In addition to the Robux pool share
             </p>
           </div>
         </section>
 
         <section
           id="how-it-works"
-          className="relative mt-10 scroll-mt-24 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-5 shadow-[0_30px_80px_-30px_rgba(80,140,255,0.4)] backdrop-blur-xl sm:mt-12 sm:p-9"
+          className="relative mt-12 scroll-mt-24 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] p-5 sm:mt-14 sm:p-9"
         >
-          <div className="space-y-2">
-            <p className="inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-100">
-              <span aria-hidden>📘</span> New here? Start here
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/45">
+              New here? Start here
             </p>
-            <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+            <h2 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
               VF Create · the full beginner guide
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-white/70 sm:text-base">
+            <p className="mt-3 text-sm leading-relaxed text-white/70 sm:text-[15px]">
               VF Create is the Virtual Football content program. You make
               short videos about VF — clips, montages, reactions, guides — post
               them on TikTok and/or YouTube, then log the link with our Discord
               bot. The community is racing to{" "}
               <strong className="text-white">1,000,000 combined views</strong>{" "}
               and unlocking a{" "}
-              <strong className="text-emerald-200">
+              <strong className="text-white">
                 {formatChallengeRobux(ROAD_TO_1M_PRIZE_POOL_ROBUX)}
               </strong>{" "}
               pool. No prior experience required — this guide walks you through
@@ -708,14 +705,14 @@ export default async function CreatorsChallengePage() {
             </p>
           </div>
 
-          <ol className="mt-6 space-y-4 text-sm leading-relaxed text-white/75 sm:mt-7 sm:space-y-5 sm:text-[15px]">
-            <li className="flex gap-3.5">
-              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-indigo-600 text-sm font-black text-white shadow-[0_8px_24px_-8px_rgba(99,102,241,0.7)]">
+          <ol className="mt-7 space-y-5 text-sm leading-relaxed text-white/70 sm:mt-8 sm:space-y-6 sm:text-[15px]">
+            <li className="flex gap-4">
+              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-xs font-semibold tabular-nums text-white/80">
                 1
               </span>
               <div>
-                <p className="text-base font-bold text-white sm:text-lg">
-                  <span aria-hidden className="mr-1.5">✅</span>Get approved as a VF Creator
+                <p className="text-base font-semibold text-white sm:text-lg">
+                  Get approved as a VF Creator
                 </p>
                 <p className="mt-1.5 text-white/70">
                   Apply through{" "}
@@ -739,13 +736,13 @@ export default async function CreatorsChallengePage() {
               </div>
             </li>
 
-            <li className="flex gap-3.5">
-              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-pink-400 to-rose-600 text-sm font-black text-white shadow-[0_8px_24px_-8px_rgba(236,72,153,0.7)]">
+            <li className="flex gap-4">
+              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-xs font-semibold tabular-nums text-white/80">
                 2
               </span>
               <div>
-                <p className="text-base font-bold text-white sm:text-lg">
-                  <span aria-hidden className="mr-1.5">🎥</span>Make a VF video and post it publicly
+                <p className="text-base font-semibold text-white sm:text-lg">
+                  Make a VF video and post it publicly
                 </p>
                 <p className="mt-1.5 text-white/70">
                   Anything VF-themed counts — gameplay clips, match
@@ -759,13 +756,13 @@ export default async function CreatorsChallengePage() {
               </div>
             </li>
 
-            <li className="flex gap-3.5">
-              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-400 to-fuchsia-600 text-sm font-black text-white shadow-[0_8px_24px_-8px_rgba(168,85,247,0.7)]">
+            <li className="flex gap-4">
+              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-xs font-semibold tabular-nums text-white/80">
                 3
               </span>
               <div>
-                <p className="text-base font-bold text-white sm:text-lg">
-                  <span aria-hidden className="mr-1.5">🤖</span>Log it with{" "}
+                <p className="text-base font-semibold text-white sm:text-lg">
+                  Log it with{" "}
                   <code className="rounded bg-white/10 px-1.5 py-0.5 text-[13px] text-white ring-1 ring-white/15">
                     /posted
                   </code>{" "}
@@ -792,13 +789,13 @@ export default async function CreatorsChallengePage() {
               </div>
             </li>
 
-            <li className="flex gap-3.5">
-              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 text-sm font-black text-white shadow-[0_8px_24px_-8px_rgba(56,189,248,0.7)]">
+            <li className="flex gap-4">
+              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-xs font-semibold tabular-nums text-white/80">
                 4
               </span>
               <div>
-                <p className="text-base font-bold text-white sm:text-lg">
-                  <span aria-hidden className="mr-1.5">🔄</span>Views sync automatically — and you can force a refresh
+                <p className="text-base font-semibold text-white sm:text-lg">
+                  Views sync automatically — and you can force a refresh
                 </p>
                 <p className="mt-1.5 text-white/70">
                   Once a day the bot pulls fresh view / play counts from
@@ -815,13 +812,13 @@ export default async function CreatorsChallengePage() {
               </div>
             </li>
 
-            <li className="flex gap-3.5">
-              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-green-600 text-sm font-black text-white shadow-[0_8px_24px_-8px_rgba(16,185,129,0.7)]">
+            <li className="flex gap-4">
+              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-xs font-semibold tabular-nums text-white/80">
                 5
               </span>
               <div>
-                <p className="text-base font-bold text-white sm:text-lg">
-                  <span aria-hidden className="mr-1.5">💰</span>How the {formatChallengeRobux(ROAD_TO_1M_PRIZE_POOL_ROBUX)}
+                <p className="text-base font-semibold text-white sm:text-lg">
+                  How the {formatChallengeRobux(ROAD_TO_1M_PRIZE_POOL_ROBUX)}
                   {" "}pool is split
                 </p>
                 <p className="mt-1.5 text-white/70">
@@ -847,13 +844,13 @@ export default async function CreatorsChallengePage() {
               </div>
             </li>
 
-            <li className="flex gap-3.5">
-              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-300 to-orange-600 text-sm font-black text-white shadow-[0_8px_24px_-8px_rgba(251,146,60,0.7)]">
+            <li className="flex gap-4">
+              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-xs font-semibold tabular-nums text-white/80">
                 6
               </span>
               <div>
-                <p className="text-base font-bold text-white sm:text-lg">
-                  <span aria-hidden className="mr-1.5">👟</span>Top 3 also win VF Brand sponsored boots
+                <p className="text-base font-semibold text-white sm:text-lg">
+                  Top 3 also win VF Brand sponsored boots
                 </p>
                 <p className="mt-1.5 text-white/70">
                   In addition to the Robux pool, the{" "}
@@ -876,13 +873,13 @@ export default async function CreatorsChallengePage() {
               </div>
             </li>
 
-            <li className="flex gap-3.5">
-              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-sm font-black text-white/85 ring-1 ring-white/15">
+            <li className="flex gap-4">
+              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-xs font-semibold text-white/80">
                 ?
               </span>
               <div>
-                <p className="text-base font-bold text-white sm:text-lg">
-                  <span aria-hidden className="mr-1.5">💬</span>Quick FAQ for new creators
+                <p className="text-base font-semibold text-white sm:text-lg">
+                  Quick FAQ for new creators
                 </p>
                 <ul className="mt-2 space-y-1.5 text-white/70">
                   <li>
@@ -935,23 +932,19 @@ export default async function CreatorsChallengePage() {
             </li>
           </ol>
 
-          <div className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-amber-300/30 bg-gradient-to-r from-amber-400/15 via-pink-400/10 to-violet-400/15 px-4 py-3 text-sm text-white shadow-[0_15px_45px_-25px_rgba(251,146,60,0.55)] sm:mt-8 sm:px-5 sm:py-4">
-            <span className="text-2xl" aria-hidden>
-              🚀
-            </span>
-            <span className="font-bold text-white">Ready to start?</span>
+          <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-white/10 pt-6 text-sm text-white/70 sm:mt-10 sm:pt-7">
+            <span className="font-medium text-white">Ready to start?</span>
             <Link
               href="/content/creators/onboard"
-              className="rounded-xl bg-gradient-to-r from-amber-300 to-orange-500 px-4 py-2 text-sm font-black text-amber-950 shadow-[0_10px_30px_-10px_rgba(251,146,60,0.7)] transition hover:scale-[1.03] hover:shadow-[0_12px_36px_-10px_rgba(251,146,60,0.85)]"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-white/90"
             >
-              Apply as a creator →
+              Apply as a creator
             </Link>
-            <span className="text-white/60">or</span>
             <Link
               href="/content/creators/vf-brand"
-              className="text-sm font-semibold text-violet-200 underline-offset-2 hover:text-white hover:underline"
+              className="text-sm text-white/70 underline-offset-2 hover:text-white hover:underline"
             >
-              See the VF Brand prize boots 👟
+              See the VF Brand prize boots
             </Link>
           </div>
         </section>
