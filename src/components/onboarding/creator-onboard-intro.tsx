@@ -225,10 +225,6 @@ export function CreatorOnboardIntro({
             </Link>
           </div>
 
-          <p className="text-xs text-white/45">
-            Next: Roblox, Discord, your details, then rules — same Discord as
-            this link.
-          </p>
         </header>
 
         <div className="w-full">
