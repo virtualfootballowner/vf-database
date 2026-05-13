@@ -26,6 +26,7 @@ export async function GET() {
     youtube_handle: string | null;
     age: number | null;
     country: string | null;
+    play_platform: string | null;
     email: string | null;
     rules_accepted_at: string | null;
     expectations_accepted_at: string | null;
@@ -37,7 +38,7 @@ export async function GET() {
     const { data } = await supabase
       .from("creator_applications")
       .select(
-        "roblox_username, tiktok_handle, youtube_handle, age, country, email, rules_accepted_at, expectations_accepted_at, status, discord_username",
+        "roblox_username, tiktok_handle, youtube_handle, age, country, play_platform, email, rules_accepted_at, expectations_accepted_at, status, discord_username",
       )
       .eq("id", session.applicationId)
       .maybeSingle();

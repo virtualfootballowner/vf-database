@@ -9,6 +9,11 @@ export function stripAtHandle(raw: string | undefined | null): string | null {
   return t.length > 0 ? t : null;
 }
 
+/** Remove Markdown escape backslashes often introduced by copy-paste (e.g. `mr\_gg\_neuer`). */
+function scrubMarkdownEscapesInSocialPaste(raw: string): string {
+  return raw.replace(/\\([\\_*[\]()~`#+\-.!|>])/g, "$1");
+}
+
 /**
  * Try to parse an http(s) URL. Returns the URL object on success, or null.
  * Accepts inputs that omit the scheme (e.g. `www.tiktok.com/@foo`) and adds
@@ -40,7 +45,7 @@ export function normalizeTiktokProfileUrl(
   raw: string | undefined | null,
 ): string | null {
   if (raw == null) return null;
-  const t = raw.trim();
+  const t = scrubMarkdownEscapesInSocialPaste(raw.trim());
   if (!t) return null;
 
   if (t.startsWith("@") || /^[A-Za-z0-9._]+$/.test(t)) {
@@ -68,7 +73,7 @@ export function normalizeYoutubeProfileUrl(
   raw: string | undefined | null,
 ): string | null {
   if (raw == null) return null;
-  const t = raw.trim();
+  const t = scrubMarkdownEscapesInSocialPaste(raw.trim());
   if (!t) return null;
 
   if (t.startsWith("@") || /^[A-Za-z0-9._-]+$/.test(t)) {
@@ -102,7 +107,7 @@ export function normalizeYoutubeProfileUrl(
  */
 export function socialProfileLabel(value: string | null | undefined): string | null {
   if (!value) return null;
-  const trimmed = value.trim();
+  const trimmed = scrubMarkdownEscapesInSocialPaste(value.trim());
   if (!trimmed) return null;
   if (!/^https?:\/\//i.test(trimmed)) {
     // Legacy bare handle.
@@ -128,9 +133,11 @@ export function tiktokProfileHref(
   value: string | null | undefined,
 ): string | null {
   if (!value) return null;
-  const trimmed = value.trim();
+  const trimmed = scrubMarkdownEscapesInSocialPaste(value.trim());
   if (!trimmed) return null;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) {
+    return normalizeTiktokProfileUrl(trimmed) ?? trimmed;
+  }
   return normalizeTiktokProfileUrl(trimmed);
 }
 
@@ -142,8 +149,10 @@ export function youtubeProfileHref(
   value: string | null | undefined,
 ): string | null {
   if (!value) return null;
-  const trimmed = value.trim();
+  const trimmed = scrubMarkdownEscapesInSocialPaste(value.trim());
   if (!trimmed) return null;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) {
+    return normalizeYoutubeProfileUrl(trimmed) ?? trimmed;
+  }
   return normalizeYoutubeProfileUrl(trimmed);
 }

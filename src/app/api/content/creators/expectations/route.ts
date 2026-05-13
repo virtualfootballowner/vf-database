@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { readCreatorSessionPayload } from "@/lib/creator-onboard/cookie-helpers";
+import { isCreatorPlayPlatform } from "@/lib/creator-onboard/play-platform";
 import { createCreatorSupabaseAdmin } from "@/lib/creator-onboard/supabase-creator";
 
 export async function POST() {
@@ -24,7 +25,7 @@ export async function POST() {
   const { data: row, error: fetchErr } = await supabase
     .from("creator_applications")
     .select(
-      "id, discord_id, status, tiktok_handle, youtube_handle, age, country, email, rules_accepted_at",
+      "id, discord_id, status, tiktok_handle, youtube_handle, age, country, email, rules_accepted_at, play_platform",
     )
     .eq("id", session.applicationId)
     .maybeSingle();
@@ -43,10 +44,15 @@ export async function POST() {
   const hasSocial =
     (row.tiktok_handle && String(row.tiktok_handle).trim()) ||
     (row.youtube_handle && String(row.youtube_handle).trim());
+  const playOk =
+    typeof row.play_platform === "string" &&
+    isCreatorPlayPlatform(row.play_platform.trim().toLowerCase());
+
   if (
     !hasSocial ||
     row.age == null ||
     !row.country ||
+    !playOk ||
     !row.rules_accepted_at
   ) {
     return NextResponse.json(

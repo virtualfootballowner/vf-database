@@ -224,19 +224,19 @@ export default async function CreatorsChallengePage() {
         </section>
 
         {/* Leaderboard — directly under progress */}
-        <section id="leaderboard" className="mt-8 scroll-mt-24 sm:mt-10">
-          <div className="flex flex-col gap-3 border-b border-white/15 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <section id="leaderboard" className="mt-8 scroll-mt-24 sm:mt-12">
+          <div className="flex flex-col gap-4 border-b border-white/15 pb-6 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
               <h2 className="text-lg font-semibold text-white sm:text-2xl">
                 Leaderboard
               </h2>
-              <p className="mt-1 text-[13px] leading-snug text-white/65 sm:text-sm sm:leading-normal">
+              <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-white/65 sm:text-sm sm:leading-relaxed">
                 Sorted by total synced views / plays · updates on each page
                 load
               </p>
             </div>
-            <div className="flex flex-col gap-1.5 sm:items-end">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-white/15 bg-white/10 px-2.5 py-1.5 text-[13px] text-white/85 shadow-sm backdrop-blur sm:px-3 sm:py-2 sm:text-sm">
+            <div className="flex flex-col gap-2 sm:items-end">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-white/15 bg-white/10 px-3.5 py-2.5 text-[13px] text-white/85 shadow-sm backdrop-blur sm:px-4 sm:py-3 sm:text-sm">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <Image
                   src="/Robux_2019_Logo_white.svg.png"
@@ -265,9 +265,9 @@ export default async function CreatorsChallengePage() {
             </div>
           </div>
 
-          <div className="mt-6 space-y-3">
+          <div className="mt-8 space-y-5 sm:mt-10 sm:space-y-6 md:space-y-7">
             {challenge.leaderboard.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-white/25 bg-zinc-100 px-6 py-6 text-center text-sm text-zinc-700 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)]">
+              <p className="rounded-xl border border-dashed border-white/25 bg-zinc-100 px-6 py-8 text-center text-sm leading-relaxed text-zinc-700 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.45)] sm:px-8 sm:py-10 sm:text-base">
                 No posts on the board yet. Approved creators: add a link with{" "}
                 <code className="rounded bg-white px-1 text-zinc-800">
                   /posted
@@ -301,11 +301,11 @@ export default async function CreatorsChallengePage() {
                         : "border-zinc-300/70"
                     }`}
                   >
-                    <div className="flex flex-col gap-3 p-3.5 sm:gap-4 sm:p-5">
-                      <div className="flex items-start gap-2.5 sm:gap-3">
-                        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                    <div className="flex flex-col gap-5 p-5 sm:gap-6 sm:p-6 md:p-7">
+                      <div className="flex items-start gap-4 sm:gap-5">
+                        <div className="flex shrink-0 items-center gap-3 sm:gap-4">
                           <span
-                            className={`flex size-8 items-center justify-center rounded-full text-[13px] font-bold tabular-nums sm:size-10 sm:text-sm ${
+                            className={`flex size-9 items-center justify-center rounded-full text-sm font-bold tabular-nums sm:size-11 sm:text-base ${
                               row.rank === 1
                                 ? "bg-amber-100 text-amber-900"
                                 : row.rank === 2
@@ -324,24 +324,24 @@ export default async function CreatorsChallengePage() {
                               alt=""
                               width={48}
                               height={48}
-                              className="size-10 rounded-full object-cover ring-1 ring-zinc-200 sm:size-12"
+                              className="size-11 rounded-full object-cover ring-1 ring-zinc-200 sm:size-14"
                             />
                           ) : (
-                            <div className="flex size-10 items-center justify-center rounded-full bg-zinc-200 text-base font-semibold text-zinc-600 sm:size-12 sm:text-lg">
+                            <div className="flex size-11 items-center justify-center rounded-full bg-zinc-200 text-lg font-semibold text-zinc-600 sm:size-14 sm:text-xl">
                               {row.displayName.slice(0, 1).toUpperCase()}
                             </div>
                           )}
                         </div>
 
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[15px] font-semibold text-zinc-900 sm:text-base">
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <p className="truncate text-base font-semibold text-zinc-900 sm:text-lg">
                             {row.displayName}
                           </p>
-                          <p className="truncate text-[12px] text-zinc-600 sm:text-sm">
+                          <p className="truncate text-[13px] leading-relaxed text-zinc-600 sm:text-sm">
                             {row.robloxUsername}
                             {country ? <> · {country}</> : null}
                           </p>
-                          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[13px] sm:mt-2 sm:gap-x-4 sm:gap-y-1 sm:text-sm">
+                          <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-1 text-[13px] sm:gap-x-5 sm:pt-2 sm:text-sm">
                             {tiktokUrl ? (
                               <a
                                 href={tiktokUrl}
@@ -366,57 +366,57 @@ export default async function CreatorsChallengePage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                        <div className="min-w-0 rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-zinc-200 sm:px-3 sm:py-2">
-                          <p className="text-[10px] uppercase tracking-wide text-zinc-500 sm:text-[11px] sm:normal-case sm:tracking-normal">
+                      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+                        <div className="flex min-w-0 flex-col gap-1 rounded-xl bg-white px-3 py-3 ring-1 ring-zinc-200/80 sm:px-4 sm:py-3.5">
+                          <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 sm:text-xs sm:normal-case sm:tracking-normal">
                             Views
                           </p>
-                          <p className="truncate text-[15px] font-semibold tabular-nums text-zinc-900 sm:text-base">
+                          <p className="truncate text-base font-semibold tabular-nums text-zinc-900 sm:text-lg">
                             {formatViewCount(row.totalViews)}
                           </p>
                         </div>
-                        <div className="min-w-0 rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-zinc-200 sm:px-3 sm:py-2">
-                          <p className="text-[10px] uppercase tracking-wide text-zinc-500 sm:text-[11px] sm:normal-case sm:tracking-normal">
+                        <div className="flex min-w-0 flex-col gap-1 rounded-xl bg-white px-3 py-3 ring-1 ring-zinc-200/80 sm:px-4 sm:py-3.5">
+                          <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 sm:text-xs sm:normal-case sm:tracking-normal">
                             Posts
                           </p>
-                          <p className="text-[15px] font-semibold tabular-nums text-zinc-900 sm:text-base">
+                          <p className="text-base font-semibold tabular-nums text-zinc-900 sm:text-lg">
                             {row.postCount}
                           </p>
                         </div>
-                        <div className="min-w-0 rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-zinc-200 sm:px-3 sm:py-2">
-                          <p className="text-[10px] uppercase tracking-wide text-zinc-500 sm:text-[11px] sm:normal-case sm:tracking-normal">
+                        <div className="flex min-w-0 flex-col gap-1 rounded-xl bg-white px-3 py-3 ring-1 ring-zinc-200/80 sm:px-4 sm:py-3.5">
+                          <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 sm:text-xs sm:normal-case sm:tracking-normal">
                             Pool share
                           </p>
-                          <p className="truncate text-[15px] font-semibold tabular-nums text-blue-800 sm:text-base">
+                          <p className="truncate text-base font-semibold tabular-nums text-blue-800 sm:text-lg">
                             {formatPoolSharePercent(row.poolSharePercent)}
                           </p>
                         </div>
-                        <div className="min-w-0 rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-zinc-200 sm:px-3 sm:py-2">
-                          <p className="text-[10px] uppercase tracking-wide text-zinc-500 sm:text-[11px] sm:normal-case sm:tracking-normal">
+                        <div className="flex min-w-0 flex-col gap-1 rounded-xl bg-white px-3 py-3 ring-1 ring-zinc-200/80 sm:px-4 sm:py-3.5">
+                          <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 sm:text-xs sm:normal-case sm:tracking-normal">
                             Est. Robux
                           </p>
-                          <p className="truncate text-[13px] font-semibold tabular-nums text-emerald-800 sm:text-base">
+                          <p className="truncate text-sm font-semibold tabular-nums text-emerald-800 sm:text-lg">
                             {formatChallengeRobux(row.estimatedPayoutRobux)}
                           </p>
                         </div>
                       </div>
 
-                      <div className="rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-zinc-200 sm:px-3 sm:py-2">
-                        <p className="text-[10px] uppercase tracking-wide text-zinc-500 sm:text-[11px] sm:normal-case sm:tracking-normal">
+                      <div className="rounded-xl bg-white px-3 py-3 ring-1 ring-zinc-200/80 sm:px-4 sm:py-3.5">
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 sm:text-xs sm:normal-case sm:tracking-normal">
                           VF Brand sponsor
                         </p>
                         {brandPick ? (
-                          <span className="mt-1 inline-flex items-center rounded-md border border-violet-300 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-950 sm:px-2.5 sm:py-1 sm:text-xs">
+                          <span className="mt-2 inline-flex items-center rounded-md border border-violet-300 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-950 sm:px-3 sm:py-1.5 sm:text-sm">
                             Top {row.rank} · footwear pick
                           </span>
                         ) : (
-                          <p className="mt-1 text-sm text-zinc-400">—</p>
+                          <p className="mt-2 text-sm text-zinc-400 sm:text-base">—</p>
                         )}
                       </div>
                     </div>
 
                     <details className="group border-t border-zinc-200 bg-zinc-200/60">
-                      <summary className="cursor-pointer list-none px-4 py-2.5 text-sm text-blue-800 hover:underline sm:px-5">
+                      <summary className="cursor-pointer list-none px-5 py-3.5 text-sm leading-relaxed text-blue-800 hover:underline sm:px-6 sm:py-4 sm:text-base">
                         View posts ({row.postCount})
                         <span className="text-zinc-400 group-open:hidden">
                           {" "}
@@ -427,7 +427,7 @@ export default async function CreatorsChallengePage() {
                           · collapse
                         </span>
                       </summary>
-                      <ul className="space-y-1 border-t border-zinc-300/70 px-4 pb-3 pt-2 sm:px-5">
+                      <ul className="space-y-2 border-t border-zinc-300/70 px-5 pb-4 pt-3 sm:px-6 sm:pb-5 sm:pt-4">
                         {row.posts.map((p) => {
                           const dateLabel = formatPostedDate(p.posted_at);
                           const viewsLabel =
@@ -437,7 +437,7 @@ export default async function CreatorsChallengePage() {
                           return (
                             <li
                               key={`${row.id}-${p.posted_at}-${p.url}`}
-                              className="flex flex-col gap-0.5 py-1.5 text-sm sm:flex-row sm:items-center sm:justify-between"
+                              className="flex flex-col gap-1 border-b border-zinc-300/40 py-3 last:border-b-0 last:pb-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-2.5"
                             >
                               <a
                                 href={p.url}
@@ -483,9 +483,9 @@ export default async function CreatorsChallengePage() {
                       key={`placeholder-${rank}`}
                       className="overflow-hidden rounded-xl border border-dashed border-white/20 bg-white/[0.04] shadow-[0_12px_30px_-20px_rgba(0,0,0,0.35)] backdrop-blur-sm"
                     >
-                      <div className="flex items-center gap-3 p-3.5 sm:gap-4 sm:p-5">
+                      <div className="flex items-center gap-4 p-5 sm:gap-5 sm:p-6">
                         <span
-                          className={`flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold tabular-nums sm:size-10 sm:text-sm ${
+                          className={`flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums sm:size-11 sm:text-base ${
                             rank === 2
                               ? "bg-white/10 text-white/60"
                               : rank === 3
@@ -495,14 +495,14 @@ export default async function CreatorsChallengePage() {
                         >
                           {rank}
                         </span>
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-dashed border-white/15 bg-white/[0.03] text-white/40 sm:size-12">
+                        <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-dashed border-white/15 bg-white/[0.03] text-white/40 sm:size-14 sm:text-lg">
                           ?
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-semibold text-white/75 sm:text-base">
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <p className="text-sm font-semibold text-white/75 sm:text-base md:text-lg">
                             Open slot · rank #{rank}
                           </p>
-                          <p className="mt-0.5 text-[11px] leading-snug text-white/55 sm:text-sm sm:leading-normal">
+                          <p className="text-xs leading-relaxed text-white/55 sm:text-sm sm:leading-relaxed">
                             {rank <= 3
                               ? "Top 3 → claim a VF Brand sponsored boot and the biggest Robux share."
                               : "Post a VF video and run /posted to lock in this spot."}

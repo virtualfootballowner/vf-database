@@ -25,6 +25,10 @@ import {
   handleContractButton,
 } from "@/bot/contracts";
 import {
+  MEDIA_STAFF_APPROVE_PREFIX,
+  MEDIA_STAFF_REJECT_PREFIX,
+} from "@/lib/media-staff/media-discord-constants";
+import {
   CREATOR_APPROVE_PREFIX,
   CREATOR_POST_REMOVE_APPROVE_PREFIX,
   CREATOR_POST_REMOVE_REJECT_MODAL_PREFIX,
@@ -33,6 +37,10 @@ import {
   CREATOR_REJECT_PREFIX,
   CREATOR_START_APP_BUTTON,
 } from "@/lib/creator-onboard/creator-discord-constants";
+import {
+  handleMediaStaffApproveButton,
+  handleMediaStaffRejectButton,
+} from "@/bot/media-staff-onboard";
 import {
   handleCreatorApproveButton,
   handleCreatorPostRemoveApproveButton,
@@ -397,6 +405,21 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
     if (customId === CREATOR_START_APP_BUTTON) {
       await handleStartCreatorAppButton(interaction);
+      return;
+    }
+
+    if (customId.startsWith(MEDIA_STAFF_APPROVE_PREFIX)) {
+      await handleMediaStaffApproveButton(
+        interaction,
+        customId.slice(MEDIA_STAFF_APPROVE_PREFIX.length),
+      );
+      return;
+    }
+    if (customId.startsWith(MEDIA_STAFF_REJECT_PREFIX)) {
+      await handleMediaStaffRejectButton(
+        interaction,
+        customId.slice(MEDIA_STAFF_REJECT_PREFIX.length),
+      );
       return;
     }
 

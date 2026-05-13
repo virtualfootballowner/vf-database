@@ -9,6 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { COUNTRIES } from "@/lib/creator-onboard/countries";
+import {
+  CREATOR_PLAY_PLATFORM_LABEL,
+  CREATOR_PLAY_PLATFORM_VALUES,
+  type CreatorPlayPlatform,
+} from "@/lib/creator-onboard/play-platform";
 
 export default function CreatorDetailsPage() {
   const router = useRouter();
@@ -17,6 +22,9 @@ export default function CreatorDetailsPage() {
   const [youtube, setYoutube] = useState("");
   const [age, setAge] = useState("");
   const [country, setCountry] = useState("");
+  const [playPlatform, setPlayPlatform] = useState<CreatorPlayPlatform | "">(
+    "",
+  );
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -38,6 +46,7 @@ export default function CreatorDetailsPage() {
               email: string | null;
               age: number | null;
               country: string | null;
+              play_platform: string | null;
               tiktok_handle: string | null;
               youtube_handle: string | null;
             } | null;
@@ -57,6 +66,9 @@ export default function CreatorDetailsPage() {
         if (db?.country) setCountry(db.country);
         if (db?.tiktok_handle) setTiktok(db.tiktok_handle);
         if (db?.youtube_handle) setYoutube(db.youtube_handle);
+        const pp = db?.play_platform?.trim()?.toLowerCase();
+        if (pp === "pc" || pp === "mobile" || pp === "console")
+          setPlayPlatform(pp);
       } catch {
         /* ignore */
       } finally {
@@ -82,6 +94,7 @@ export default function CreatorDetailsPage() {
           youtube_handle: youtube.trim() || null,
           age: Number.parseInt(age, 10),
           country,
+          play_platform: playPlatform,
           email: email.trim(),
         }),
       });
@@ -104,7 +117,7 @@ export default function CreatorDetailsPage() {
       totalSteps={6}
       stepLabel="Details"
       title="Your details"
-      subtitle="Roblox is already linked from the last step. Paste a link to your TikTok profile, then your age and country. YouTube link and email are optional."
+      subtitle="Roblox is already linked from the last step. Paste your TikTok profile link, say where you mainly play (PC, mobile, or console), then age and country. YouTube link and email are optional."
     >
       {!hydrated ? (
         <p className="text-muted-foreground text-sm">Loading…</p>
@@ -148,6 +161,31 @@ export default function CreatorDetailsPage() {
               autoComplete="off"
             />
           </div>
+          <fieldset className="space-y-2">
+            <legend className="mb-1 text-sm font-medium">Main platform</legend>
+            <p className="text-muted-foreground text-xs">
+              Where do you mainly play Roblox?
+            </p>
+            <div className="flex flex-col gap-2 pl-0.5">
+              {CREATOR_PLAY_PLATFORM_VALUES.map((v, i) => (
+                <label
+                  key={v}
+                  className="flex cursor-pointer items-center gap-2 text-sm"
+                >
+                  <input
+                    type="radio"
+                    name="play_platform"
+                    value={v}
+                    checked={playPlatform === v}
+                    onChange={() => setPlayPlatform(v)}
+                    required={i === 0}
+                    className="text-primary border-input h-4 w-4"
+                  />
+                  {CREATOR_PLAY_PLATFORM_LABEL[v]}
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <div className="space-y-2">
             <Label htmlFor="age">Age</Label>
             <Input
@@ -194,7 +232,7 @@ export default function CreatorDetailsPage() {
           ) : null}
           <Button
             type="submit"
-            disabled={loading || !robloxLabel}
+            disabled={loading || !robloxLabel || !playPlatform}
             className="w-full"
           >
             {loading ? "Saving…" : "Continue"}

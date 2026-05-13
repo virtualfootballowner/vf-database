@@ -75,6 +75,20 @@ const envSchema = z.object({
    * approval DM. Example: https://discord.com/channels/{guild_id}/{channel_id}
    */
   DISCORD_CREATOR_CHECKLIST_CHANNEL_URL: optionalOutgoingChannel,
+  /**
+   * Invite link for the VF Private Testing Hub (creator access). Shown in the
+   * creator approval DM. Defaults in code when unset.
+   */
+  DISCORD_CREATOR_PRIVATE_TESTING_INVITE_URL: optionalOutgoingChannel,
+  /**
+   * Role added when **media staff** onboarding is approved (VF Media).
+   * Defaults in code when unset.
+   */
+  DISCORD_MEDIA_STAFF_ROLE_ID: z.preprocess((raw) => {
+    if (raw == null || raw === "") return "1503912250702823524";
+    const s = String(raw).trim();
+    return s.length > 0 ? s : "1503912250702823524";
+  }, z.string().min(1)),
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   ROBLOX_API_BASE_URL: z.string().url().default("https://users.roblox.com"),
@@ -109,6 +123,9 @@ export const env = envSchema.parse({
   DISCORD_CREATOR_VF_GUILD_ID: process.env.DISCORD_CREATOR_VF_GUILD_ID,
   DISCORD_CREATOR_CHECKLIST_CHANNEL_URL:
     process.env.DISCORD_CREATOR_CHECKLIST_CHANNEL_URL,
+  DISCORD_CREATOR_PRIVATE_TESTING_INVITE_URL:
+    process.env.DISCORD_CREATOR_PRIVATE_TESTING_INVITE_URL,
+  DISCORD_MEDIA_STAFF_ROLE_ID: process.env.DISCORD_MEDIA_STAFF_ROLE_ID,
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   ROBLOX_API_BASE_URL: process.env.ROBLOX_API_BASE_URL,

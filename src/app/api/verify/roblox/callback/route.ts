@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { clearCreatorRobloxOAuthStateOnResponse } from "@/lib/creator-onboard/cookie-helpers";
 import { tryCompleteCreatorRobloxOAuthViaVerifyCallback } from "@/lib/creator-onboard/handle-creator-roblox-via-verify-callback";
+import { tryCompleteMediaStaffRobloxViaVerifyCallback } from "@/lib/vfl-verify/handle-media-staff-via-verify-callbacks";
 import { tryCompleteMediaRobloxViaVerifyCallback } from "@/lib/vfl-verify/handle-media-via-verify-callbacks";
 import { loadVerifyEnv } from "@/lib/vfl-verify/load-verify-env";
 import { applyGuildVerification } from "@/lib/vfl-verify/apply-guild-verification";
@@ -53,6 +54,18 @@ export async function GET(request: Request) {
   );
   if (creatorReturn) {
     return creatorReturn;
+  }
+
+  /**
+   * Media staff onboarding verify — dispatch before plain media verify.
+   */
+  const mediaStaffReturn = await tryCompleteMediaStaffRobloxViaVerifyCallback(
+    request,
+    code,
+    state,
+  );
+  if (mediaStaffReturn) {
+    return mediaStaffReturn;
   }
 
   /**

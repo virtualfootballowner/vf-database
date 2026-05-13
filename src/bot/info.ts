@@ -122,6 +122,8 @@ export async function handleHelp(
         name: "🛠️ Staff · server managers",
         value: [
           "**`/postverify`** — post the verify card in this channel",
+          "**`/postverify-media`** — VF Media nickname + verified role card",
+          "**`/postverify-media-staff`** — VF Media staff verify + application card",
           "**`/help`** — post this command index in this channel",
           "**`/appoint`** — assign a club / nation manager for a season",
           "**`/backlog`** — pending whitelist + release queue",

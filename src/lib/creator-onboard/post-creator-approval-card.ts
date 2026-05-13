@@ -2,6 +2,7 @@ import {
   CREATOR_APPROVE_PREFIX,
   CREATOR_REJECT_PREFIX,
 } from "@/lib/creator-onboard/creator-discord-constants";
+import { formatCreatorPlayPlatform } from "@/lib/creator-onboard/play-platform";
 import {
   socialProfileLabel,
   tiktokProfileHref,
@@ -10,20 +11,19 @@ import {
 
 const DISCORD_API = "https://discord.com/api/v10";
 
-function escapeMarkdown(value: string): string {
-  return value.replace(/([\\\[\]()`*_~|>])/g, "\\$1");
-}
-
-function formatSocialMarkdown(
+function staffDiscordSocialField(
   href: string | null,
-  label: string | null,
+  displayHandle: string | null,
+  product: "TikTok" | "YouTube",
 ): string {
-  if (href && label) {
-    return `[${escapeMarkdown(label)}](${href})`;
-  }
-  if (href) return href;
-  if (label) return label;
-  return "—";
+  if (!href) return "—";
+  // Use a Markdown-safe link label — underscores in @handles break Discord's
+  // [text](url) parser (italic / malformed links → wrong click targets / 404s).
+  const hint =
+    displayHandle && displayHandle !== "—"
+      ? `\n\`${displayHandle}\``
+      : "";
+  return `[Open ${product} profile](${href})${hint}`;
 }
 
 function redactEmail(email: string | null | undefined): string {
@@ -54,16 +54,22 @@ export async function postCreatorApprovalCardViaDiscordApi(opts: {
     : `\`${robloxIdRaw}\``;
   const age = r.age != null ? String(r.age) : "—";
   const country = String(r.country ?? "—");
+  const platformLabel = formatCreatorPlayPlatform(
+    typeof r.play_platform === "string" ? r.play_platform : null,
+  );
+  const platform = platformLabel ?? "—";
   const tiktokRaw = typeof r.tiktok_handle === "string" ? r.tiktok_handle : null;
   const youtubeRaw =
     typeof r.youtube_handle === "string" ? r.youtube_handle : null;
-  const tt = formatSocialMarkdown(
+  const tt = staffDiscordSocialField(
     tiktokProfileHref(tiktokRaw),
     socialProfileLabel(tiktokRaw),
+    "TikTok",
   );
-  const yt = formatSocialMarkdown(
+  const yt = staffDiscordSocialField(
     youtubeProfileHref(youtubeRaw),
     socialProfileLabel(youtubeRaw),
+    "YouTube",
   );
 
   const embed = {
@@ -82,8 +88,8 @@ export async function postCreatorApprovalCardViaDiscordApi(opts: {
         inline: false,
       },
       {
-        name: "Age / country",
-        value: `${age} · ${country}`,
+        name: "Age / country / platform",
+        value: `${age} · ${country} · ${platform}`,
         inline: true,
       },
       {

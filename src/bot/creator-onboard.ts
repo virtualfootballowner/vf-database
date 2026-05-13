@@ -32,6 +32,7 @@ import {
   CREATOR_START_APP_BUTTON,
 } from "@/lib/creator-onboard/creator-discord-constants";
 import { loadCreatorWebEnv } from "@/lib/creator-onboard/env-web";
+import { formatCreatorPlayPlatform } from "@/lib/creator-onboard/play-platform";
 import {
   ROAD_TO_1M_TARGET_VIEWS,
   buildRoadTo1MChallenge,
@@ -152,10 +153,17 @@ function vfGuildId(): string {
 const DEFAULT_CREATOR_CHECKLIST_CHANNEL_URL =
   "https://discord.com/channels/1500978557264986345/1502932833025527821";
 
+/** VF Private Testing Hub — override via DISCORD_CREATOR_PRIVATE_TESTING_INVITE_URL. */
+const DEFAULT_CREATOR_PRIVATE_TESTING_INVITE_URL =
+  "https://discord.gg/F6UCX2xAHV";
+
 function creatorApprovalDmContent(): string {
   const checklistUrl =
     env.DISCORD_CREATOR_CHECKLIST_CHANNEL_URL?.trim() ||
     DEFAULT_CREATOR_CHECKLIST_CHANNEL_URL;
+  const privateTestingInvite =
+    env.DISCORD_CREATOR_PRIVATE_TESTING_INVITE_URL?.trim() ||
+    DEFAULT_CREATOR_PRIVATE_TESTING_INVITE_URL;
   const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
   const leaderboardUrl = `${siteBase}/content/creators#leaderboard`;
   // Discord doesn't render [label](url) masked links in plain message
@@ -163,6 +171,7 @@ function creatorApprovalDmContent(): string {
   // auto-link them. The Open Graph embed will preview the page below.
   return [
     "You're in. Welcome to **VF Create**.",
+    `**VF Private Testing Hub** — join here for access: ${privateTestingInvite}`,
     `**Go straight to the leaderboard →** ${leaderboardUrl}`,
     `That's where your posts will show up once you run \`/posted\`. The full beginner guide and prize pool are on the same page.`,
     `Then jump into the checklist: ${checklistUrl}`,
@@ -600,6 +609,7 @@ type CreatorRow = {
   youtube_handle: string | null;
   age: number | null;
   country: string | null;
+  play_platform: string | null;
   status: "draft" | "pending" | "approved" | "rejected";
   approved_by: string | null;
   approved_at: string | null;
@@ -854,7 +864,7 @@ export async function handleCreatorProfileCommand(
   const { data, error } = await supabase
     .from("creator_applications")
     .select(
-      "id, discord_id, discord_username, discord_avatar_url, roblox_id, roblox_username, roblox_avatar_url, tiktok_handle, youtube_handle, age, country, status, approved_by, approved_at, rejection_reason, posted_video_links, created_at, updated_at",
+      "id, discord_id, discord_username, discord_avatar_url, roblox_id, roblox_username, roblox_avatar_url, tiktok_handle, youtube_handle, age, country, play_platform, status, approved_by, approved_at, rejection_reason, posted_video_links, created_at, updated_at",
     )
     .eq("discord_id", target.id)
     .order("updated_at", { ascending: false })
@@ -881,6 +891,7 @@ export async function handleCreatorProfileCommand(
   const row = data as CreatorRow;
   const meta = STATUS_META[row.status];
   const country = countryName(row.country);
+  const playsOn = formatCreatorPlayPlatform(row.play_platform);
   const tiktokUrl = tiktokProfileHref(row.tiktok_handle);
   const youtubeUrl = youtubeProfileHref(row.youtube_handle);
   const tt = socialProfileLabel(row.tiktok_handle);
@@ -938,6 +949,11 @@ export async function handleCreatorProfileCommand(
       {
         name: "Region",
         value: country ? `\`${country}\`` : "*Not set*",
+        inline: true,
+      },
+      {
+        name: "Plays on",
+        value: playsOn ? `\`${playsOn}\`` : "*Not set*",
         inline: true,
       },
     )

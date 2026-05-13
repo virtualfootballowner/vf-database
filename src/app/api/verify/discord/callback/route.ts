@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 
 import { loadVerifyEnv } from "@/lib/vfl-verify/load-verify-env";
 import { exchangeDiscordCode } from "@/lib/vfl-verify/discord-oauth";
+import { tryCompleteMediaStaffDiscordViaVerifyCallback } from "@/lib/vfl-verify/handle-media-staff-via-verify-callbacks";
 import { tryCompleteMediaDiscordViaVerifyCallback } from "@/lib/vfl-verify/handle-media-via-verify-callbacks";
 import { generatePkcePair } from "@/lib/vfl-verify/pkce";
 import { robloxAuthorizeUrl } from "@/lib/vfl-verify/roblox-oauth";
@@ -37,6 +38,13 @@ export async function GET(request: Request) {
    * Media verify flow piggybacks on this same redirect URI — dispatch first
    * so it doesn't get classified as a league-flow state mismatch.
    */
+  const mediaStaffResp = await tryCompleteMediaStaffDiscordViaVerifyCallback(
+    request,
+    code,
+    state,
+  );
+  if (mediaStaffResp) return mediaStaffResp;
+
   const mediaResp = await tryCompleteMediaDiscordViaVerifyCallback(
     request,
     code,

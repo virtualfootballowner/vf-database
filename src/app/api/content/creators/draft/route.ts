@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { readCreatorSessionPayload } from "@/lib/creator-onboard/cookie-helpers";
+import { creatorPlayPlatformSchema } from "@/lib/creator-onboard/play-platform";
 import {
   normalizeTiktokProfileUrl,
   normalizeYoutubeProfileUrl,
@@ -17,6 +18,7 @@ const bodySchema = z.object({
   youtube_handle: z.string().max(2048).optional().nullable(),
   age: z.number().int().min(13).max(120),
   country: z.string().length(2),
+  play_platform: creatorPlayPlatformSchema,
   email: z.string().email().optional().nullable().or(z.literal("")),
 });
 
@@ -109,6 +111,7 @@ export async function PATCH(request: Request) {
       youtube_handle: youtube,
       age: parsed.data.age,
       country: parsed.data.country.toUpperCase(),
+      play_platform: parsed.data.play_platform,
       email,
       updated_at: now,
     })

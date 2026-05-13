@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { readCreatorSessionPayload } from "@/lib/creator-onboard/cookie-helpers";
 import { postCreatorApprovalCardViaDiscordApi } from "@/lib/creator-onboard/post-creator-approval-card";
+import { isCreatorPlayPlatform } from "@/lib/creator-onboard/play-platform";
 import { createCreatorSupabaseAdmin } from "@/lib/creator-onboard/supabase-creator";
 
 export async function POST() {
@@ -42,10 +43,15 @@ export async function POST() {
   const hasTiktok =
     !!row.tiktok_handle && String(row.tiktok_handle).trim().length > 0;
 
+  const playPlatformRaw =
+    typeof row.play_platform === "string" ? row.play_platform.trim().toLowerCase() : "";
+  const playPlatformOk = isCreatorPlayPlatform(playPlatformRaw);
+
   if (
     !hasTiktok ||
     row.age == null ||
     !row.country ||
+    !playPlatformOk ||
     !row.rules_accepted_at ||
     !row.expectations_accepted_at ||
     !row.roblox_id ||

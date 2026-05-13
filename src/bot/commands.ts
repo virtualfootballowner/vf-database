@@ -72,6 +72,9 @@ import {
   onboardMediaCommand,
 } from "@/bot/creator-onboard";
 import {
+  handlePostVerifyMediaStaffCard,
+} from "@/bot/media-staff-onboard";
+import {
   handleUpdateContentCommand,
   updateContentCommand,
 } from "@/bot/creator-content-sync";
@@ -181,6 +184,14 @@ export const slashCommandDefinitions = [
     .setName("postverify-media")
     .setDescription(
       "Post the VF Media nickname-verify card (rename only, no roles or DB)",
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("postverify-media-staff")
+    .setDescription(
+      "Post the VF Media staff verify + application card (onboarding, no DB)",
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .toJSON(),
@@ -503,6 +514,9 @@ export async function handleSlashCommand(
       return;
     case "postverify-media":
       await handlePostVerifyMediaCard(interaction);
+      return;
+    case "postverify-media-staff":
+      await handlePostVerifyMediaStaffCard(interaction);
       return;
     case "onboard-media":
       await handleOnboardMediaCommand(interaction);
