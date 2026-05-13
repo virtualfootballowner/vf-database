@@ -1184,6 +1184,23 @@ export async function handleCreatorPostedCommand(
       }
     })();
   }
+
+  const feedChannelId = env.DISCORD_CREATOR_POSTED_FEED_CHANNEL_ID?.trim();
+  if (feedChannelId) {
+    void (async () => {
+      try {
+        const ch = await interaction.client.channels.fetch(feedChannelId);
+        if (ch?.isTextBased() && ch.isSendable()) {
+          await ch.send({
+            content: `${interaction.user} just posted\n${url}`,
+            allowedMentions: { parse: [] },
+          });
+        }
+      } catch (e) {
+        console.error("[creator] /posted feed post:", e);
+      }
+    })();
+  }
 }
 
 export async function handleCreatorPostRemoveCommand(
