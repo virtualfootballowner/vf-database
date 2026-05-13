@@ -1148,13 +1148,7 @@ export async function handleCreatorPostedCommand(
     const logEmbed = new EmbedBuilder()
       .setColor(0x3b82f6)
       .setTitle("New VF Create post")
-      .setDescription(
-        [
-          `${interaction.user} added a directory post.`,
-          "",
-          `**Link** · ${url}`,
-        ].join("\n"),
-      )
+      .setDescription(`${interaction.user} added a directory post.`)
       .addFields(
         {
           name: "Creator",
@@ -1179,7 +1173,11 @@ export async function handleCreatorPostedCommand(
       try {
         const ch = await interaction.client.channels.fetch(logChannelId);
         if (ch?.isTextBased() && ch.isSendable()) {
-          await ch.send({ embeds: [logEmbed] });
+          await ch.send({
+            content: url,
+            embeds: [logEmbed],
+            allowedMentions: { parse: [] },
+          });
         }
       } catch (e) {
         console.error("[creator] /posted log post:", e);
