@@ -2,6 +2,7 @@ import {
   CREATOR_APPROVE_PREFIX,
   CREATOR_REJECT_PREFIX,
 } from "@/lib/creator-onboard/creator-discord-constants";
+import { COUNTRIES } from "@/lib/creator-onboard/countries";
 import { formatCreatorPlayPlatform } from "@/lib/creator-onboard/play-platform";
 import {
   socialProfileLabel,
@@ -24,6 +25,13 @@ function staffDiscordSocialField(
       ? `\n\`${displayHandle}\``
       : "";
   return `[Open ${product} profile](${href})${hint}`;
+}
+
+function countryDisplay(raw: unknown): string {
+  if (typeof raw !== "string" || !raw.trim()) return "—";
+  const code = raw.trim().toUpperCase();
+  const hit = COUNTRIES.find((c) => c.code === code);
+  return hit ? hit.name : code;
 }
 
 function redactEmail(email: string | null | undefined): string {
@@ -53,7 +61,7 @@ export async function postCreatorApprovalCardViaDiscordApi(opts: {
     ? "_manual entry — Roblox OAuth pending approval_"
     : `\`${robloxIdRaw}\``;
   const age = r.age != null ? String(r.age) : "—";
-  const country = String(r.country ?? "—");
+  const country = countryDisplay(r.country);
   const platformLabel = formatCreatorPlayPlatform(
     typeof r.play_platform === "string" ? r.play_platform : null,
   );
@@ -88,8 +96,18 @@ export async function postCreatorApprovalCardViaDiscordApi(opts: {
         inline: false,
       },
       {
-        name: "Age / country / platform",
-        value: `${age} · ${country} · ${platform}`,
+        name: "Age",
+        value: age,
+        inline: true,
+      },
+      {
+        name: "Country",
+        value: country,
+        inline: true,
+      },
+      {
+        name: "Platform",
+        value: platform,
         inline: true,
       },
       {
@@ -100,6 +118,11 @@ export async function postCreatorApprovalCardViaDiscordApi(opts: {
       {
         name: "YouTube",
         value: yt,
+        inline: true,
+      },
+      {
+        name: "\u200b",
+        value: "\u200b",
         inline: true,
       },
       {
