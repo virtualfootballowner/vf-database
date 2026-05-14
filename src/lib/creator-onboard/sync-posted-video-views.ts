@@ -7,6 +7,9 @@ import {
   lookupYoutubeViews,
 } from "@/lib/creator-onboard/apify-video-views";
 import {
+  expandTiktokUrlsForSync,
+} from "@/lib/creator-onboard/expand-posted-video-url";
+import {
   parsePostedVideoLinks,
   type PostedVideoLink,
 } from "@/lib/creator-onboard/approved-creators-directory";
@@ -57,7 +60,7 @@ export async function syncPostedVideoViewsWithSupabase(opts: {
   }>;
 
   const youtubeUrls = new Set<string>();
-  const tiktokUrls = new Set<string>();
+  const rawTiktokUrls = new Set<string>();
 
   for (const row of list) {
     const links = parsePostedVideoLinks(row.posted_video_links);
@@ -68,11 +71,17 @@ export async function syncPostedVideoViewsWithSupabase(opts: {
       if (p === "youtube") {
         youtubeUrls.add(link.url);
       } else if (p === "tiktok") {
-        tiktokUrls.add(link.url);
+        rawTiktokUrls.add(link.url);
       } else {
         result.otherUrls += 1;
       }
     }
+  }
+
+  const tiktokResolvedByRaw = await expandTiktokUrlsForSync(rawTiktokUrls);
+  const tiktokUrls = new Set<string>();
+  for (const raw of rawTiktokUrls) {
+    tiktokUrls.add(tiktokResolvedByRaw.get(raw) ?? raw);
   }
 
   result.youtubeUrls = youtubeUrls.size;
@@ -163,11 +172,27 @@ export async function syncPostedVideoViewsWithSupabase(opts: {
             views_fetched_at: fetchedAt,
           };
         }
-        const v = lookupTiktokViews(link.url, tiktokMap);
+        const expanded = tiktokResolvedByRaw.get(link.url) ?? link.url;
+        const v = lookupTiktokViews(expanded, tiktokMap);
         if (v != null) {
           changed = true;
+          let storeUrl = link.url;
+          if (expanded.trim() !== link.url.trim()) {
+            try {
+              const u = new URL(expanded);
+              if (
+                u.hostname.toLowerCase().includes("tiktok.com") &&
+                /\/video\/\d+/i.test(u.pathname)
+              ) {
+                storeUrl = expanded;
+              }
+            } catch {
+              /* keep link.url */
+            }
+          }
           return {
             ...base,
+            url: storeUrl,
             view_count: v,
             views_fetched_at: fetchedAt,
             views_source: "tiktok" as const,

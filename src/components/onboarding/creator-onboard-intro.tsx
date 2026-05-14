@@ -3,6 +3,9 @@ import { ArrowLeft } from "lucide-react";
 
 const ROBUX_LOGO_SRC = "/Robux_2019_Logo_white.svg.png";
 
+/** VF Media (creator server). Override with NEXT_PUBLIC_VF_DISCORD_INVITE_URL. */
+const DEFAULT_VF_MEDIA_DISCORD_INVITE = "https://discord.gg/rQsqG7Za7z";
+
 /** Screenshot strip at top: `/public/ss1.png` … `ss11.png`. */
 const SS_STRIP_IMAGES: string[] = Array.from(
   { length: 11 },
@@ -15,16 +18,16 @@ function SsOverlapStrip() {
       <Link
         href="/"
         aria-label="Back"
-        className="absolute left-2 top-2 z-20 inline-flex size-10 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white shadow-md backdrop-blur-sm transition hover:bg-black/55 sm:left-4 sm:top-4 sm:size-11"
+        className="absolute left-2 top-2 z-20 inline-flex size-9 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white shadow-md backdrop-blur-sm transition hover:bg-black/55 sm:left-4 sm:top-4 sm:size-11"
       >
-        <ArrowLeft className="size-5 sm:size-[1.35rem]" strokeWidth={2.25} />
+        <ArrowLeft className="size-[1.1rem] sm:size-[1.35rem]" strokeWidth={2.25} />
       </Link>
-      <div className="flex justify-center overflow-x-auto overflow-y-visible px-2 pb-2 pt-11 sm:px-4 sm:pb-4 sm:pt-14 md:pt-16 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex items-center justify-center py-2">
+      <div className="flex justify-center overflow-x-auto overflow-y-visible px-3 pb-1 pt-9 sm:px-4 sm:pb-4 sm:pt-14 md:pt-16 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex items-center justify-center py-1.5 sm:py-2">
           {SS_STRIP_IMAGES.map((src, i) => (
             <div
               key={src}
-              className={`relative h-[7.25rem] w-[5.75rem] shrink-0 overflow-hidden rounded-xl border border-white/25 bg-[#12326e] shadow-[0_10px_28px_-6px_rgba(0,0,0,0.55)] sm:h-[9.25rem] sm:w-[7.25rem] md:h-[10.75rem] md:w-[8.25rem] ${i > 0 ? "-ml-5 sm:-ml-9 md:-ml-11" : ""} `}
+              className={`relative h-[5.25rem] w-[4.1rem] shrink-0 overflow-hidden rounded-lg border border-white/25 bg-[#12326e] shadow-[0_8px_20px_-6px_rgba(0,0,0,0.55)] sm:h-[9.25rem] sm:w-[7.25rem] sm:rounded-xl sm:shadow-[0_10px_28px_-6px_rgba(0,0,0,0.55)] md:h-[10.75rem] md:w-[8.25rem] ${i > 0 ? "-ml-3 sm:-ml-9 md:-ml-11" : ""} `}
               style={{ zIndex: i + 1 }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- static public assets */}
@@ -148,6 +151,11 @@ export function CreatorOnboardIntro({
   bootstrapHref: string | null;
 }) {
   const heroSrc = vfCreatePublicPath(1);
+  const discordInvite =
+    process.env.NEXT_PUBLIC_VF_DISCORD_INVITE_URL?.trim() ||
+    DEFAULT_VF_MEDIA_DISCORD_INVITE;
+  const applyHref = bootstrapHref ?? discordInvite;
+  const applyIsExternal = !bootstrapHref;
 
   return (
     <main className="relative min-h-dvh min-w-0 overflow-x-hidden bg-[#04132f] text-white">
@@ -156,39 +164,41 @@ export function CreatorOnboardIntro({
         className="pointer-events-none fixed inset-0 bg-gradient-to-b from-[#083696]/95 via-[#061f52] to-[#040d22]"
       />
       <SsOverlapStrip />
-      <div className="relative mx-auto flex min-h-dvh max-w-6xl flex-col gap-8 px-4 pb-16 pt-4 sm:gap-10 sm:px-6 sm:pt-6 md:px-8 md:pt-8">
-        <header className="flex flex-col gap-6">
-          <div className="space-y-2">
-            <p className="text-sm text-white/50">VF Create Program</p>
-            <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl">
+      <div className="relative mx-auto flex min-h-dvh max-w-6xl flex-col gap-6 px-4 pb-12 pt-3 sm:gap-10 sm:px-6 sm:pb-16 sm:pt-6 md:px-8 md:pt-8">
+        <header className="flex flex-col gap-5 sm:gap-6">
+          <div className="space-y-1.5 sm:space-y-2">
+            <p className="text-xs uppercase tracking-[0.18em] text-white/50 sm:text-sm sm:tracking-normal sm:normal-case">
+              VF Create Program
+            </p>
+            <h1 className="text-[2.25rem] font-semibold leading-[1.05] tracking-tight sm:text-5xl md:text-6xl">
               This is your shot.
             </h1>
           </div>
 
-          <div className="grid gap-8 border-t border-white/10 pt-8 sm:grid-cols-2 sm:gap-12 sm:items-start">
-            <div className="text-right sm:pr-6 md:pr-10">
-              <div className="flex flex-wrap items-center justify-end gap-2.5">
-                <p className="text-sm text-white/50">Prize pool</p>
+          <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-5 sm:gap-12 sm:pt-8 sm:items-start">
+            <div className="text-center sm:text-right sm:pr-6 md:pr-10">
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end sm:gap-2.5">
+                <p className="text-xs text-white/50 sm:text-sm">Prize pool</p>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={ROBUX_LOGO_SRC}
                   alt=""
                   width={72}
                   height={22}
-                  className="h-4 w-auto object-contain opacity-90"
+                  className="h-3.5 w-auto object-contain opacity-90 sm:h-4"
                 />
               </div>
-              <p className="mt-3 text-4xl font-semibold tabular-nums tracking-tight sm:text-5xl">
+              <p className="mt-1.5 text-3xl font-semibold tabular-nums tracking-tight sm:mt-3 sm:text-5xl">
                 50K
               </p>
             </div>
-            <div className="text-left sm:border-l sm:border-white/10 sm:pl-6 md:pl-10">
-              <p className="text-sm text-white/50">Sponsorship</p>
-              <div className="mt-3 space-y-0.5">
-                <p className="text-xl font-semibold leading-snug sm:text-2xl">
+            <div className="border-l border-white/10 pl-4 text-center sm:pl-6 sm:text-left md:pl-10">
+              <p className="text-xs text-white/50 sm:text-sm">Sponsorship</p>
+              <div className="mt-1.5 space-y-0.5 sm:mt-3">
+                <p className="text-base font-semibold leading-snug sm:text-2xl">
                   Custom VF Brand
                 </p>
-                <p className="text-base font-semibold text-white/85 sm:text-lg">
+                <p className="text-sm font-semibold text-white/85 sm:text-lg">
                   Sponsorship
                 </p>
               </div>
@@ -196,24 +206,43 @@ export function CreatorOnboardIntro({
           </div>
 
           <div className="flex flex-col items-center gap-4 text-center">
-            {bootstrapHref ? (
-              <Link
-                href={bootstrapHref}
-                className="relative inline-flex min-h-[3.75rem] w-full max-w-md items-center justify-center overflow-hidden rounded-lg border border-white/50 bg-gradient-to-b from-white via-[#f8fafc] to-[#dbeafe] px-12 py-4 text-lg font-bold uppercase tracking-[0.18em] text-[#062a5c] shadow-[inset_0_2px_0_rgba(255,255,255,0.85),0_6px_28px_rgba(255,255,255,0.28),0_2px_8px_rgba(8,54,150,0.35)] transition hover:brightness-[1.05] sm:w-auto"
+            {applyIsExternal ? (
+              <a
+                href={applyHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="relative inline-flex min-h-[3.5rem] w-full max-w-md items-center justify-center overflow-hidden rounded-lg border border-white/50 bg-gradient-to-b from-white via-[#f8fafc] to-[#dbeafe] px-8 py-3.5 text-base font-bold uppercase tracking-[0.16em] text-[#062a5c] shadow-[inset_0_2px_0_rgba(255,255,255,0.85),0_6px_28px_rgba(255,255,255,0.28),0_2px_8px_rgba(8,54,150,0.35)] transition hover:brightness-[1.05] sm:min-h-[3.75rem] sm:w-auto sm:px-12 sm:py-4 sm:text-lg sm:tracking-[0.18em]"
               >
                 <span
                   aria-hidden
                   className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/45 to-transparent opacity-70"
                 />
-                <span className="relative z-[1] drop-shadow-sm">Start application</span>
-              </Link>
+                <span className="relative z-[1] drop-shadow-sm">Apply now</span>
+              </a>
             ) : (
-              <p className="max-w-md text-sm text-white/65">
-                Use your personal link from the VF Discord bot (Start
-                application) so we can unlock this button for your account.
+              <Link
+                href={applyHref}
+                className="relative inline-flex min-h-[3.5rem] w-full max-w-md items-center justify-center overflow-hidden rounded-lg border border-white/50 bg-gradient-to-b from-white via-[#f8fafc] to-[#dbeafe] px-8 py-3.5 text-base font-bold uppercase tracking-[0.16em] text-[#062a5c] shadow-[inset_0_2px_0_rgba(255,255,255,0.85),0_6px_28px_rgba(255,255,255,0.28),0_2px_8px_rgba(8,54,150,0.35)] transition hover:brightness-[1.05] sm:min-h-[3.75rem] sm:w-auto sm:px-12 sm:py-4 sm:text-lg sm:tracking-[0.18em]"
+              >
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/45 to-transparent opacity-70"
+                />
+                <span className="relative z-[1] drop-shadow-sm">
+                  Start application
+                </span>
+              </Link>
+            )}
+            {applyIsExternal && (
+              <p className="max-w-md text-xs text-white/55">
+                Join the VF Media Discord and tap{" "}
+                <span className="font-semibold text-white/75">
+                  Start application
+                </span>{" "}
+                on the creator card — the bot will DM you a personal link.
               </p>
             )}
-            <p className="mx-auto max-w-2xl text-center text-base leading-relaxed text-white/70 sm:text-lg">
+            <p className="mx-auto max-w-2xl text-sm leading-relaxed text-white/70 sm:text-lg">
               We&apos;re building something loud for Virtual Football — and we
               want creators who can match the energy.
             </p>
@@ -224,7 +253,6 @@ export function CreatorOnboardIntro({
               VF Create directory
             </Link>
           </div>
-
         </header>
 
         <div className="w-full">
@@ -235,7 +263,7 @@ export function CreatorOnboardIntro({
           />
         </div>
 
-        <section className="space-y-4">
+        <section className="space-y-3 sm:space-y-4">
           <div>
             <h2 className="text-base font-semibold text-white">Gallery</h2>
             <p className="mt-1 max-w-2xl text-sm text-white/50">
@@ -243,7 +271,7 @@ export function CreatorOnboardIntro({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
             {GALLERY_LAYOUT.map(({ n, aspectClass, className }) => (
               <MediaSlot
                 key={n}
@@ -255,7 +283,7 @@ export function CreatorOnboardIntro({
           </div>
         </section>
 
-        <footer className="mt-auto flex flex-wrap justify-center gap-x-4 gap-y-2 border-t border-white/10 pt-8 text-center text-[11px] text-white/45">
+        <footer className="mt-auto flex flex-wrap justify-center gap-x-4 gap-y-2 border-t border-white/10 pt-6 text-center text-[11px] text-white/45 sm:pt-8">
           <Link href="/privacy" className="underline underline-offset-2">
             Privacy
           </Link>

@@ -3,6 +3,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
+  type Message,
   MessageFlags,
   PermissionFlagsBits,
   type ButtonInteraction,
@@ -18,6 +19,36 @@ function mediaStaffTargetGuildId(): string {
     env.DISCORD_CREATOR_VF_GUILD_ID?.trim() ||
     env.DISCORD_GUILD_ID
   );
+}
+
+/**
+ * Read the "Role" field off the application card embed and map it to a
+ * specialty Discord role id (Reporter / GFX / Streamer / Commentator).
+ * Returns `null` for "Other" or any unrecognized label so we just grant the
+ * base media staff role without crashing.
+ */
+function mediaStaffSpecialtyRoleFromMessage(
+  message: Message,
+): { roleId: string; label: string } | null {
+  const embed = message.embeds?.[0];
+  if (!embed) return null;
+  const field = embed.fields?.find((f) => f.name.trim().toLowerCase() === "role");
+  if (!field) return null;
+  const label = field.value.trim();
+  const key = label.toLowerCase();
+  if (key === "reporter") {
+    return { roleId: env.DISCORD_MEDIA_REPORTER_ROLE_ID, label };
+  }
+  if (key === "gfx maker" || key === "gfx" || key.startsWith("gfx")) {
+    return { roleId: env.DISCORD_MEDIA_GFX_ROLE_ID, label };
+  }
+  if (key === "streamer") {
+    return { roleId: env.DISCORD_MEDIA_STREAMER_ROLE_ID, label };
+  }
+  if (key === "commentator") {
+    return { roleId: env.DISCORD_MEDIA_COMMENTATOR_ROLE_ID, label };
+  }
+  return null;
 }
 
 function ensureManageRolesStaff(interaction: ButtonInteraction): boolean {
@@ -41,6 +72,7 @@ export async function handleMediaStaffApproveButton(
 
   const guildId = mediaStaffTargetGuildId();
   const roleId = env.DISCORD_MEDIA_STAFF_ROLE_ID;
+  const specialty = mediaStaffSpecialtyRoleFromMessage(interaction.message);
 
   let guild;
   try {
@@ -66,19 +98,54 @@ export async function handleMediaStaffApproveButton(
     memberNote =
       " Applicant is **not in** the VF Media server — role could not be added. Ask them to join, then use Discord to add the role manually.";
   } else {
-    try {
-      if (member.roles.cache.has(roleId)) {
-        memberNote = " They already had the media staff role.";
-      } else {
-        await member.roles.add(
-          roleId,
-          `Media staff approved by ${interaction.user.tag}`,
-        );
+    const reason = `Media staff approved by ${interaction.user.tag}`;
+    const granted: string[] = [];
+    const alreadyHad: string[] = [];
+    const failed: string[] = [];
+
+    if (member.roles.cache.has(roleId)) {
+      alreadyHad.push("media staff");
+    } else {
+      try {
+        await member.roles.add(roleId, reason);
+        granted.push("media staff");
+      } catch (e) {
+        console.error("[media-staff] role add (base):", e);
+        failed.push("media staff");
       }
-    } catch (e) {
-      console.error("[media-staff] role add:", e);
-      memberNote =
-        " Could not add role — check bot **Manage Roles** and role hierarchy.";
+    }
+
+    if (specialty) {
+      if (member.roles.cache.has(specialty.roleId)) {
+        alreadyHad.push(specialty.label);
+      } else {
+        try {
+          await member.roles.add(specialty.roleId, reason);
+          granted.push(specialty.label);
+        } catch (e) {
+          console.error(
+            `[media-staff] role add (specialty ${specialty.label}):`,
+            e,
+          );
+          failed.push(specialty.label);
+        }
+      }
+    }
+
+    const parts: string[] = [];
+    if (granted.length > 0) {
+      parts.push(`Granted: **${granted.join("**, **")}**`);
+    }
+    if (alreadyHad.length > 0) {
+      parts.push(`Already had: ${alreadyHad.join(", ")}`);
+    }
+    if (failed.length > 0) {
+      parts.push(
+        `Failed: ${failed.join(", ")} — check bot **Manage Roles** and role hierarchy.`,
+      );
+    }
+    if (parts.length > 0) {
+      memberNote = ` ${parts.join(" · ")}.`;
     }
   }
 

@@ -90,6 +90,31 @@ const envSchema = z.object({
     return s.length > 0 ? s : "1503912250702823524";
   }, z.string().min(1)),
   /**
+   * Specialty roles auto-added alongside the base media staff role, based on
+   * the role the applicant selected on their VF Media application. Each one
+   * defaults to the production VF Media role id and may be overridden via env.
+   */
+  DISCORD_MEDIA_REPORTER_ROLE_ID: z.preprocess((raw) => {
+    if (raw == null || raw === "") return "1504559575502688336";
+    const s = String(raw).trim();
+    return s.length > 0 ? s : "1504559575502688336";
+  }, z.string().min(1)),
+  DISCORD_MEDIA_GFX_ROLE_ID: z.preprocess((raw) => {
+    if (raw == null || raw === "") return "1504559619605926011";
+    const s = String(raw).trim();
+    return s.length > 0 ? s : "1504559619605926011";
+  }, z.string().min(1)),
+  DISCORD_MEDIA_STREAMER_ROLE_ID: z.preprocess((raw) => {
+    if (raw == null || raw === "") return "1504559657337753621";
+    const s = String(raw).trim();
+    return s.length > 0 ? s : "1504559657337753621";
+  }, z.string().min(1)),
+  DISCORD_MEDIA_COMMENTATOR_ROLE_ID: z.preprocess((raw) => {
+    if (raw == null || raw === "") return "1504559699025199287";
+    const s = String(raw).trim();
+    return s.length > 0 ? s : "1504559699025199287";
+  }, z.string().min(1)),
+  /**
    * Admin-only log channel notified whenever a VF Create creator runs
    * `/posted` to add a new directory link. Defaults in code when unset.
    */
@@ -145,6 +170,11 @@ export const env = envSchema.parse({
   DISCORD_CREATOR_PRIVATE_TESTING_INVITE_URL:
     process.env.DISCORD_CREATOR_PRIVATE_TESTING_INVITE_URL,
   DISCORD_MEDIA_STAFF_ROLE_ID: process.env.DISCORD_MEDIA_STAFF_ROLE_ID,
+  DISCORD_MEDIA_REPORTER_ROLE_ID: process.env.DISCORD_MEDIA_REPORTER_ROLE_ID,
+  DISCORD_MEDIA_GFX_ROLE_ID: process.env.DISCORD_MEDIA_GFX_ROLE_ID,
+  DISCORD_MEDIA_STREAMER_ROLE_ID: process.env.DISCORD_MEDIA_STREAMER_ROLE_ID,
+  DISCORD_MEDIA_COMMENTATOR_ROLE_ID:
+    process.env.DISCORD_MEDIA_COMMENTATOR_ROLE_ID,
   DISCORD_CREATOR_POSTED_LOG_CHANNEL_ID:
     process.env.DISCORD_CREATOR_POSTED_LOG_CHANNEL_ID,
   DISCORD_CREATOR_POSTED_FEED_CHANNEL_ID:

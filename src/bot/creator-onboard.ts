@@ -19,6 +19,10 @@ import {
 import { env } from "@/bot/config";
 import { createBotSupabase } from "@/bot/stats-queries";
 import {
+  DEFAULT_APIFY_TIKTOK_ACTOR,
+  DEFAULT_APIFY_YOUTUBE_ACTOR,
+} from "@/lib/creator-onboard/apify-video-views";
+import {
   listApprovedCreatorsForDirectory,
   parsePostedVideoLinks,
 } from "@/lib/creator-onboard/approved-creators-directory";
@@ -39,6 +43,7 @@ import {
   formatChallengeRobux,
   formatPoolSharePercent,
 } from "@/lib/creator-onboard/road-to-1m";
+import { syncPostedVideoViewsWithSupabase } from "@/lib/creator-onboard/sync-posted-video-views";
 import {
   socialProfileLabel,
   tiktokProfileHref,
@@ -1200,6 +1205,39 @@ export async function handleCreatorPostedCommand(
         console.error("[creator] /posted feed post:", e);
       }
     })();
+  }
+
+  // Fire-and-forget directory sync — runs the same refresh as `/update-content`
+  // so the leaderboard / view counts pick up the new link immediately. The
+  // user's ephemeral reply has already been sent, so any Apify latency here
+  // doesn't slow them down.
+  const apifyToken = process.env.APIFY_API_TOKEN?.trim();
+  if (apifyToken) {
+    const youtubeActor =
+      process.env.APIFY_YOUTUBE_ACTOR_ID?.trim() || DEFAULT_APIFY_YOUTUBE_ACTOR;
+    const tiktokActor =
+      process.env.APIFY_TIKTOK_ACTOR_ID?.trim() || DEFAULT_APIFY_TIKTOK_ACTOR;
+    void (async () => {
+      try {
+        const r = await syncPostedVideoViewsWithSupabase({
+          supabase,
+          apifyToken,
+          youtubeActorId: youtubeActor,
+          tiktokActorId: tiktokActor,
+        });
+        console.log(
+          `[creator] /posted auto-sync ok · apps=${r.applicationsConsidered} updated=${r.applicationsUpdated} yt=${r.youtubeUrls} tt=${r.tiktokUrls}`,
+        );
+        if (r.youtubeError) console.error("[creator] /posted YT:", r.youtubeError);
+        if (r.tiktokError) console.error("[creator] /posted TT:", r.tiktokError);
+      } catch (e) {
+        console.error("[creator] /posted auto-sync failed:", e);
+      }
+    })();
+  } else {
+    console.warn(
+      "[creator] /posted auto-sync skipped — APIFY_API_TOKEN not set on bot host",
+    );
   }
 }
 
