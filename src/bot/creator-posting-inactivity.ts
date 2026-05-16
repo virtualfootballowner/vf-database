@@ -50,21 +50,39 @@ type AppRow = {
   posting_inactivity_warned_at: string | null;
 };
 
+async function postToStaffChannel(
+  client: Client,
+  channelId: string,
+  payload: { content: string; userId: string },
+): Promise<void> {
+  try {
+    const ch = await client.channels.fetch(channelId);
+    if (ch?.isTextBased() && ch.isSendable()) {
+      await ch.send({
+        content: payload.content,
+        allowedMentions: { users: [payload.userId] },
+      });
+    }
+  } catch (e) {
+    console.error("[creator-inactivity] staff channel post:", e);
+  }
+}
+
 export async function runCreatorPostingInactivityCheck(
   client: Client,
 ): Promise<void> {
   const approvalChannelId = env.DISCORD_CREATOR_APPROVAL_CHANNEL_ID?.trim();
+  const scoutRole = env.DISCORD_SCOUT_ROLE_ID?.trim();
+
   if (!approvalChannelId) {
     console.warn(
-      "[creator-inactivity] skip — DISCORD_CREATOR_APPROVAL_CHANNEL_ID unset",
+      "[creator-inactivity] DISCORD_CREATOR_APPROVAL_CHANNEL_ID unset — will still DM creators; staff channel posts skipped",
     );
-    return;
   }
-
-  const scoutRole = env.DISCORD_SCOUT_ROLE_ID?.trim();
   if (!scoutRole) {
-    console.warn("[creator-inactivity] skip — DISCORD_SCOUT_ROLE_ID unset");
-    return;
+    console.warn(
+      "[creator-inactivity] DISCORD_SCOUT_ROLE_ID unset — 8-day kick will reject in DB + DM only (no role strip)",
+    );
   }
 
   const supabase = createBotSupabase();
@@ -76,19 +94,15 @@ export async function runCreatorPostingInactivityCheck(
     .eq("status", "approved");
 
   if (error) {
-    console.error("[creator-inactivity] fetch:", error);
+    console.error(
+      "[creator-inactivity] fetch:",
+      error,
+      "(if this mentions an unknown column, apply the posting_inactivity migration on Supabase)",
+    );
     return;
   }
 
   const list = (rows ?? []) as AppRow[];
-  const guildId = vfGuildId();
-  let guild;
-  try {
-    guild = await client.guilds.fetch(guildId);
-  } catch (e) {
-    console.error("[creator-inactivity] guild fetch:", e);
-    return;
-  }
 
   const now = Date.now();
   const isoNow = new Date().toISOString();
@@ -132,21 +146,28 @@ export async function runCreatorPostingInactivityCheck(
         continue;
       }
 
-      let member;
-      try {
-        member = await guild.members.fetch(row.discord_id);
-      } catch {
-        member = null;
-      }
-
-      if (member?.roles.cache.has(scoutRole)) {
+      if (scoutRole) {
         try {
-          await member.roles.remove(
-            scoutRole,
-            "VF Create: no /posted within posting window",
-          );
+          const guild = await client.guilds.fetch(vfGuildId());
+          let member;
+          try {
+            member = await guild.members.fetch(row.discord_id);
+          } catch {
+            member = null;
+          }
+
+          if (member?.roles.cache.has(scoutRole)) {
+            try {
+              await member.roles.remove(
+                scoutRole,
+                "VF Create: no /posted within posting window",
+              );
+            } catch (e) {
+              console.error("[creator-inactivity] role remove:", e);
+            }
+          }
         } catch (e) {
-          console.error("[creator-inactivity] role remove:", e);
+          console.error("[creator-inactivity] guild fetch (kick):", e);
         }
       }
 
@@ -171,32 +192,30 @@ export async function runCreatorPostingInactivityCheck(
       try {
         const u = await client.users.fetch(row.discord_id);
         await u.send({ content: kickDmCopy() });
-      } catch {
-        /* DMs closed */
+      } catch (e) {
+        console.warn(
+          `[creator-inactivity] kick DM failed ${row.discord_id}:`,
+          e,
+        );
       }
 
-      try {
-        const ch = await client.channels.fetch(approvalChannelId);
-        if (ch?.isTextBased() && ch.isSendable()) {
-          await ch.send({
-            content: [
-              "**VF Create · posting inactivity — removed**",
-              `<@${row.discord_id}>`,
-              row.discord_username
-                ? `Discord tag: \`${row.discord_username}\``
-                : null,
-              row.roblox_username
-                ? `Roblox: \`${row.roblox_username}\``
-                : null,
-              `_No directory posts within ${KICK_AFTER_DAYS} days of approval · Creator role stripped · application rejected_`,
-            ]
-              .filter(Boolean)
-              .join("\n"),
-            allowedMentions: { users: [row.discord_id] },
-          });
-        }
-      } catch (e) {
-        console.error("[creator-inactivity] staff channel kick post:", e);
+      if (approvalChannelId) {
+        await postToStaffChannel(client, approvalChannelId, {
+          userId: row.discord_id,
+          content: [
+            "**VF Create · posting inactivity — removed**",
+            `<@${row.discord_id}>`,
+            row.discord_username
+              ? `Discord tag: \`${row.discord_username}\``
+              : null,
+            row.roblox_username
+              ? `Roblox: \`${row.roblox_username}\``
+              : null,
+            `_No directory posts within ${KICK_AFTER_DAYS} days of approval · Creator role stripped · application rejected_`,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        });
       }
 
       console.log(
@@ -223,32 +242,30 @@ export async function runCreatorPostingInactivityCheck(
       try {
         const u = await client.users.fetch(row.discord_id);
         await u.send({ content: warnDmCopy() });
-      } catch {
-        /* DMs closed */
+      } catch (e) {
+        console.warn(
+          `[creator-inactivity] warn DM failed ${row.discord_id}:`,
+          e,
+        );
       }
 
-      try {
-        const ch = await client.channels.fetch(approvalChannelId);
-        if (ch?.isTextBased() && ch.isSendable()) {
-          await ch.send({
-            content: [
-              "**VF Create · posting inactivity — warned**",
-              `<@${row.discord_id}>`,
-              row.discord_username
-                ? `Discord tag: \`${row.discord_username}\``
-                : null,
-              row.roblox_username
-                ? `Roblox: \`${row.roblox_username}\``
-                : null,
-              `_Approved ${WARN_AFTER_DAYS}+ days ago with no \`/posted\` link · member was DM’d_`,
-            ]
-              .filter(Boolean)
-              .join("\n"),
-            allowedMentions: { users: [row.discord_id] },
-          });
-        }
-      } catch (e) {
-        console.error("[creator-inactivity] staff channel warn post:", e);
+      if (approvalChannelId) {
+        await postToStaffChannel(client, approvalChannelId, {
+          userId: row.discord_id,
+          content: [
+            "**VF Create · posting inactivity — warned**",
+            `<@${row.discord_id}>`,
+            row.discord_username
+              ? `Discord tag: \`${row.discord_username}\``
+              : null,
+            row.roblox_username
+              ? `Roblox: \`${row.roblox_username}\``
+              : null,
+            `_Approved ${WARN_AFTER_DAYS}+ days ago with no \`/posted\` link · member was DM’d (check logs if DMs closed)_`,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        });
       }
 
       console.log(
@@ -256,6 +273,10 @@ export async function runCreatorPostingInactivityCheck(
       );
     }
   }
+
+  console.log(
+    `[creator-inactivity] tick complete · ${list.length} approved row(s) scanned`,
+  );
 }
 
 export function scheduleCreatorPostingInactivityJob(client: Client): void {
