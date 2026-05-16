@@ -79,6 +79,7 @@ import {
   clearPlayerDiscordBanFromGuild,
   setPlayerDiscordBanFromGuild,
 } from "@/bot/player-discord-ban-sync";
+import { scheduleCreatorPostingInactivityJob } from "@/bot/creator-posting-inactivity";
 import { createBotSupabase } from "@/bot/stats-queries";
 import {
   APPROVE_BUTTON_ID_PREFIX,
@@ -190,6 +191,8 @@ client.once(Events.ClientReady, async (readyClient) => {
   } catch (error) {
     console.error("Backfill failed:", error);
   }
+
+  scheduleCreatorPostingInactivityJob(readyClient);
 });
 
 client.on(Events.GuildCreate, async (guild) => {
