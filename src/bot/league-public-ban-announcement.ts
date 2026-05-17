@@ -2,6 +2,7 @@ import type { Client, GuildBan } from "discord.js";
 import { EmbedBuilder } from "discord.js";
 
 import { env } from "@/bot/config";
+import { formatBailAmountForDisplay } from "@/lib/players/format-ban-bail";
 import { createBotSupabase } from "@/bot/stats-queries";
 import { getRobloxHeadshotsForBot } from "@/lib/roblox";
 import {
@@ -49,7 +50,7 @@ async function postLeaguePublicBanAnnouncement(
     const { data: row, error } = await supabase
       .from("players")
       .select(
-        "roblox_username, roblox_user_id, discord_banned_at, discord_banned_until, discord_ban_reason",
+        "roblox_username, roblox_user_id, discord_banned_at, discord_banned_until, discord_ban_reason, discord_ban_bail_amount",
       )
       .eq("discord_id", discordUserId)
       .maybeSingle();
@@ -64,6 +65,7 @@ async function postLeaguePublicBanAnnouncement(
       discord_banned_at: string | null;
       discord_banned_until: string | null;
       discord_ban_reason: string | null;
+      discord_ban_bail_amount: number | string | null;
     } | null;
 
     const banRow = {
@@ -106,6 +108,12 @@ async function postLeaguePublicBanAnnouncement(
     const reasonText =
       player?.discord_ban_reason?.trim() || auditReason || "*No reason provided*";
 
+    const bailNum = Number(player?.discord_ban_bail_amount);
+    const bailField =
+      Number.isFinite(bailNum) && bailNum > 0
+        ? `**${formatBailAmountForDisplay(bailNum)}** — join the league server & open a ticket to discuss or pay (see staff).`
+        : null;
+
     const embed = new EmbedBuilder()
       .setColor(0x991b1b)
       .setTitle("League Discord · ban")
@@ -119,6 +127,9 @@ async function postLeaguePublicBanAnnouncement(
       )
       .addFields(
         { name: "Duration", value: durationValue, inline: false },
+        ...(bailField
+          ? [{ name: "Bail", value: bailField, inline: false }]
+          : []),
         {
           name: "Reason",
           value: reasonText.length > 900 ? `${reasonText.slice(0, 897)}…` : reasonText,

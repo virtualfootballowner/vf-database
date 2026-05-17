@@ -142,6 +142,10 @@ const envSchema = z.object({
     const s = String(raw).trim();
     return s.length > 0 ? s : "1504550802906419232";
   }, z.string().min(1)),
+  /** Invite link for the main VF League Discord (bail / ticket instructions in ban DMs). */
+  DISCORD_LEAGUE_INVITE_URL: optionalOutgoingChannel,
+  /** Channel or doc link for opening a bail / support ticket (optional). */
+  DISCORD_BAIL_TICKET_CHANNEL_URL: optionalOutgoingChannel,
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   ROBLOX_API_BASE_URL: z.string().url().default("https://users.roblox.com"),
@@ -190,6 +194,9 @@ export const env = envSchema.parse({
     process.env.DISCORD_CREATOR_POSTED_FEED_CHANNEL_ID,
   DISCORD_PUBLIC_BAN_LOG_CHANNEL_ID:
     process.env.DISCORD_PUBLIC_BAN_LOG_CHANNEL_ID,
+  DISCORD_LEAGUE_INVITE_URL: process.env.DISCORD_LEAGUE_INVITE_URL,
+  DISCORD_BAIL_TICKET_CHANNEL_URL:
+    process.env.DISCORD_BAIL_TICKET_CHANNEL_URL,
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   ROBLOX_API_BASE_URL: process.env.ROBLOX_API_BASE_URL,

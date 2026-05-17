@@ -14,6 +14,8 @@ import {
   type GuildTextBasedChannel,
 } from "discord.js";
 
+import { banBailDmAppendLines } from "@/bot/ban-bail-copy";
+import { formatBailAmountForDisplay } from "@/lib/players/format-ban-bail";
 import { env } from "@/bot/config";
 import { setPlayerDiscordBanFromGuild } from "@/bot/player-discord-ban-sync";
 import { getRobloxHeadshotsForBot } from "@/lib/roblox";
@@ -271,6 +273,16 @@ export const slashCommandDefinitions = [
         .setDescription("Days of message history to delete (0-7)")
         .setMinValue(0)
         .setMaxValue(7)
+        .setRequired(false),
+    )
+    .addNumberOption((opt) =>
+      opt
+        .setName("bail")
+        .setDescription(
+          "Optional bail amount (>0). User is DM’d to join the league server & open a ticket to pay.",
+        )
+        .setMinValue(0)
+        .setMaxValue(999_999_999)
         .setRequired(false),
     )
     .toJSON(),
@@ -781,6 +793,12 @@ async function handlePlayer(
       identityParts.push(
         `> **VF Discord** · **Banned** (${untilLine}) · since ${dateStr}`,
       );
+      const bailNum = Number(profile.discord_ban_bail_amount);
+      if (Number.isFinite(bailNum) && bailNum > 0) {
+        identityParts.push(
+          `> **Bail** · **${formatBailAmountForDisplay(bailNum)}** · join league Discord & open a ticket to pay`,
+        );
+      }
       const r = profile.discord_ban_reason?.trim();
       if (r) {
         identityParts.push(
@@ -1517,6 +1535,10 @@ async function handleBan(
   }
   const durationLabel = discordBanSlashDurationLabel(durationKey);
 
+  const bailRaw = interaction.options.getNumber("bail");
+  const bailForDb =
+    bailRaw != null && Number.isFinite(bailRaw) && bailRaw > 0 ? bailRaw : null;
+
   if (target) {
     try {
       const dm = new EmbedBuilder()
@@ -1531,6 +1553,7 @@ async function handleBan(
             until
               ? `\n_Ban lifts (synced with Discord)_ · ${until.toISOString()}`
               : "",
+            ...banBailDmAppendLines(bailForDb ?? 0),
           ]
             .filter(Boolean)
             .join("\n"),
@@ -1566,6 +1589,7 @@ async function handleBan(
       reason: dbReason,
       until:
         durationKey === "permanent" ? null : until,
+      bailAmount: bailForDb,
     });
   } catch (syncErr) {
     console.error("[ban] player DB sync failed:", syncErr);
@@ -1585,6 +1609,14 @@ async function handleBan(
             : until
               ? `${durationLabel} (_until ${until.toISOString()}_ )`
               : durationLabel,
+        inline: true,
+      },
+      {
+        name: "Bail",
+        value:
+          bailForDb != null
+            ? `**${formatBailAmountForDisplay(bailForDb)}** · user DM’d with ticket steps`
+            : "None",
         inline: true,
       },
       {

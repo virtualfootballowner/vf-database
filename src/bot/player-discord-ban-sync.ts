@@ -9,6 +9,8 @@ export async function setPlayerDiscordBanFromGuild(
     reason: string | null;
     /** Omit to leave `discord_banned_until` unchanged (gateway sync). */
     until?: Date | null;
+    /** When provided (including `null`), updates `discord_ban_bail_amount`. When omitted, column unchanged. */
+    bailAmount?: number | null;
   },
 ): Promise<void> {
   const reason = opts.reason?.trim() || null;
@@ -20,6 +22,9 @@ export async function setPlayerDiscordBanFromGuild(
     patch.discord_banned_until = opts.until
       ? opts.until.toISOString()
       : null;
+  }
+  if (Object.prototype.hasOwnProperty.call(opts, "bailAmount")) {
+    patch.discord_ban_bail_amount = opts.bailAmount;
   }
   const { error } = await supabase
     .from("players")
@@ -40,6 +45,7 @@ export async function clearPlayerDiscordBanFromGuild(
       discord_banned_at: null,
       discord_ban_reason: null,
       discord_banned_until: null,
+      discord_ban_bail_amount: null,
     })
     .eq("discord_id", discordUserId);
 

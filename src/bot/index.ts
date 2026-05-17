@@ -310,9 +310,12 @@ client.on(Events.GuildBanAdd, async (ban) => {
     if (ban.guild.id !== env.DISCORD_GUILD_ID) return;
     await postMemberOutgoing(ban.guild, ban.user, "banned");
     try {
+      const auditReason = ban.reason?.trim() ?? "";
+      const fromSlashCommand = /^Banned by .+:/.test(auditReason);
       await setPlayerDiscordBanFromGuild(createBotSupabase(), ban.user.id, {
         at: new Date(),
         reason: ban.reason ?? null,
+        ...(fromSlashCommand ? {} : { bailAmount: null }),
       });
     } catch (syncErr) {
       console.error("GuildBanAdd player ban sync failed:", syncErr);

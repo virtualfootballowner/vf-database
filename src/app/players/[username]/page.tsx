@@ -27,6 +27,7 @@ import {
 import { getRobloxHeadshots, isVerifiedRobloxUserId } from "@/lib/roblox";
 import { describeBanForUi } from "@/lib/players/discord-ban";
 import { trophyImageForTrophyTitle, TROPHY_IMAGE } from "@/lib/trophy-assets";
+import { formatBailAmountForDisplay } from "@/lib/players/format-ban-bail";
 import {
   getPlayerMatchAppearances,
   summaryLine,
@@ -44,6 +45,7 @@ type PlayerProfileRow = {
   discord_banned_at?: string | null;
   discord_banned_until?: string | null;
   discord_ban_reason?: string | null;
+  discord_ban_bail_amount?: number | string | null;
   goals_total?: number | null;
   assists_total?: number | null;
   avg_rating?: number | null;
@@ -211,6 +213,13 @@ export default async function PlayerDetailPage({
     });
   })();
 
+  const bailDisplay = (() => {
+    if (!banUi.active) return null;
+    const n = Number(player.discord_ban_bail_amount);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return formatBailAmountForDisplay(n);
+  })();
+
   return (
     <main className="relative min-h-dvh min-w-0 w-full overflow-x-clip text-white">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 pb-16 pt-5 sm:px-6 sm:pt-8 md:px-8 md:pt-10">
@@ -244,6 +253,13 @@ export default async function PlayerDetailPage({
             {player.discord_ban_reason?.trim() ? (
               <p className="mt-2 rounded-md border border-red-400/20 bg-black/20 px-3 py-2 text-xs leading-relaxed text-red-50/90">
                 {player.discord_ban_reason.trim()}
+              </p>
+            ) : null}
+            {bailDisplay ? (
+              <p className="mt-2 text-xs leading-relaxed text-amber-100/90">
+                <span className="font-semibold">Bail · </span>
+                {bailDisplay} — join the VF League Discord and open a support
+                ticket if you want to pay or discuss bail.
               </p>
             ) : null}
           </div>
@@ -537,6 +553,12 @@ export default async function PlayerDetailPage({
                 label="Discord"
                 value={player.discord_username ?? "Not linked"}
               />
+              {bailDisplay ? (
+                <Row
+                  label="Bail"
+                  value={`${bailDisplay} — pay via league Discord ticket`}
+                />
+              ) : null}
               <Row
                 label="Position"
                 value={player.position ?? "Not set"}

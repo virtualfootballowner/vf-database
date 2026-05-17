@@ -282,6 +282,7 @@ export type PlayerProfileRow = {
   discord_banned_at: string | null;
   discord_banned_until: string | null;
   discord_ban_reason: string | null;
+  discord_ban_bail_amount: number | string | null;
 };
 
 export async function findPlayersByUsername(
