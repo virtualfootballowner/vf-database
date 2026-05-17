@@ -294,7 +294,7 @@ export async function handleContractCommand(
       })
       .setTitle("Contract offer")
       .setDescription(
-        `<@${signeeUser.id}> — you’ve been offered a spot on the **Season ${activeSeason}** roster.\n\nOnly **you** can use the buttons below.`,
+        `<@${signeeUser.id}> — you’ve been offered a spot on the **Season ${activeSeason}** roster.\n\nOnly **you** can use the buttons below.\n\n_This offer **voids** if there is no response within **30 minutes**._`,
       )
       .addFields(
         {
@@ -325,7 +325,7 @@ export async function handleContractCommand(
       )
       .setThumbnail(logoUrl ?? null)
       .setFooter({
-        text: `Offer ${offerId.slice(0, 8)}… · Season ${activeSeason}`,
+        text: `Offer ${offerId.slice(0, 8)}… · Season ${activeSeason} · Void if no answer in 30 min`,
       })
       .setTimestamp(new Date());
 
@@ -382,6 +382,8 @@ export async function handleContractCommand(
             `**[Open the offer to approve or deny →](${reply.url})**`,
             "",
             "_Only you can use the buttons on the offer card._",
+            "",
+            "_This offer **voids automatically** if you don’t respond within **30 minutes**._",
           ].join("\n"),
         )
         .setThumbnail(logoUrl ?? null)

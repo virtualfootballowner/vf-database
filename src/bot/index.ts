@@ -82,6 +82,7 @@ import {
 } from "@/bot/player-discord-ban-sync";
 import { scheduleCreatorPostingInactivityJob } from "@/bot/creator-posting-inactivity";
 import { scheduleDiscordBanExpiryJob } from "@/bot/discord-ban-expiry-job";
+import { scheduleContractOfferExpiryJob } from "@/bot/contract-offer-expiry-job";
 import { scheduleLeaguePublicBanAnnouncement } from "@/bot/league-public-ban-announcement";
 import { createBotSupabase } from "@/bot/stats-queries";
 import {
@@ -241,6 +242,7 @@ client.once(Events.ClientReady, async (readyClient) => {
 
   scheduleCreatorPostingInactivityJob(readyClient);
   scheduleDiscordBanExpiryJob(readyClient);
+  scheduleContractOfferExpiryJob(readyClient);
 });
 
 client.on(Events.GuildCreate, async (guild) => {
