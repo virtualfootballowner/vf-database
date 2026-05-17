@@ -1040,38 +1040,46 @@ export async function handleCreatorPostedCommand(
     return;
   }
 
+  // Acknowledge fast — Discord times out after ~3s with “The application did not respond”.
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  try {
+    const guild = interaction.guild;
+
   const scoutRole = env.DISCORD_SCOUT_ROLE_ID?.trim();
   if (!scoutRole) {
-    await interaction.reply({
-      flags: MessageFlags.Ephemeral,
+    await interaction.editReply({
       content:
         "The VF Create creator role isn’t configured on the bot yet. Ask staff to set `DISCORD_SCOUT_ROLE_ID`.",
     });
     return;
   }
 
-  const member = interaction.member as GuildMember;
+  let member = interaction.member as GuildMember;
   if (!member.roles.cache.has(scoutRole)) {
-    await interaction.reply({
-      flags: MessageFlags.Ephemeral,
-      content:
-        "You need the **VF Create** creator role to add directory posts. If you’re approved and don’t have it yet, ask staff.",
-    });
-    return;
+    try {
+      member = await guild.members.fetch(interaction.user.id);
+    } catch {
+      /* keep interaction member */
+    }
+    if (!member.roles.cache.has(scoutRole)) {
+      await interaction.editReply({
+        content:
+          "You need the **VF Create** creator role to add directory posts. If you’re approved and don’t have it yet, ask staff.",
+      });
+      return;
+    }
   }
 
   const raw = interaction.options.getString("link", true);
   const url = validatePostedHttpsUrl(raw);
   if (!url) {
-    await interaction.reply({
-      flags: MessageFlags.Ephemeral,
+    await interaction.editReply({
       content:
         "That doesn’t look like a valid **https://** link. Paste the full URL from the address bar or share sheet.",
     });
     return;
   }
-
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const supabase = createBotSupabase();
   const { data, error } = await supabase
@@ -1271,6 +1279,15 @@ export async function handleCreatorPostedCommand(
     console.warn(
       "[creator] /posted auto-sync skipped — set APIFY_API_TOKEN (bot) and/or CRON_SECRET (bot) to refresh views after /posted",
     );
+  }
+  } catch (e) {
+    console.error("[creator] /posted failed:", e);
+    await interaction
+      .editReply({
+        content:
+          "Something went wrong while running `/posted`. Try again shortly — if it keeps failing, tell staff to check bot logs.",
+      })
+      .catch(() => {});
   }
 }
 
