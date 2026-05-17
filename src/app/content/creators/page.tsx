@@ -555,6 +555,7 @@ export default async function CreatorsChallengePage() {
                                     typeof p.view_count === "number"
                                       ? formatViewCount(p.view_count)
                                       : null;
+                                  const syncErr = p.views_error?.trim();
                                   return (
                                     <li
                                       key={`${row.id}-${p.posted_at}-${p.url}`}
@@ -592,6 +593,13 @@ export default async function CreatorsChallengePage() {
                                               </span>
                                             ) : null}
                                           </>
+                                        ) : syncErr ? (
+                                          <span
+                                            className="text-amber-200/70"
+                                            title={syncErr}
+                                          >
+                                            Metrics pending
+                                          </span>
                                         ) : (
                                           "Awaiting sync"
                                         )}

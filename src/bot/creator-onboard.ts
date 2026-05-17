@@ -1207,11 +1207,10 @@ export async function handleCreatorPostedCommand(
     })();
   }
 
-  // Fire-and-forget directory sync — runs the same refresh as `/update-content`
-  // so the leaderboard / view counts pick up the new link immediately. The
-  // user's ephemeral reply has already been sent, so any Apify latency here
-  // doesn't slow them down.
+  // Fire-and-forget directory sync — same refresh as `/update-content`. Prefer
+  // Apify on the bot; if missing, call the site cron (Apify on Vercel works too).
   const apifyToken = process.env.APIFY_API_TOKEN?.trim();
+  const cronSecret = process.env.CRON_SECRET?.trim();
   if (apifyToken) {
     const youtubeActor =
       process.env.APIFY_YOUTUBE_ACTOR_ID?.trim() || DEFAULT_APIFY_YOUTUBE_ACTOR;
@@ -1234,9 +1233,43 @@ export async function handleCreatorPostedCommand(
         console.error("[creator] /posted auto-sync failed:", e);
       }
     })();
+  } else if (cronSecret) {
+    void (async () => {
+      try {
+        const res = await fetch(
+          `${siteBase}/api/cron/sync-creator-post-views`,
+          {
+            method: "GET",
+            headers: { Authorization: `Bearer ${cronSecret}` },
+          },
+        );
+        const bodyText = await res.text().catch(() => "");
+        if (!res.ok) {
+          console.error(
+            "[creator] /posted cron sync:",
+            res.status,
+            bodyText.slice(0, 300),
+          );
+          return;
+        }
+        try {
+          const j = JSON.parse(bodyText) as {
+            applicationsUpdated?: number;
+            ok?: boolean;
+          };
+          console.log(
+            `[creator] /posted cron sync ok · updated=${j.applicationsUpdated ?? "?"}`,
+          );
+        } catch {
+          console.log("[creator] /posted cron sync ok");
+        }
+      } catch (e) {
+        console.error("[creator] /posted cron sync failed:", e);
+      }
+    })();
   } else {
     console.warn(
-      "[creator] /posted auto-sync skipped — APIFY_API_TOKEN not set on bot host",
+      "[creator] /posted auto-sync skipped — set APIFY_API_TOKEN (bot) and/or CRON_SECRET (bot) to refresh views after /posted",
     );
   }
 }
