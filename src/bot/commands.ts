@@ -15,7 +15,14 @@ import {
 } from "discord.js";
 
 import { env } from "@/bot/config";
+import { setPlayerDiscordBanFromGuild } from "@/bot/player-discord-ban-sync";
 import { getRobloxHeadshotsForBot } from "@/lib/roblox";
+import {
+  banUntilFromDurationChoice,
+  describeBanForUi,
+  discordBanSlashDurationLabel,
+  isDiscordBanActive,
+} from "@/lib/players/discord-ban";
 import {
   buildTeamNameBySlug,
   createBotSupabase,
@@ -237,6 +244,23 @@ export const slashCommandDefinitions = [
         .setName("reason")
         .setDescription("Reason for the ban")
         .setRequired(false),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("duration")
+        .setDescription("How long the Discord ban lasts")
+        .setRequired(true)
+        .addChoices(
+          { name: "Permanent", value: "permanent" },
+          { name: "1 hour", value: "1h" },
+          { name: "6 hours", value: "6h" },
+          { name: "12 hours", value: "12h" },
+          { name: "1 day", value: "1d" },
+          { name: "3 days", value: "3d" },
+          { name: "7 days", value: "7d" },
+          { name: "14 days", value: "14d" },
+          { name: "30 days", value: "30d" },
+        ),
     )
     .addIntegerOption((opt) =>
       opt
@@ -733,12 +757,27 @@ async function handlePlayer(
         : `> **Discord** · *not linked on profile*`,
       `> **Position** · ${profile.position?.trim() || "*—*"}`,
     ];
-    if (profile.discord_banned_at) {
-      const d = new Date(profile.discord_banned_at);
-      const dateStr = Number.isNaN(d.getTime())
-        ? profile.discord_banned_at
-        : d.toISOString().slice(0, 10);
-      identityParts.push(`> **VF Discord** · **Banned** · ${dateStr}`);
+    const banRow = {
+      discord_banned_at: profile.discord_banned_at,
+      discord_banned_until: profile.discord_banned_until,
+    };
+    if (isDiscordBanActive(banRow)) {
+      const d = profile.discord_banned_at
+        ? new Date(profile.discord_banned_at)
+        : null;
+      const dateStr =
+        d && !Number.isNaN(d.getTime())
+          ? d.toISOString().slice(0, 10)
+          : (profile.discord_banned_at ?? "—");
+      const desc = describeBanForUi(banRow);
+      const untilLine = desc.isPermanent
+        ? "permanent"
+        : desc.untilLabel
+          ? `until ${desc.untilLabel.slice(0, 10)}`
+          : "temporary";
+      identityParts.push(
+        `> **VF Discord** · **Banned** (${untilLine}) · since ${dateStr}`,
+      );
       const r = profile.discord_ban_reason?.trim();
       if (r) {
         identityParts.push(
@@ -1426,6 +1465,7 @@ async function handleBan(
   const user = interaction.options.getUser("user", true);
   const reason =
     interaction.options.getString("reason") ?? "No reason provided";
+  const durationKey = interaction.options.getString("duration", true);
   const deleteDays = interaction.options.getInteger("delete_days") ?? 0;
 
   if (user.id === interaction.user.id) {
@@ -1460,12 +1500,38 @@ async function handleBan(
   }
 
   let dmDelivered = true;
+  const banStartedAt = new Date();
+  const until =
+    durationKey === "permanent"
+      ? null
+      : banUntilFromDurationChoice(durationKey, banStartedAt);
+  if (durationKey !== "permanent" && !until) {
+    await interaction.editReply({
+      content:
+        "Invalid **duration** — pick one of the `/ban` duration choices.",
+    });
+    return;
+  }
+  const durationLabel = discordBanSlashDurationLabel(durationKey);
+
   if (target) {
     try {
       const dm = new EmbedBuilder()
         .setColor(0x991b1b)
         .setTitle("🔨 You were banned from VFL")
-        .setDescription(`**Reason**\n${reason}`)
+        .setDescription(
+          [
+            `**Duration** · ${durationLabel}`,
+            "",
+            "**Reason**",
+            reason,
+            until
+              ? `\n_Ban lifts (synced with Discord)_ · ${until.toISOString()}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        )
         .setFooter({ text: "VFL Bot" })
         .setTimestamp(new Date());
       await target.send({ embeds: [dm] });
@@ -1489,12 +1555,35 @@ async function handleBan(
     return;
   }
 
+  const supabase = createBotSupabase();
+  const dbReason = `Banned by ${interaction.user.tag}: ${reason}`;
+  try {
+    await setPlayerDiscordBanFromGuild(supabase, user.id, {
+      at: banStartedAt,
+      reason: dbReason,
+      until:
+        durationKey === "permanent" ? null : until,
+    });
+  } catch (syncErr) {
+    console.error("[ban] player DB sync failed:", syncErr);
+  }
+
   const result = new EmbedBuilder()
     .setColor(0x991b1b)
     .setTitle("🔨 Banned")
     .setDescription(`**${user.tag}** has been banned from the server.`)
     .addFields(
       { name: "Reason", value: reason, inline: false },
+      {
+        name: "Duration",
+        value:
+          durationKey === "permanent"
+            ? durationLabel
+            : until
+              ? `${durationLabel} (_until ${until.toISOString()}_ )`
+              : durationLabel,
+        inline: true,
+      },
       {
         name: "Messages deleted",
         value:

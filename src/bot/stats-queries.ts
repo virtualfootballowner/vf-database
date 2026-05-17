@@ -280,6 +280,7 @@ export type PlayerProfileRow = {
   trophies: unknown;
   accolades: unknown;
   discord_banned_at: string | null;
+  discord_banned_until: string | null;
   discord_ban_reason: string | null;
 };
 

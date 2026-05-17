@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { isDiscordBanActive } from "@/lib/players/discord-ban";
 
 /**
  * Roblox calls this endpoint when a player joins the VF lobby place
@@ -123,15 +124,36 @@ export async function GET(req: Request): Promise<Response> {
   // check and the team-roster lookup.
   const { data: playerRow } = await supabase
     .from("players")
-    .select("id")
+    .select("id, discord_banned_at, discord_banned_until")
     .eq("roblox_user_id", robloxUserId)
     .maybeSingle();
-  const playerId = (playerRow as { id: string } | null)?.id ?? null;
+  const player = playerRow as {
+    id: string;
+    discord_banned_at: string | null;
+    discord_banned_until: string | null;
+  } | null;
 
-  if (!playerId) {
+  if (!player) {
     return jsonOk({
       authorized: false,
       reason: "Roblox user is not linked to a VF profile.",
+      match_code: matchCode,
+      match_id: match.id,
+      status: match.status,
+    });
+  }
+
+  const playerId = player.id;
+
+  if (
+    isDiscordBanActive({
+      discord_banned_at: player.discord_banned_at,
+      discord_banned_until: player.discord_banned_until,
+    })
+  ) {
+    return jsonOk({
+      authorized: false,
+      reason: "Player is banned from the league Discord.",
       match_code: matchCode,
       match_id: match.id,
       status: match.status,

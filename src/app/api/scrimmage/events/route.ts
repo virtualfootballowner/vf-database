@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { autoFinalizeScrimmage } from "@/lib/scrimmage/auto-finalize";
+import { isDiscordBanActive } from "@/lib/players/discord-ban";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 /**
@@ -148,22 +149,43 @@ export async function POST(req: Request): Promise<Response> {
   // Resolve every roblox_user_id referenced in this batch (one query).
   const robloxUserIds = [
     ...new Set(
-      events
-        .map((e) => (e.roblox_user_id == null ? "" : String(e.roblox_user_id)))
-        .filter(Boolean),
+      events.flatMap((e) => {
+        const ids: string[] = [];
+        const primary =
+          e.roblox_user_id == null ? "" : String(e.roblox_user_id);
+        if (primary) ids.push(primary);
+        const assistRaw = e.details?.assist_roblox_user_id;
+        if (assistRaw != null && String(assistRaw).trim())
+          ids.push(String(assistRaw));
+        return ids;
+      }),
     ),
   ];
+  type BanCheckRow = {
+    id: string;
+    roblox_user_id: string;
+    discord_banned_at: string | null;
+    discord_banned_until: string | null;
+  };
   const playerByRoblox = new Map<string, string>();
+  const bannedRoblox = new Set<string>();
   if (robloxUserIds.length > 0) {
     const { data } = await supabase
       .from("players")
-      .select("id, roblox_user_id")
+      .select(
+        "id, roblox_user_id, discord_banned_at, discord_banned_until",
+      )
       .in("roblox_user_id", robloxUserIds);
-    for (const row of (data ?? []) as {
-      id: string;
-      roblox_user_id: string;
-    }[]) {
+    for (const row of (data ?? []) as BanCheckRow[]) {
       playerByRoblox.set(row.roblox_user_id, row.id);
+      if (
+        isDiscordBanActive({
+          discord_banned_at: row.discord_banned_at,
+          discord_banned_until: row.discord_banned_until,
+        })
+      ) {
+        bannedRoblox.add(row.roblox_user_id);
+      }
     }
   }
 
@@ -205,6 +227,30 @@ export async function POST(req: Request): Promise<Response> {
         reason: `Match ${matchCode} is ${match.status}; cannot accept new events.`,
       });
       continue;
+    }
+
+    if (bannedRoblox.has(robloxUserId)) {
+      results.push({
+        external_event_id: externalId,
+        status: "rejected",
+        reason:
+          "Primary player is banned from the league Discord — event blocked.",
+      });
+      continue;
+    }
+
+    const assistRaw = ev.details?.assist_roblox_user_id;
+    if (assistRaw != null) {
+      const assistId = String(assistRaw);
+      if (assistId && bannedRoblox.has(assistId)) {
+        results.push({
+          external_event_id: externalId,
+          status: "rejected",
+          reason:
+            "Assist player is banned from the league Discord — event blocked.",
+        });
+        continue;
+      }
     }
 
     const playerId = playerByRoblox.get(robloxUserId) ?? null;

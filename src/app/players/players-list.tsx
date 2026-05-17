@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { isDiscordBanActive } from "@/lib/players/discord-ban";
 
 export type PlayerRow = {
   id: string;
@@ -16,6 +17,7 @@ export type PlayerRow = {
   discord_username: string | null;
   position: string | null;
   discord_banned_at?: string | null;
+  discord_banned_until?: string | null;
 };
 
 type PlayersListProps = {
@@ -116,7 +118,10 @@ export function PlayersList({ players, headshots }: PlayersListProps) {
                         <p className="truncate text-base font-semibold tracking-tight text-white">
                           {player.roblox_username}
                         </p>
-                        {player.discord_banned_at ? (
+                        {isDiscordBanActive({
+                          discord_banned_at: player.discord_banned_at ?? null,
+                          discord_banned_until: player.discord_banned_until ?? null,
+                        }) ? (
                           <Badge
                             variant="outline"
                             className="shrink-0 border-red-400/40 text-[10px] font-semibold uppercase tracking-wider text-red-200/95"

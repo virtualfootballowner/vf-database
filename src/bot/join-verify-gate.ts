@@ -1,6 +1,11 @@
 import { Client, type GuildMember } from "discord.js";
 
 import { env } from "@/bot/config";
+import { createBotSupabase } from "@/bot/stats-queries";
+import {
+  describeBanForUi,
+  isDiscordBanActive,
+} from "@/lib/players/discord-ban";
 
 /**
  * Join-time verification gate.
@@ -22,6 +27,50 @@ function deadlineLabel(): string {
 }
 
 const kickTimers = new Map<string, NodeJS.Timeout>();
+
+/**
+ * Linked players who are still marked banned in the DB must not remain in the
+ * league guild (covers temp-ban bookkeeping and Discord/DB drift).
+ */
+export async function handleLeagueDiscordBanJoinGate(
+  member: GuildMember,
+): Promise<boolean> {
+  if (member.user.bot) return false;
+  if (member.guild.id !== env.DISCORD_GUILD_ID) return false;
+
+  const supabase = createBotSupabase();
+  const { data, error } = await supabase
+    .from("players")
+    .select("discord_banned_at, discord_banned_until")
+    .eq("discord_id", member.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[ban-join-gate] player lookup:", error);
+    return false;
+  }
+
+  const row = data as {
+    discord_banned_at: string | null;
+    discord_banned_until: string | null;
+  } | null;
+
+  if (!isDiscordBanActive(row)) return false;
+
+  const desc = describeBanForUi(row);
+  const detail = desc.isPermanent
+    ? "permanent league ban"
+    : desc.untilLabel
+      ? `banned until ${desc.untilLabel}`
+      : "league ban in effect";
+
+  try {
+    await member.kick(`VF league Discord — ${detail}.`);
+  } catch (e) {
+    console.error(`[ban-join-gate] kick failed for ${member.id}:`, e);
+  }
+  return true;
+}
 
 export function cancelRoverVerifyDeadline(userId: string): void {
   const t = kickTimers.get(userId);

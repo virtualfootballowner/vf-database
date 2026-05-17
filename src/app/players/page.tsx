@@ -19,7 +19,7 @@ async function getPlayers(): Promise<PlayerRow[]> {
     const result = await supabase
       .from("players")
       .select(
-        "id, roblox_username, roblox_user_id, discord_username, position, discord_banned_at",
+        "id, roblox_username, roblox_user_id, discord_username, position, discord_banned_at, discord_banned_until",
       )
       .order("roblox_username", { ascending: true });
 

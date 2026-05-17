@@ -24,7 +24,7 @@ function warnDmCopy(): string {
     "",
     `You’ve been approved for **${WARN_AFTER_DAYS} days** and we still don’t see a competition video on your **VF Create directory** profile.`,
     "",
-    `Post your **VF** clip on **TikTok or YouTube**, then in the **VF Media** server run **`/posted`** and paste the full video link.`,
+    `Post your **VF** clip on **TikTok or YouTube**, then in the **VF Media** server run **\`/posted\`** and paste the full video link.`,
     "",
     `If you don’t add a link within **${KICK_AFTER_DAYS - WARN_AFTER_DAYS} more days** ( **${KICK_AFTER_DAYS} days** total after approval ), your **Creator** access will be removed automatically.`,
   ].join("\n");

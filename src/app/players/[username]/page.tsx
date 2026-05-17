@@ -25,6 +25,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getRobloxHeadshots, isVerifiedRobloxUserId } from "@/lib/roblox";
+import { describeBanForUi } from "@/lib/players/discord-ban";
 import { trophyImageForTrophyTitle, TROPHY_IMAGE } from "@/lib/trophy-assets";
 import {
   getPlayerMatchAppearances,
@@ -41,6 +42,7 @@ type PlayerProfileRow = {
   discord_username: string | null;
   position: string | null;
   discord_banned_at?: string | null;
+  discord_banned_until?: string | null;
   discord_ban_reason?: string | null;
   goals_total?: number | null;
   assists_total?: number | null;
@@ -172,6 +174,13 @@ export default async function PlayerDetailPage({
     accolades: player.accolades ?? [],
   };
 
+  const banRow = {
+    discord_banned_at: player.discord_banned_at ?? null,
+    discord_banned_until: player.discord_banned_until ?? null,
+  };
+  const banUi = describeBanForUi(banRow);
+  const showDiscordBanBanner = banUi.active;
+
   const discordBanDate = (() => {
     const raw = player.discord_banned_at;
     if (!raw) return null;
@@ -182,6 +191,23 @@ export default async function PlayerDetailPage({
       month: "short",
       year: "numeric",
       timeZone: "UTC",
+    });
+  })();
+
+  const banLiftLabel = (() => {
+    if (!banUi.active) return null;
+    if (banUi.isPermanent) return null;
+    if (!banUi.untilLabel) return null;
+    const d = new Date(banUi.untilLabel);
+    if (Number.isNaN(d.getTime())) return banUi.untilLabel;
+    return d.toLocaleString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "UTC",
+      timeZoneName: "short",
     });
   })();
 
@@ -198,14 +224,20 @@ export default async function PlayerDetailPage({
           All players
         </Link>
 
-        {player.discord_banned_at ? (
+        {showDiscordBanBanner ? (
           <div
             role="status"
             className="rounded-xl border border-red-400/35 bg-red-950/35 px-4 py-3 text-left text-sm text-red-100/95 shadow-[0_12px_40px_-20px_rgba(239,68,68,0.5)]"
           >
             <p className="font-semibold tracking-tight">Banned from VF Discord</p>
             <p className="mt-1 text-xs text-red-100/75">
-              {discordBanDate ? `Since ${discordBanDate} · ` : null}
+              {discordBanDate ? `Since ${discordBanDate}` : null}
+              {banLiftLabel
+                ? ` · Lifts ${banLiftLabel}`
+                : banUi.isPermanent
+                  ? " · Permanent ban"
+                  : null}
+              {" · "}
               This reflects a ban from the league Discord server, not Roblox or the
               site account.
             </p>
@@ -240,7 +272,7 @@ export default async function PlayerDetailPage({
               {player.position ?? "Position unset"}
             </p>
             <div className="mt-3 flex flex-wrap justify-center gap-1.5 sm:justify-start">
-              {player.discord_banned_at ? (
+              {showDiscordBanBanner ? (
                 <Badge
                   variant="outline"
                   className="border-red-400/40 text-[11px] font-semibold text-red-200/95"
@@ -487,8 +519,17 @@ export default async function PlayerDetailPage({
               <Row
                 label="VF Discord"
                 value={
-                  player.discord_banned_at
-                    ? `Banned${discordBanDate ? ` · ${discordBanDate}` : ""}`
+                  showDiscordBanBanner
+                    ? [
+                        banUi.isPermanent
+                          ? "Banned (permanent)"
+                          : banLiftLabel
+                            ? `Banned · lifts ${banLiftLabel}`
+                            : "Banned",
+                        discordBanDate ? `since ${discordBanDate}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
                     : "In good standing"
                 }
               />

@@ -68,6 +68,7 @@ import {
 } from "@/bot/commands";
 import {
   cancelRoverVerifyDeadline,
+  handleLeagueDiscordBanJoinGate,
   handleMemberJoinVerifyGate,
 } from "@/bot/join-verify-gate";
 import {
@@ -80,6 +81,7 @@ import {
   setPlayerDiscordBanFromGuild,
 } from "@/bot/player-discord-ban-sync";
 import { scheduleCreatorPostingInactivityJob } from "@/bot/creator-posting-inactivity";
+import { scheduleDiscordBanExpiryJob } from "@/bot/discord-ban-expiry-job";
 import { createBotSupabase } from "@/bot/stats-queries";
 import {
   APPROVE_BUTTON_ID_PREFIX,
@@ -193,6 +195,7 @@ client.once(Events.ClientReady, async (readyClient) => {
   }
 
   scheduleCreatorPostingInactivityJob(readyClient);
+  scheduleDiscordBanExpiryJob(readyClient);
 });
 
 client.on(Events.GuildCreate, async (guild) => {
@@ -211,7 +214,10 @@ client.on(Events.GuildCreate, async (guild) => {
 
 client.on(Events.GuildMemberAdd, async (member) => {
   try {
-    await handleMemberJoinVerifyGate(client, member as GuildMember);
+    const m = member as GuildMember;
+    const removedForBan = await handleLeagueDiscordBanJoinGate(m);
+    if (removedForBan) return;
+    await handleMemberJoinVerifyGate(client, m);
   } catch (error) {
     console.error("GuildMemberAdd verify gate failed:", error);
   }
