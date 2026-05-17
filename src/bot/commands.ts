@@ -247,15 +247,16 @@ export const slashCommandDefinitions = [
         .setDescription("Ban length on Discord (required)")
         .setRequired(true)
         .addChoices(
+          { name: "1 week", value: "1w" },
+          { name: "2 weeks", value: "2w" },
+          { name: "3 weeks", value: "3w" },
+          { name: "1 month", value: "1mo" },
+          { name: "2 months", value: "2mo" },
+          { name: "3 months", value: "3mo" },
+          { name: "4 months", value: "4mo" },
+          { name: "1 season", value: "1season" },
+          { name: "2 seasons", value: "2season" },
           { name: "Permanent", value: "permanent" },
-          { name: "1 hour", value: "1h" },
-          { name: "6 hours", value: "6h" },
-          { name: "12 hours", value: "12h" },
-          { name: "1 day", value: "1d" },
-          { name: "3 days", value: "3d" },
-          { name: "7 days", value: "7d" },
-          { name: "14 days", value: "14d" },
-          { name: "30 days", value: "30d" },
         ),
     )
     .addStringOption((opt) =>

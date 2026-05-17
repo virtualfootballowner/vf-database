@@ -31,19 +31,24 @@ export function describeBanForUi(row: DiscordBanRow | null | undefined): {
   return { active: true, isPermanent: false, untilLabel: until };
 }
 
-const HOUR_MS = 3600_000;
 const DAY_MS = 86400_000;
 
-/** Slash `/ban` choice value → length. Keys match Discord command `addChoices` values. */
+/**
+ * Slash `/ban` choice value → length. Keys match Discord `addChoices` values.
+ * Months use 30-day months. Seasons are calendar approximations (tune if VF defines season length elsewhere).
+ */
 const BAN_DURATION_MS: Record<string, number> = {
-  "1h": HOUR_MS,
-  "6h": 6 * HOUR_MS,
-  "12h": 12 * HOUR_MS,
-  "1d": DAY_MS,
-  "3d": 3 * DAY_MS,
-  "7d": 7 * DAY_MS,
-  "14d": 14 * DAY_MS,
-  "30d": 30 * DAY_MS,
+  "1w": 7 * DAY_MS,
+  "2w": 14 * DAY_MS,
+  "3w": 21 * DAY_MS,
+  "1mo": 30 * DAY_MS,
+  "2mo": 60 * DAY_MS,
+  "3mo": 90 * DAY_MS,
+  "4mo": 120 * DAY_MS,
+  /** ~6 months — policy default; not read from DB seasons */
+  "1season": 180 * DAY_MS,
+  /** ~12 months — policy default */
+  "2season": 365 * DAY_MS,
 };
 
 /** `null` = permanent; invalid choice yields `null` (caller should treat as permanent or reject). */
@@ -60,15 +65,16 @@ export function banUntilFromDurationChoice(
 
 export function discordBanSlashDurationLabel(choice: string): string {
   const labels: Record<string, string> = {
+    "1w": "1 week",
+    "2w": "2 weeks",
+    "3w": "3 weeks",
+    "1mo": "1 month",
+    "2mo": "2 months",
+    "3mo": "3 months",
+    "4mo": "4 months",
+    "1season": "1 season",
+    "2season": "2 seasons",
     permanent: "Permanent",
-    "1h": "1 hour",
-    "6h": "6 hours",
-    "12h": "12 hours",
-    "1d": "1 day",
-    "3d": "3 days",
-    "7d": "7 days",
-    "14d": "14 days",
-    "30d": "30 days",
   };
   return labels[choice] ?? choice;
 }
