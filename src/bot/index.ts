@@ -166,6 +166,24 @@ client.once(Events.ClientReady, async (readyClient) => {
 
   try {
     const reset = process.env.DISCORD_FORCE_RESET_COMMANDS === "1";
+
+    // If `/ban` exists as a GLOBAL command (Discord Developer Portal or an old
+    // deploy), some clients keep showing that definition instead of the guild
+    // command with `duration` choices. Guild-scoped commands are authoritative here.
+    try {
+      const globalCommands = await readyClient.application.commands.fetch();
+      for (const cmd of globalCommands.values()) {
+        if (cmd.name === "ban") {
+          await cmd.delete();
+          console.log(
+            "[commands] Deleted GLOBAL `/ban` — only guild `/ban` (with duration) remains.",
+          );
+        }
+      }
+    } catch (e) {
+      console.error("[commands] Global command cleanup failed:", e);
+    }
+
     for (const [, guild] of readyClient.guilds.cache) {
       if (reset) {
         const existing = await guild.commands.fetch();
@@ -186,9 +204,30 @@ client.once(Events.ClientReady, async (readyClient) => {
       );
       if (guild.id === env.DISCORD_GUILD_ID) {
         console.log(
-          "[commands] If /ban still lacks a **duration** field in your Discord client, fully restart Discord (cached command forms can lag behind the server).",
+          "[commands] If `/ban` options look stale, fully quit and reopen Discord.",
         );
       }
+    }
+
+    try {
+      const leagueGuild = await readyClient.guilds.fetch(env.DISCORD_GUILD_ID);
+      const synced = await leagueGuild.commands.set(slashCommandDefinitions);
+      const banCmd = synced.find((c) => c.name === "ban");
+      const durationOpt = banCmd?.options?.find((o) => o.name === "duration");
+      const choiceCount =
+        durationOpt &&
+        "choices" in durationOpt &&
+        Array.isArray(durationOpt.choices)
+          ? durationOpt.choices.length
+          : 0;
+      console.log(
+        `[commands] League guild \`${env.DISCORD_GUILD_ID}\`: /ban → duration has **${choiceCount}** choices (expect 10).`,
+      );
+    } catch (e) {
+      console.error(
+        "[commands] Failed to force-sync commands on DISCORD_GUILD_ID (wrong id or bot not in server?):",
+        e,
+      );
     }
   } catch (error) {
     console.error("Failed to register slash commands:", error);
