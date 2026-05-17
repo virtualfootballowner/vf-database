@@ -231,7 +231,9 @@ export const slashCommandDefinitions = [
 
   new SlashCommandBuilder()
     .setName("ban")
-    .setDescription("Ban a user from the server")
+    .setDescription(
+      "Ban from the league server — you must pick a duration (permanent or timed).",
+    )
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
     .addUserOption((opt) =>
       opt
@@ -241,14 +243,8 @@ export const slashCommandDefinitions = [
     )
     .addStringOption((opt) =>
       opt
-        .setName("reason")
-        .setDescription("Reason for the ban")
-        .setRequired(false),
-    )
-    .addStringOption((opt) =>
-      opt
         .setName("duration")
-        .setDescription("How long the Discord ban lasts")
+        .setDescription("Ban length on Discord (required)")
         .setRequired(true)
         .addChoices(
           { name: "Permanent", value: "permanent" },
@@ -261,6 +257,12 @@ export const slashCommandDefinitions = [
           { name: "14 days", value: "14d" },
           { name: "30 days", value: "30d" },
         ),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("reason")
+        .setDescription("Reason for the ban")
+        .setRequired(false),
     )
     .addIntegerOption((opt) =>
       opt

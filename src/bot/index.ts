@@ -82,6 +82,7 @@ import {
 } from "@/bot/player-discord-ban-sync";
 import { scheduleCreatorPostingInactivityJob } from "@/bot/creator-posting-inactivity";
 import { scheduleDiscordBanExpiryJob } from "@/bot/discord-ban-expiry-job";
+import { scheduleLeaguePublicBanAnnouncement } from "@/bot/league-public-ban-announcement";
 import { createBotSupabase } from "@/bot/stats-queries";
 import {
   APPROVE_BUTTON_ID_PREFIX,
@@ -183,6 +184,11 @@ client.once(Events.ClientReady, async (readyClient) => {
       console.log(
         `Registered ${slashCommandDefinitions.length} slash command(s) in **${guild.name}** (${guild.id}).`,
       );
+      if (guild.id === env.DISCORD_GUILD_ID) {
+        console.log(
+          "[commands] If /ban still lacks a **duration** field in your Discord client, fully restart Discord (cached command forms can lag behind the server).",
+        );
+      }
     }
   } catch (error) {
     console.error("Failed to register slash commands:", error);
@@ -272,6 +278,7 @@ client.on(Events.GuildBanAdd, async (ban) => {
     } catch (syncErr) {
       console.error("GuildBanAdd player ban sync failed:", syncErr);
     }
+    scheduleLeaguePublicBanAnnouncement(client, ban);
   } catch (error) {
     console.error("GuildBanAdd outgoing log failed:", error);
   }
