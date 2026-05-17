@@ -67,6 +67,28 @@ function formatViewCount(n: number): string {
   return `${(n / 1_000_000_000).toFixed(1)}B`;
 }
 
+/** Short label when last sync failed (full message in title/tooltip). */
+function postedSyncFailureLabel(err: string): string {
+  const t = err.trim();
+  const lower = t.toLowerCase();
+  if (
+    t.includes("402") ||
+    lower.includes("exceed your remaining") ||
+    lower.includes("billing/subscription") ||
+    lower.includes("please consider upgrading") ||
+    lower.includes("remaining usage")
+  ) {
+    return "API quota (Apify)";
+  }
+  if (lower.includes("no metrics returned")) {
+    return "Link not scraped yet";
+  }
+  if (lower.includes("apify") && lower.includes("401")) {
+    return "API auth error";
+  }
+  return "Sync failed";
+}
+
 function formatTargetNumber(n: number): string {
   return new Intl.NumberFormat(undefined).format(n);
 }
@@ -595,10 +617,10 @@ export default async function CreatorsChallengePage() {
                                           </>
                                         ) : syncErr ? (
                                           <span
-                                            className="text-amber-200/70"
+                                            className="text-amber-200/80"
                                             title={syncErr}
                                           >
-                                            Metrics pending
+                                            {postedSyncFailureLabel(syncErr)}
                                           </span>
                                         ) : (
                                           "Awaiting sync"
