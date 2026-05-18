@@ -19,8 +19,8 @@ import {
 import { env } from "@/bot/config";
 import { createBotSupabase } from "@/bot/stats-queries";
 import {
-  DEFAULT_APIFY_TIKTOK_ACTOR,
-  DEFAULT_APIFY_YOUTUBE_ACTOR,
+  resolveApifyTiktokActors,
+  resolveApifyYoutubeActors,
 } from "@/lib/creator-onboard/apify-video-views";
 import {
   listApprovedCreatorsForDirectory,
@@ -1220,17 +1220,17 @@ export async function handleCreatorPostedCommand(
   const apifyToken = process.env.APIFY_API_TOKEN?.trim();
   const cronSecret = process.env.CRON_SECRET?.trim();
   if (apifyToken) {
-    const youtubeActor =
-      process.env.APIFY_YOUTUBE_ACTOR_ID?.trim() || DEFAULT_APIFY_YOUTUBE_ACTOR;
-    const tiktokActor =
-      process.env.APIFY_TIKTOK_ACTOR_ID?.trim() || DEFAULT_APIFY_TIKTOK_ACTOR;
+    const yt = resolveApifyYoutubeActors();
+    const tt = resolveApifyTiktokActors();
     void (async () => {
       try {
         const r = await syncPostedVideoViewsWithSupabase({
           supabase,
           apifyToken,
-          youtubeActorId: youtubeActor,
-          tiktokActorId: tiktokActor,
+          youtubeActorId: yt.primary,
+          youtubeFallbackActorId: yt.fallback,
+          tiktokActorId: tt.primary,
+          tiktokFallbackActorId: tt.fallback,
         });
         console.log(
           `[creator] /posted auto-sync ok · apps=${r.applicationsConsidered} updated=${r.applicationsUpdated} yt=${r.youtubeUrls} tt=${r.tiktokUrls}`,

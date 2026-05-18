@@ -81,7 +81,7 @@ function postedSyncFailureLabel(err: string): string {
     return "API quota (Apify)";
   }
   if (lower.includes("no metrics returned")) {
-    return "Link not scraped yet";
+    return "Views unavailable";
   }
   if (lower.includes("apify") && lower.includes("401")) {
     return "API auth error";

@@ -1,6 +1,6 @@
 import {
-  DEFAULT_APIFY_TIKTOK_ACTOR,
-  DEFAULT_APIFY_YOUTUBE_ACTOR,
+  resolveApifyTiktokActors,
+  resolveApifyYoutubeActors,
 } from "@/lib/creator-onboard/apify-video-views";
 import { loadCreatorWebEnv } from "@/lib/creator-onboard/env-web";
 import { syncPostedVideoViewsForAllApproved } from "@/lib/creator-onboard/sync-posted-video-views";
@@ -44,18 +44,18 @@ export async function GET(req: Request): Promise<Response> {
     );
   }
 
-  const youtubeActor =
-    process.env.APIFY_YOUTUBE_ACTOR_ID?.trim() || DEFAULT_APIFY_YOUTUBE_ACTOR;
-  const tiktokActor =
-    process.env.APIFY_TIKTOK_ACTOR_ID?.trim() || DEFAULT_APIFY_TIKTOK_ACTOR;
+  const yt = resolveApifyYoutubeActors();
+  const tt = resolveApifyTiktokActors();
 
   try {
     const env = loadCreatorWebEnv();
     const result = await syncPostedVideoViewsForAllApproved({
       env,
       apifyToken: token,
-      youtubeActorId: youtubeActor,
-      tiktokActorId: tiktokActor,
+      youtubeActorId: yt.primary,
+      youtubeFallbackActorId: yt.fallback,
+      tiktokActorId: tt.primary,
+      tiktokFallbackActorId: tt.fallback,
     });
     return Response.json({ ok: true, ...result });
   } catch (e) {

@@ -7,8 +7,8 @@ import {
 
 import { createBotSupabase } from "@/bot/stats-queries";
 import {
-  DEFAULT_APIFY_TIKTOK_ACTOR,
-  DEFAULT_APIFY_YOUTUBE_ACTOR,
+  resolveApifyTiktokActors,
+  resolveApifyYoutubeActors,
 } from "@/lib/creator-onboard/apify-video-views";
 import { syncPostedVideoViewsWithSupabase } from "@/lib/creator-onboard/sync-posted-video-views";
 
@@ -53,16 +53,16 @@ export async function handleUpdateContentCommand(
 
   try {
     const supabase = createBotSupabase();
-    const youtubeActor =
-      process.env.APIFY_YOUTUBE_ACTOR_ID?.trim() || DEFAULT_APIFY_YOUTUBE_ACTOR;
-    const tiktokActor =
-      process.env.APIFY_TIKTOK_ACTOR_ID?.trim() || DEFAULT_APIFY_TIKTOK_ACTOR;
+    const yt = resolveApifyYoutubeActors();
+    const tt = resolveApifyTiktokActors();
 
     const result = await syncPostedVideoViewsWithSupabase({
       supabase,
       apifyToken: token,
-      youtubeActorId: youtubeActor,
-      tiktokActorId: tiktokActor,
+      youtubeActorId: yt.primary,
+      youtubeFallbackActorId: yt.fallback,
+      tiktokActorId: tt.primary,
+      tiktokFallbackActorId: tt.fallback,
     });
 
     const lines = [

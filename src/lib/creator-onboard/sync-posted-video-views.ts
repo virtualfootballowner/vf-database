@@ -5,6 +5,8 @@ import {
   fetchYoutubeViewCounts,
   lookupTiktokViews,
   lookupYoutubeViews,
+  resolveApifyTiktokActors,
+  resolveApifyYoutubeActors,
 } from "@/lib/creator-onboard/apify-video-views";
 import {
   expandTiktokUrlsForSync,
@@ -32,7 +34,9 @@ export async function syncPostedVideoViewsWithSupabase(opts: {
   supabase: SupabaseClient;
   apifyToken: string;
   youtubeActorId?: string;
+  youtubeFallbackActorId?: string;
   tiktokActorId?: string;
+  tiktokFallbackActorId?: string;
 }): Promise<SyncPostedVideoViewsResult> {
   const result: SyncPostedVideoViewsResult = {
     applicationsConsidered: 0,
@@ -93,12 +97,20 @@ export async function syncPostedVideoViewsWithSupabase(opts: {
   const ranYoutube = youtubeUrls.size > 0;
   const ranTiktok = tiktokUrls.size > 0;
 
+  const ytActors = resolveApifyYoutubeActors();
+  const ttActors = resolveApifyTiktokActors();
+  const youtubePrimary = opts.youtubeActorId ?? ytActors.primary;
+  const youtubeFallback = opts.youtubeFallbackActorId ?? ytActors.fallback;
+  const tiktokPrimary = opts.tiktokActorId ?? ttActors.primary;
+  const tiktokFallback = opts.tiktokFallbackActorId ?? ttActors.fallback;
+
   if (ranYoutube) {
     try {
       youtubeMap = await fetchYoutubeViewCounts(
         [...youtubeUrls],
         opts.apifyToken,
-        opts.youtubeActorId,
+        youtubePrimary,
+        youtubeFallback,
       );
     } catch (e) {
       result.youtubeError =
@@ -112,7 +124,8 @@ export async function syncPostedVideoViewsWithSupabase(opts: {
       tiktokMap = await fetchTiktokPlayCounts(
         [...tiktokUrls],
         opts.apifyToken,
-        opts.tiktokActorId,
+        tiktokPrimary,
+        tiktokFallback,
       );
     } catch (e) {
       result.tiktokError =
@@ -156,7 +169,8 @@ export async function syncPostedVideoViewsWithSupabase(opts: {
         }
         return {
           ...base,
-          views_error: "YouTube: no metrics returned for this URL",
+          views_error:
+            "YouTube: no metrics returned (primary + fallback scrapers)",
           views_fetched_at: fetchedAt,
         };
       }
@@ -201,7 +215,8 @@ export async function syncPostedVideoViewsWithSupabase(opts: {
         }
         return {
           ...base,
-          views_error: "TikTok: no metrics returned for this URL",
+          views_error:
+            "TikTok: no metrics returned (primary + fallback scrapers)",
           views_fetched_at: fetchedAt,
         };
       }
@@ -236,13 +251,17 @@ export async function syncPostedVideoViewsForAllApproved(opts: {
   env: CreatorWebEnv;
   apifyToken: string;
   youtubeActorId?: string;
+  youtubeFallbackActorId?: string;
   tiktokActorId?: string;
+  tiktokFallbackActorId?: string;
 }): Promise<SyncPostedVideoViewsResult> {
   const supabase = createCreatorSupabaseAdmin(opts.env);
   return syncPostedVideoViewsWithSupabase({
     supabase,
     apifyToken: opts.apifyToken,
     youtubeActorId: opts.youtubeActorId,
+    youtubeFallbackActorId: opts.youtubeFallbackActorId,
     tiktokActorId: opts.tiktokActorId,
+    tiktokFallbackActorId: opts.tiktokFallbackActorId,
   });
 }
