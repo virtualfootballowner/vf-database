@@ -7,6 +7,7 @@ export const TROPHY_IMAGE = {
   ballonDor: "/balon dor.png",
   goldenBoot: "/Golden boot.png",
   goldenGlove: "/golden glove.png",
+  goldenShield: "/golden shield.png",
 } as const;
 
 /** DB `team_season_honors.honor_kind` → image under /public */
@@ -31,6 +32,7 @@ export function accoladeImageForTitle(title: string): string | null {
   if (/ball?on\s*d['']?\s*or/i.test(t)) return TROPHY_IMAGE.ballonDor;
   if (/golden\s*boot/i.test(t)) return TROPHY_IMAGE.goldenBoot;
   if (/golden\s*glove/i.test(t)) return TROPHY_IMAGE.goldenGlove;
+  if (/golden\s*shield/i.test(t)) return TROPHY_IMAGE.goldenShield;
   return null;
 }
 
