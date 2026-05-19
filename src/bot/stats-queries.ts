@@ -399,10 +399,19 @@ export async function fetchTeamSeasonManagerName(
       .select("manager_display_name")
       .eq("team_slug", teamSlug)
       .eq("season", season)
+      .limit(1)
       .maybeSingle();
 
-    // PGRST205: table not migrated / not in PostgREST schema cache yet
     if (error) {
+      const code = (error as { code?: string }).code;
+      // PGRST205: table not migrated / not in PostgREST schema cache yet
+      if (code === "PGRST205") {
+        return mergeSeed(empty);
+      }
+      console.error(
+        `fetchTeamSeasonManagerName ${teamSlug} S${season}:`,
+        error,
+      );
       return mergeSeed(empty);
     }
 
@@ -416,8 +425,46 @@ export async function fetchTeamSeasonManagerName(
       fromDb.set(season, t);
     }
     return mergeSeed(fromDb);
-  } catch {
+  } catch (err) {
+    console.error(
+      `fetchTeamSeasonManagerName ${teamSlug} S${season} threw:`,
+      err,
+    );
     return mergeSeed(empty);
+  }
+}
+
+/** Log S3 nation manager rows at startup so deploy drift is obvious in Railway logs. */
+export async function logSeason3NationManagers(
+  supabase: SupabaseClient,
+): Promise<void> {
+  const slugs = ["france", "belgium"] as const;
+  const { data, error } = await supabase
+    .from("team_season_managers")
+    .select("team_slug, manager_display_name, manager_discord_id")
+    .eq("season", 3)
+    .in("team_slug", [...slugs]);
+
+  if (error) {
+    console.error("[managers] Could not load S3 france/belgium rows:", error);
+    return;
+  }
+
+  const bySlug = new Map(
+    (data ?? []).map((r) => [
+      String((r as { team_slug: string }).team_slug),
+      r as {
+        manager_display_name: string | null;
+        manager_discord_id: string | null;
+      },
+    ]),
+  );
+
+  for (const slug of slugs) {
+    const row = bySlug.get(slug);
+    const name = row?.manager_display_name?.trim() ?? "(none)";
+    const discord = row?.manager_discord_id?.trim() ?? "—";
+    console.log(`[managers] S3 ${slug}: ${name} · discord ${discord}`);
   }
 }
 

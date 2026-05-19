@@ -84,7 +84,10 @@ import { scheduleCreatorPostingInactivityJob } from "@/bot/creator-posting-inact
 import { scheduleDiscordBanExpiryJob } from "@/bot/discord-ban-expiry-job";
 import { scheduleContractOfferExpiryJob } from "@/bot/contract-offer-expiry-job";
 import { scheduleLeaguePublicBanAnnouncement } from "@/bot/league-public-ban-announcement";
-import { createBotSupabase } from "@/bot/stats-queries";
+import {
+  createBotSupabase,
+  logSeason3NationManagers,
+} from "@/bot/stats-queries";
 import {
   APPROVE_BUTTON_ID_PREFIX,
   DENY_BUTTON_ID_PREFIX,
@@ -164,6 +167,16 @@ client.once(Events.ClientReady, async (readyClient) => {
     console.log(`Install / re-invite this app: ${oauthBotInviteUrl(readyClient.user.id)}`);
   }
   logMemberOutgoingStartup();
+
+  try {
+    const supabase = createBotSupabase();
+    const host = new URL(env.SUPABASE_URL).hostname;
+    console.log(`[managers] Supabase host: ${host}`);
+    console.log(`[managers] VF_ACTIVE_ROSTER_SEASON=${env.VF_ACTIVE_ROSTER_SEASON}`);
+    await logSeason3NationManagers(supabase);
+  } catch (e) {
+    console.error("[managers] Startup manager check failed:", e);
+  }
 
   try {
     const reset = process.env.DISCORD_FORCE_RESET_COMMANDS === "1";
