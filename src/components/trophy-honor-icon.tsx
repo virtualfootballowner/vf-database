@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Trophy } from "lucide-react";
 
 import {
+  accoladeImageForTitle,
   trophyImageForHonorKind,
   trophyImageForTrophyTitle,
 } from "@/lib/trophy-assets";
@@ -12,6 +13,8 @@ type Props = {
   iconClassName?: string;
   /** Player trophy row */
   trophyTitle?: string;
+  /** Personal accolade row */
+  accoladeTitle?: string;
   /** Team honor row (`team_season_honors.honor_kind`) */
   honorKind?: string;
 };
@@ -20,6 +23,7 @@ export function TrophyHonorIcon({
   className,
   iconClassName,
   trophyTitle,
+  accoladeTitle,
   honorKind,
 }: Props) {
   const src =
@@ -27,7 +31,9 @@ export function TrophyHonorIcon({
       ? trophyImageForHonorKind(honorKind)
       : trophyTitle != null && trophyTitle !== ""
         ? trophyImageForTrophyTitle(trophyTitle)
-        : null;
+        : accoladeTitle != null && accoladeTitle !== ""
+          ? accoladeImageForTitle(accoladeTitle)
+          : null;
 
   if (src) {
     return (

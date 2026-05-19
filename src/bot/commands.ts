@@ -2,16 +2,13 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  ComponentType,
   EmbedBuilder,
   MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
   type AutocompleteInteraction,
   type ChatInputCommandInteraction,
-  type GuildBasedChannel,
   type GuildMember,
-  type GuildTextBasedChannel,
 } from "discord.js";
 
 import { banBailDmAppendLines } from "@/bot/ban-bail-copy";
@@ -40,10 +37,7 @@ import {
   loadTeams,
   resolveTeamForSlashCommand,
 } from "@/bot/stats-queries";
-import {
-  APPROVE_BUTTON_ID_PREFIX,
-  DENY_BUTTON_ID_PREFIX,
-} from "@/bot/sync";
+import { buildBacklogEmbed } from "@/bot/backlog";
 import {
   CONTRACT_POSITION_CHOICES,
   CONTRACT_ROLE_CHOICES,
@@ -176,7 +170,7 @@ export const slashCommandDefinitions = [
   new SlashCommandBuilder()
     .setName("backlog")
     .setDescription(
-      "Show every pending whitelist request waiting on staff approval",
+      "All pending staff approvals: whitelist, VF Create, media, releases, contracts",
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
     .toJSON(),
@@ -1242,127 +1236,7 @@ async function handleBacklog(
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  const members = await interaction.guild.members.fetch();
-  const guildId = interaction.guild.id;
-
-  const pending = Array.from(
-    members
-      .filter(
-        (member) =>
-          member.roles.cache.has(env.DISCORD_ROVER_VERIFIED_ROLE_ID) &&
-          !member.roles.cache.has(env.DISCORD_APPROVED_ROLE_ID),
-      )
-      .values(),
-  ).sort((a, b) => (a.joinedTimestamp ?? 0) - (b.joinedTimestamp ?? 0));
-
-  const supabase = createBotSupabase();
-  const { data: releaseRows, error: releaseErr } = await supabase
-    .from("roster_release_requests")
-    .select(
-      "id, guild_id, channel_id, message_id, requester_discord_id, target_discord_id, team_slug, season, created_at, players:player_id(roblox_username)",
-    )
-    .eq("guild_id", guildId)
-    .eq("status", "pending")
-    .order("created_at", { ascending: true })
-    .limit(50);
-  if (releaseErr) {
-    console.error("backlog release fetch:", releaseErr);
-  }
-  type ReleaseBacklogRow = {
-    id: string;
-    guild_id: string;
-    channel_id: string | null;
-    message_id: string | null;
-    requester_discord_id: string;
-    target_discord_id: string;
-    team_slug: string;
-    season: number;
-    created_at: string | null;
-    /** Supabase typegen returns embedded FK joins as an array even for many-to-one. */
-    players: { roblox_username: string | null }[] | null;
-  };
-  const releases = (releaseRows ?? []) as unknown as ReleaseBacklogRow[];
-
-  if (pending.length === 0 && releases.length === 0) {
-    const embed = new EmbedBuilder()
-      .setColor(0x10b981)
-      .setTitle("✅ Backlog")
-      .setDescription(
-        "No pending whitelist requests **and** no pending release requests. All clear.",
-      );
-    await interaction.editReply({ embeds: [embed] });
-    return;
-  }
-
-  const cardLinks = await collectReviewCardLinks(interaction);
-
-  const whitelistLines = pending.map((member, idx) => {
-    const nick = member.nickname ? ` · nick \`${member.nickname}\`` : "";
-    const joined = member.joinedTimestamp
-      ? ` · joined <t:${Math.floor(member.joinedTimestamp / 1000)}:R>`
-      : "";
-    const cardUrl = cardLinks.get(member.id);
-    const cardLink = cardUrl ? ` · [📩 review card](${cardUrl})` : "";
-    return `**${idx + 1}.** ${member} (\`${member.user.username}\`)${nick}${joined}${cardLink}`;
-  });
-
-  const teamNames = await buildTeamNameBySlug(supabase);
-  const releaseLines = releases.map((row, idx) => {
-    const created = row.created_at
-      ? ` · <t:${Math.floor(new Date(row.created_at).getTime() / 1000)}:R>`
-      : "";
-    const cardUrl =
-      row.message_id && row.channel_id
-        ? `https://discord.com/channels/${guildId}/${row.channel_id}/${row.message_id}`
-        : null;
-    const cardLink = cardUrl ? ` · [📩 review card](${cardUrl})` : "";
-    const teamLabel = teamNames.get(row.team_slug) ?? row.team_slug;
-    const playerName =
-      row.players?.[0]?.roblox_username ?? row.target_discord_id;
-    return (
-      `**${idx + 1}.** \`${playerName}\` · ${teamLabel} (\`${row.team_slug}\`) · S${row.season}` +
-      ` · req <@${row.requester_discord_id}>${created}${cardLink}`
-    );
-  });
-
-  const sections: string[] = [];
-  if (pending.length > 0) {
-    const visible = whitelistLines.slice(0, 25).join("\n");
-    const overflow =
-      pending.length > 25 ? `\n…and **${pending.length - 25}** more.` : "";
-    sections.push(
-      `**🛂 Whitelist · ${pending.length} pending**\n${visible}${overflow}`,
-    );
-  }
-  if (releases.length > 0) {
-    const visible = releaseLines.slice(0, 25).join("\n");
-    const overflow =
-      releases.length > 25 ? `\n…and **${releases.length - 25}** more.` : "";
-    sections.push(
-      `**📤 Release requests · ${releases.length} pending**\n${visible}${overflow}`,
-    );
-  }
-
-  const totals = [
-    pending.length > 0
-      ? `${pending.length} whitelist`
-      : null,
-    releases.length > 0
-      ? `${releases.length} release${releases.length === 1 ? "" : "s"}`
-      : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
-  const embed = new EmbedBuilder()
-    .setColor(0x083696)
-    .setTitle(`📋 Backlog · ${totals}`)
-    .setDescription(sections.join("\n\n"))
-    .setFooter({
-      text: "Tap a review card link to approve or deny.",
-    })
-    .setTimestamp(new Date());
-
+  const embed = await buildBacklogEmbed(interaction.guild);
   await interaction.editReply({ embeds: [embed] });
 }
 
@@ -1738,6 +1612,7 @@ async function handleAppoint(
           team_slug: resolved.slug,
           season,
           manager_display_name: robloxName,
+          manager_discord_id: managerDiscordUser.id,
         },
         { onConflict: "team_slug,season" },
       );
@@ -1803,52 +1678,3 @@ async function handleAppoint(
   }
 }
 
-async function collectReviewCardLinks(
-  interaction: ChatInputCommandInteraction,
-): Promise<Map<string, string>> {
-  const links = new Map<string, string>();
-  if (!interaction.guild) return links;
-
-  let channel: GuildBasedChannel | null;
-  try {
-    channel = await interaction.guild.channels.fetch(
-      env.DISCORD_STAFF_REVIEW_CHANNEL_ID,
-    );
-  } catch {
-    return links;
-  }
-
-  if (!channel || !channel.isTextBased()) return links;
-
-  let messages;
-  try {
-    messages = await (channel as GuildTextBasedChannel).messages.fetch({
-      limit: 100,
-    });
-  } catch {
-    return links;
-  }
-
-  // Messages come back newest first — first hit per memberId wins.
-  for (const message of messages.values()) {
-    for (const row of message.components ?? []) {
-      if (row.type !== ComponentType.ActionRow) continue;
-      for (const component of row.components) {
-        if (component.type !== ComponentType.Button) continue;
-        const customId = component.customId;
-        if (!customId) continue;
-        let memberId: string | null = null;
-        if (customId.startsWith(APPROVE_BUTTON_ID_PREFIX)) {
-          memberId = customId.slice(APPROVE_BUTTON_ID_PREFIX.length);
-        } else if (customId.startsWith(DENY_BUTTON_ID_PREFIX)) {
-          memberId = customId.slice(DENY_BUTTON_ID_PREFIX.length);
-        }
-        if (memberId && !links.has(memberId)) {
-          links.set(memberId, message.url);
-        }
-      }
-    }
-  }
-
-  return links;
-}

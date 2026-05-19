@@ -501,12 +501,44 @@ export type ResolveManagerTeamResult =
       reason: "no_player" | "no_username" | "not_manager" | "ambiguous";
     };
 
-/** Resolve team slug from `team_season_managers` for the contractor’s linked Roblox name. */
+function uniqueTeamSlugsFromManagerRows(
+  rows: { team_slug: string }[] | null,
+): string[] {
+  return [
+    ...new Set(
+      (rows ?? []).map((r) => String(r.team_slug)),
+    ),
+  ];
+}
+
+function resolveManagerSlugFromRows(slugs: string[]): ResolveManagerTeamResult {
+  if (slugs.length === 0) return { ok: false, reason: "not_manager" };
+  if (slugs.length > 1) return { ok: false, reason: "ambiguous" };
+  return { ok: true, teamSlug: slugs[0]! };
+}
+
+/** Resolve team slug from `team_season_managers` (Discord id first, then Roblox name). */
 export async function resolveManagerTeamSlugForSeason(
   supabase: SupabaseClient,
   contractorDiscordId: string,
   season: number,
 ): Promise<ResolveManagerTeamResult> {
+  const { data: byDiscord, error: discordErr } = await supabase
+    .from("team_season_managers")
+    .select("team_slug")
+    .eq("season", season)
+    .eq("manager_discord_id", contractorDiscordId);
+
+  if (discordErr) {
+    const code = (discordErr as { code?: string }).code;
+    if (code !== "42703" && code !== "PGRST204") throw discordErr;
+  } else {
+    const fromDiscord = resolveManagerSlugFromRows(
+      uniqueTeamSlugsFromManagerRows(byDiscord as { team_slug: string }[]),
+    );
+    if (fromDiscord.ok || fromDiscord.reason === "ambiguous") return fromDiscord;
+  }
+
   const profile = await findPlayerByDiscordId(supabase, contractorDiscordId);
   if (!profile) return { ok: false, reason: "no_player" };
   const name = profile.roblox_username?.trim();
@@ -519,15 +551,9 @@ export async function resolveManagerTeamSlugForSeason(
     .ilike("manager_display_name", name);
 
   if (error) throw error;
-  const rows = data ?? [];
-  const slugs = [
-    ...new Set(
-      rows.map((r) => String((r as { team_slug: string }).team_slug)),
-    ),
-  ];
-  if (slugs.length === 0) return { ok: false, reason: "not_manager" };
-  if (slugs.length > 1) return { ok: false, reason: "ambiguous" };
-  return { ok: true, teamSlug: slugs[0]! };
+  return resolveManagerSlugFromRows(
+    uniqueTeamSlugsFromManagerRows(data as { team_slug: string }[]),
+  );
 }
 
 /** All `team_slug` values the player is on for this season (usually 0–1). */

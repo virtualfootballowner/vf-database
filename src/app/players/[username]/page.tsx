@@ -2,7 +2,6 @@ import {
   ArrowLeft,
   Award,
   CalendarDays,
-  Medal,
   Star,
 } from "lucide-react";
 import type { Metadata } from "next";
@@ -26,7 +25,10 @@ import {
 } from "@/components/ui/card";
 import { getRobloxHeadshots, isVerifiedRobloxUserId } from "@/lib/roblox";
 import { describeBanForUi } from "@/lib/players/discord-ban";
-import { trophyImageForTrophyTitle, TROPHY_IMAGE } from "@/lib/trophy-assets";
+import {
+  accoladeImageForTitle,
+  trophyImageForTrophyTitle,
+} from "@/lib/trophy-assets";
 import { formatBailAmountForDisplay } from "@/lib/players/format-ban-bail";
 import {
   getPlayerMatchAppearances,
@@ -330,7 +332,7 @@ export default async function PlayerDetailPage({
             />
             <StatTile label="Appearances" value={stats.appearances} />
             <TrophyStatTile trophies={stats.trophies} />
-            <StatTile label="Accolades" value={stats.accolades.length} />
+            <AccoladeStatTile accolades={stats.accolades} />
           </div>
         </section>
 
@@ -500,7 +502,9 @@ export default async function PlayerDetailPage({
                   {stats.accolades.map((accolade, idx) => (
                     <ListRow
                       key={idx}
-                      icon={<Medal className="size-3.5 text-fuchsia-200" />}
+                      icon={
+                        <TrophyHonorIcon accoladeTitle={accolade.title} />
+                      }
                       title={accolade.title}
                       meta={[
                         accolade.season ? `Season ${accolade.season}` : null,
@@ -588,6 +592,40 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
           {label}
         </p>
         <p className="mt-1.5 text-2xl font-semibold text-white">{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AccoladeStatTile({ accolades }: { accolades: Accolade[] }) {
+  const srcs = new Set<string>();
+  for (const a of accolades) {
+    const s = accoladeImageForTitle(a.title);
+    if (s) srcs.add(s);
+  }
+  return (
+    <Card className="gap-1 py-4">
+      <CardContent>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
+          Accolades
+        </p>
+        <p className="mt-1.5 text-2xl font-semibold text-white">
+          {accolades.length}
+        </p>
+        {srcs.size > 0 ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {[...srcs].map((src) => (
+              <Image
+                key={src}
+                src={src}
+                alt=""
+                width={28}
+                height={28}
+                className="size-7 object-contain opacity-95"
+              />
+            ))}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

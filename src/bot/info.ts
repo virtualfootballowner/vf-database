@@ -126,7 +126,7 @@ export async function handleHelp(
           "**`/postverify-media-staff`** — VF Media staff verify + application card",
           "**`/help`** — post this command index in this channel",
           "**`/appoint`** — assign a club / nation manager for a season",
-          "**`/backlog`** — pending whitelist + release queue",
+          "**`/backlog`** — all pending staff approvals (whitelist, VF Create, media, releases, contracts)",
           "**`/creator-remove`** — delete all VF Create DB rows for a user + strip creator role",
           "**`/kick`** · **`/ban`** — moderation",
         ].join("\n"),
