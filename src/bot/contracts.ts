@@ -25,7 +25,7 @@ import {
 } from "@/bot/stats-queries";
 
 /** Max players per club per season (signed squad); managers cannot /contract beyond this. */
-export const MAX_ROSTER_PLAYERS = 15;
+export const MAX_ROSTER_PLAYERS = 18;
 
 async function rosterSpaceForNewSignee(
   supabase: ReturnType<typeof createBotSupabase>,
