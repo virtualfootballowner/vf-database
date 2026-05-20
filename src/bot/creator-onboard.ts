@@ -44,7 +44,10 @@ import {
   formatPoolSharePercent,
 } from "@/lib/creator-onboard/road-to-1m";
 import { syncPostedVideoViewsWithSupabase } from "@/lib/creator-onboard/sync-posted-video-views";
+import { classifyPostedVideoUrl } from "@/lib/creator-onboard/posted-video-url-platform";
 import {
+  normalizeTiktokProfileUrl,
+  normalizeYoutubeProfileUrl,
   socialProfileLabel,
   tiktokProfileHref,
   youtubeProfileHref,
@@ -71,6 +74,22 @@ export const creatorProfileCommand = new SlashCommandBuilder()
       .setName("user")
       .setDescription("Discord member to look up")
       .setRequired(false),
+  )
+  .toJSON();
+
+export const creatorSwapCommand = new SlashCommandBuilder()
+  .setName("swap")
+  .setDescription(
+    "Update your TikTok or YouTube profile link on your VF Create creator profile",
+  )
+  .addStringOption((opt) =>
+    opt
+      .setName("link")
+      .setDescription(
+        "New TikTok or YouTube profile/channel link (replaces your current one for that platform)",
+      )
+      .setRequired(true)
+      .setMaxLength(2048),
   )
   .toJSON();
 
@@ -148,6 +167,51 @@ function postedUrlsEffectivelyEqual(a: string, b: string): boolean {
   } catch {
     return a === b;
   }
+}
+
+type SocialSwapPlatform = "tiktok" | "youtube";
+
+function resolveSocialSwapLink(
+  raw: string,
+): { platform: SocialSwapPlatform; normalized: string } | { error: string } {
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed.length > MAX_POSTED_URL_LEN) {
+    return {
+      error:
+        "Paste a full **https://** TikTok or YouTube **profile/channel** link.",
+    };
+  }
+
+  const tiktok = normalizeTiktokProfileUrl(trimmed);
+  if (tiktok) {
+    return { platform: "tiktok", normalized: tiktok };
+  }
+
+  const youtube = normalizeYoutubeProfileUrl(trimmed);
+  if (youtube) {
+    return { platform: "youtube", normalized: youtube };
+  }
+
+  const classified = classifyPostedVideoUrl(
+    trimmed.startsWith("http") ? trimmed : `https://${trimmed.replace(/^\/+/, "")}`,
+  );
+  if (classified === "tiktok") {
+    return {
+      error:
+        "That looks like a **TikTok video** link. Paste your **profile** link instead (e.g. `https://www.tiktok.com/@yourhandle`).",
+    };
+  }
+  if (classified === "youtube") {
+    return {
+      error:
+        "That looks like a **YouTube video** link. Paste your **channel** link instead (e.g. `https://www.youtube.com/@yourchannel`).",
+    };
+  }
+
+  return {
+    error:
+      "Couldn’t tell if that’s TikTok or YouTube. Paste a profile/channel URL from one of those platforms.",
+  };
 }
 
 function vfGuildId(): string {
@@ -1027,6 +1091,138 @@ export async function handleCreatorProfileCommand(
       content: `**Private** — your age on file is **${row.age}**. Only you can see this message.`,
     });
   }
+}
+
+export async function handleCreatorSwapCommand(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  if (!interaction.guild || !interaction.member) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Use `/swap` inside the VF Discord server.",
+    });
+    return;
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const scoutRole = env.DISCORD_SCOUT_ROLE_ID?.trim();
+  if (!scoutRole) {
+    await interaction.editReply({
+      content:
+        "The VF Create creator role isn’t configured on the bot yet. Ask staff to set `DISCORD_SCOUT_ROLE_ID`.",
+    });
+    return;
+  }
+
+  const guild = interaction.guild;
+  let member = interaction.member as GuildMember;
+  if (!member.roles.cache.has(scoutRole)) {
+    try {
+      member = await guild.members.fetch(interaction.user.id);
+    } catch {
+      /* keep interaction member */
+    }
+    if (!member.roles.cache.has(scoutRole)) {
+      await interaction.editReply({
+        content:
+          "You need the **VF Create** creator role to update your social links. If you’re approved and don’t have it yet, ask staff.",
+      });
+      return;
+    }
+  }
+
+  const raw = interaction.options.getString("link", true);
+  const resolved = resolveSocialSwapLink(raw);
+  if ("error" in resolved) {
+    await interaction.editReply({ content: resolved.error });
+    return;
+  }
+
+  const { platform, normalized } = resolved;
+  const platformLabel = platform === "tiktok" ? "TikTok" : "YouTube";
+  const field = platform === "tiktok" ? "tiktok_handle" : "youtube_handle";
+
+  const supabase = createBotSupabase();
+  const { data, error } = await supabase
+    .from("creator_applications")
+    .select("id, tiktok_handle, youtube_handle")
+    .eq("discord_id", interaction.user.id)
+    .eq("status", "approved")
+    .maybeSingle();
+
+  if (error) {
+    console.error("[creator] /swap lookup:", error);
+    await interaction.editReply({
+      content: "Couldn’t update your profile right now. Try again shortly.",
+    });
+    return;
+  }
+
+  if (!data) {
+    await interaction.editReply({
+      content:
+        "No **approved** VF Create profile is linked to your Discord account. Finish onboarding and get approved first.",
+    });
+    return;
+  }
+
+  const row = data as {
+    id: string;
+    tiktok_handle: string | null;
+    youtube_handle: string | null;
+  };
+  const previous =
+    platform === "tiktok" ? row.tiktok_handle : row.youtube_handle;
+  const previousNormalized =
+    platform === "tiktok"
+      ? normalizeTiktokProfileUrl(previous)
+      : normalizeYoutubeProfileUrl(previous);
+
+  if (
+    previousNormalized === normalized ||
+    (previous && postedUrlsEffectivelyEqual(previous, normalized))
+  ) {
+    await interaction.editReply({
+      content: `That’s already your **${platformLabel}** link on file.`,
+    });
+    return;
+  }
+
+  const updatedAt = new Date().toISOString();
+  const { error: upErr } = await supabase
+    .from("creator_applications")
+    .update({
+      [field]: normalized,
+      updated_at: updatedAt,
+    })
+    .eq("id", row.id);
+
+  if (upErr) {
+    console.error("[creator] /swap update:", upErr);
+    await interaction.editReply({
+      content:
+        "Couldn’t save that link. Try again or ask staff to check the database.",
+    });
+    return;
+  }
+
+  const prevLabel = previous ? socialProfileLabel(previous) : null;
+  const newLabel = socialProfileLabel(normalized) ?? normalized;
+  const lines = [
+    previous
+      ? `Replaced your **${platformLabel}** link on your VF Create profile.`
+      : `Added your **${platformLabel}** link to your VF Create profile.`,
+    "",
+    prevLabel
+      ? `**Before** · ${prevLabel}`
+      : `**Before** · *none*`,
+    `**Now** · ${newLabel}`,
+    "",
+    `[Open creator directory](${env.VFL_SITE_URL.replace(/\/$/, "")}/content/creators)`,
+  ];
+
+  await interaction.editReply({ content: lines.join("\n") });
 }
 
 export async function handleCreatorPostedCommand(
