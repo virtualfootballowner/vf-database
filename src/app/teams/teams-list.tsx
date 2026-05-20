@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 
 import { TeamCrest } from "./team-crest";
 import type { Team } from "./teams-data";
-import { teamHasSeason } from "@/lib/team-seasons";
+import { teamMatchesSeasonFilter } from "@/lib/team-seasons";
 
 type SeasonFilter = "all" | "1" | "2" | "3";
 
@@ -36,21 +36,44 @@ export function TeamsList({ teams }: TeamsListProps) {
   const [season, setSeason] = useState<SeasonFilter>("all");
   const deferredQuery = useDeferredValue(query);
 
+  const seasonPool = useMemo(() => {
+    if (season === "all") return teams;
+    return teams.filter((team) =>
+      teamMatchesSeasonFilter(team.seasons, Number(season)),
+    );
+  }, [season, teams]);
+
   const filtered = useMemo(() => {
     const q = deferredQuery.trim().toLowerCase();
-    return teams.filter((team) => {
-      if (season !== "all" && !teamHasSeason(team.seasons, Number(season))) {
-        return false;
-      }
+    return seasonPool.filter((team) => {
       if (!q) return true;
       return (
         team.name.toLowerCase().includes(q) ||
         team.short.toLowerCase().includes(q)
       );
     });
-  }, [deferredQuery, season, teams]);
+  }, [deferredQuery, seasonPool]);
 
-  const isFiltered = season !== "all" || query.trim().length > 0;
+  const countLabel = useMemo(() => {
+    const q = query.trim().length > 0;
+    if (season === "3") {
+      if (q) {
+        return `${filtered.length} of ${seasonPool.length} nations`;
+      }
+      return `${seasonPool.length} nations`;
+    }
+    if (season !== "all") {
+      const tag = `S${season}`;
+      if (q) {
+        return `${filtered.length} of ${seasonPool.length} · ${tag}`;
+      }
+      return `${seasonPool.length} teams · ${tag}`;
+    }
+    if (q) {
+      return `${filtered.length} of ${teams.length} teams`;
+    }
+    return `${teams.length} teams`;
+  }, [filtered.length, query, season, seasonPool.length, teams.length]);
 
   return (
     <>
@@ -82,9 +105,7 @@ export function TeamsList({ teams }: TeamsListProps) {
             className="h-9 shrink-0 gap-2 self-start border-white/15 bg-white/5 px-3 text-white/85 sm:self-auto"
           >
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
-            {isFiltered
-              ? `${filtered.length} of ${teams.length}`
-              : `${teams.length} clubs`}
+            {countLabel}
           </Badge>
         </div>
 

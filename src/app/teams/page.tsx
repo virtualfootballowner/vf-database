@@ -12,14 +12,14 @@ export default async function TeamsPage() {
 
         <section>
           <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
-            Clubs
+            League &amp; nations
           </p>
           <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl">
             Teams
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">
-            Every club registered in the database. Filter by season or search
-            by name to find a specific club.
+            League clubs for Seasons 1–2 and national squads for Season 3.
+            Filter by season or search by name.
           </p>
         </section>
 

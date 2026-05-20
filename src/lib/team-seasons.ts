@@ -15,3 +15,18 @@ export function normalizeSeasons(seasons: unknown): number[] {
 export function teamHasSeason(seasons: unknown, season: number): boolean {
   return normalizeSeasons(seasons).includes(season);
 }
+
+/** Season 3 World Cup pool — national squads only (no league clubs tagged S3). */
+export function isSeason3NationOnlyTeam(seasons: unknown): boolean {
+  const s = normalizeSeasons(seasons);
+  return s.includes(3) && !s.includes(1) && !s.includes(2);
+}
+
+/** Teams page season tab — S3 excludes league clubs even if mis-tagged in DB. */
+export function teamMatchesSeasonFilter(
+  seasons: unknown,
+  season: number,
+): boolean {
+  if (season === 3) return isSeason3NationOnlyTeam(seasons);
+  return teamHasSeason(seasons, season);
+}
