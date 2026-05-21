@@ -52,3 +52,47 @@ export function normalizeTiktokUrlKey(url: string): string {
     return url.trim().toLowerCase();
   }
 }
+
+/** Numeric TikTok video id when parsable from a canonical /video/{id} URL. */
+export function extractTiktokVideoId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    if (!host.includes("tiktok.com") && host !== "vm.tiktok.com") return null;
+    const m = u.pathname.match(/\/video\/(\d+)/i);
+    return m?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Stable identity for duplicate detection (YouTube id, TikTok id, or normalized URL). */
+export function postedVideoCanonicalKey(url: string): string {
+  const platform = classifyPostedVideoUrl(url);
+  if (platform === "youtube") {
+    const id = extractYoutubeVideoId(url);
+    if (id) return `youtube:${id}`;
+  }
+  if (platform === "tiktok") {
+    const id = extractTiktokVideoId(url);
+    if (id) return `tiktok:${id}`;
+    return `tiktok:${normalizeTiktokUrlKey(url)}`;
+  }
+  try {
+    const u = new URL(url);
+    u.hash = "";
+    return u.href;
+  } catch {
+    return url.trim().toLowerCase();
+  }
+}
+
+/** True when two posted links refer to the same video (including URL variants). */
+export function postedVideoUrlsAreDuplicate(a: string, b: string): boolean {
+  if (postedVideoCanonicalKey(a) === postedVideoCanonicalKey(b)) return true;
+  try {
+    return new URL(a).href === new URL(b).href;
+  } catch {
+    return a.trim() === b.trim();
+  }
+}

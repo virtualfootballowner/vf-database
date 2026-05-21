@@ -44,7 +44,11 @@ import {
   formatPoolSharePercent,
 } from "@/lib/creator-onboard/road-to-1m";
 import { syncPostedVideoViewsWithSupabase } from "@/lib/creator-onboard/sync-posted-video-views";
-import { classifyPostedVideoUrl } from "@/lib/creator-onboard/posted-video-url-platform";
+import { expandTiktokUrlIfNeeded } from "@/lib/creator-onboard/expand-posted-video-url";
+import {
+  classifyPostedVideoUrl,
+  postedVideoUrlsAreDuplicate,
+} from "@/lib/creator-onboard/posted-video-url-platform";
 import {
   normalizeTiktokProfileUrl,
   normalizeYoutubeProfileUrl,
@@ -1268,7 +1272,7 @@ export async function handleCreatorPostedCommand(
   }
 
   const raw = interaction.options.getString("link", true);
-  const url = validatePostedHttpsUrl(raw);
+  let url = validatePostedHttpsUrl(raw);
   if (!url) {
     await interaction.editReply({
       content:
@@ -1277,10 +1281,14 @@ export async function handleCreatorPostedCommand(
     return;
   }
 
+  if (classifyPostedVideoUrl(url) === "tiktok") {
+    url = validatePostedHttpsUrl(await expandTiktokUrlIfNeeded(url)) ?? url;
+  }
+
   const supabase = createBotSupabase();
   const { data, error } = await supabase
     .from("creator_applications")
-    .select("id, posted_video_links")
+    .select("id, discord_username, posted_video_links")
     .eq("discord_id", interaction.user.id)
     .eq("status", "approved")
     .maybeSingle();
@@ -1301,11 +1309,46 @@ export async function handleCreatorPostedCommand(
     return;
   }
 
-  const row = data as { id: string; posted_video_links: unknown };
+  const row = data as {
+    id: string;
+    discord_username: string | null;
+    posted_video_links: unknown;
+  };
   const existing = parsePostedVideoLinks(row.posted_video_links);
-  if (existing.some((e) => postedUrlsEffectivelyEqual(e.url, url))) {
+  if (existing.some((e) => postedVideoUrlsAreDuplicate(e.url, url))) {
     await interaction.editReply({
-      content: "That URL is already on your directory profile.",
+      content:
+        "That video is already on your profile — even if you pasted a different link format for the same post.",
+    });
+    return;
+  }
+
+  const { data: otherCreators, error: othersErr } = await supabase
+    .from("creator_applications")
+    .select("discord_username, posted_video_links")
+    .eq("status", "approved")
+    .neq("id", row.id);
+
+  if (othersErr) {
+    console.error("[creator] /posted duplicate scan:", othersErr);
+    await interaction.editReply({
+      content: "Couldn’t verify that link right now. Try again shortly.",
+    });
+    return;
+  }
+
+  for (const other of otherCreators ?? []) {
+    const o = other as {
+      discord_username: string | null;
+      posted_video_links: unknown;
+    };
+    const otherLinks = parsePostedVideoLinks(o.posted_video_links);
+    if (!otherLinks.some((e) => postedVideoUrlsAreDuplicate(e.url, url))) {
+      continue;
+    }
+    const label = o.discord_username?.trim() || "another creator";
+    await interaction.editReply({
+      content: `That video is already logged on **${label}**'s profile. Each post can only be claimed once.`,
     });
     return;
   }
