@@ -766,10 +766,7 @@ async function handlePlayer(
       profile.avg_rating != null && Number.isFinite(Number(profile.avg_rating))
         ? `**${profile.avg_rating}**`
         : "*—*";
-    const appsLine =
-      profile.appearances_total != null && profile.appearances_total > 0
-        ? `**${profile.appearances_total}**`
-        : "*—*";
+    const appsLine = `**${profile.appearances_total ?? 0}**`;
 
     const trophiesText = formatHonorList(profile.trophies, 8).slice(0, 1024);
     const accoladesText = formatHonorList(profile.accolades, 8).slice(0, 1024);

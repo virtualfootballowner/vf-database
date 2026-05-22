@@ -173,7 +173,7 @@ export default async function PlayerDetailPage({
     goals: player.goals_total ?? 0,
     assists: player.assists_total ?? 0,
     avgRating: player.avg_rating ?? null,
-    appearances: player.appearances_total ?? 0,
+    appearances: appearances.length,
     trophies: player.trophies ?? [],
     accolades: player.accolades ?? [],
   };

@@ -337,7 +337,7 @@ export async function fetchPlayerCareer(
   return rows.map((r) => {
     const club = teamNameBySlug.get(r.team_slug) ?? r.team_slug;
     const g =
-      r.games != null && r.games > 0
+      r.games != null
         ? ` · ${r.games} app${r.games === 1 ? "" : "s"}`
         : "";
     return `S${r.season} · ${club}${g}`;
