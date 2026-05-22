@@ -41,6 +41,8 @@ import {
   handleMediaStaffApproveButton,
   handleMediaStaffRejectButton,
 } from "@/bot/media-staff-onboard";
+import { handleMediaJobClaimButton } from "@/bot/media-jobs";
+import { MEDIA_ART_JOB_CLAIM_PREFIX } from "@/lib/media-jobs/media-job-discord-constants";
 import {
   handleCreatorApproveButton,
   handleCreatorPostRemoveApproveButton,
@@ -492,6 +494,14 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
       await handleMediaStaffRejectButton(
         interaction,
         customId.slice(MEDIA_STAFF_REJECT_PREFIX.length),
+      );
+      return;
+    }
+
+    if (customId.startsWith(MEDIA_ART_JOB_CLAIM_PREFIX)) {
+      await handleMediaJobClaimButton(
+        interaction,
+        customId.slice(MEDIA_ART_JOB_CLAIM_PREFIX.length),
       );
       return;
     }

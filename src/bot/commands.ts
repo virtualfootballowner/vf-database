@@ -80,6 +80,10 @@ import {
   handlePostVerifyMediaStaffCard,
 } from "@/bot/media-staff-onboard";
 import {
+  handleMediaJobCommand,
+  mediaJobCommand,
+} from "@/bot/media-jobs";
+import {
   handleUpdateContentCommand,
   updateContentCommand,
 } from "@/bot/creator-content-sync";
@@ -209,6 +213,7 @@ export const slashCommandDefinitions = [
   creatorRemoveFromDbCommand,
   creatorSwapCommand,
   updateContentCommand,
+  mediaJobCommand,
 
   new SlashCommandBuilder()
     .setName("kick")
@@ -577,6 +582,9 @@ export async function handleSlashCommand(
       return;
     case "update-content":
       await handleUpdateContentCommand(interaction);
+      return;
+    case "job":
+      await handleMediaJobCommand(interaction);
       return;
     case "kick":
       await handleKick(interaction);
