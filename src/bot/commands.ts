@@ -31,6 +31,7 @@ import {
   fetchTeamSeasonManagerName,
   fetchTeamSeasonRecord,
   filterTeamsForAutocomplete,
+  ensureManagerOnSquadSheet,
   findPlayerByDiscordId,
   findPlayersByUsername,
   formatHonorList,
@@ -1633,6 +1634,21 @@ async function handleAppoint(
 
     if (upsertErr) throw upsertErr;
 
+    const squadResult = await ensureManagerOnSquadSheet(
+      supabase,
+      profile.id,
+      resolved.slug,
+      season,
+    );
+    if (squadResult.error) {
+      console.error("[appoint] squad sheet:", squadResult.error);
+    }
+    const squadLine = squadResult.error
+      ? "**Squad sheet** · Manager saved, but could not add them to `player_team_seasons`. Check logs."
+      : squadResult.added
+        ? "**Squad sheet** · Added to the Season roster (`player_team_seasons`)."
+        : "**Squad sheet** · Already on the Season roster.";
+
     const roleId = env.DISCORD_TEAM_MANAGER_ROLE_ID;
     let roleLines: string;
     try {
@@ -1675,6 +1691,8 @@ async function handleAppoint(
           `**Discord** · ${managerDiscordUser}`,
           "",
           roleLines,
+          "",
+          squadLine,
           "",
           `> Stored in \`team_season_managers\` — site & bot will use this name.`,
         ].join("\n"),

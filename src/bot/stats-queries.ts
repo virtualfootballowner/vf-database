@@ -603,6 +603,35 @@ export async function resolveManagerTeamSlugForSeason(
   );
 }
 
+/** Add appointed manager to the season squad sheet if not already listed. */
+export async function ensureManagerOnSquadSheet(
+  supabase: SupabaseClient,
+  playerId: string,
+  teamSlug: string,
+  season: number,
+): Promise<{ added: boolean; error: unknown | null }> {
+  const { data: existing, error: findErr } = await supabase
+    .from("player_team_seasons")
+    .select("player_id")
+    .eq("player_id", playerId)
+    .eq("team_slug", teamSlug)
+    .eq("season", season)
+    .maybeSingle();
+
+  if (findErr) return { added: false, error: findErr };
+  if (existing) return { added: false, error: null };
+
+  const { error } = await supabase.from("player_team_seasons").insert({
+    player_id: playerId,
+    team_slug: teamSlug,
+    season,
+    games: 0,
+  });
+
+  if (error) return { added: false, error };
+  return { added: true, error: null };
+}
+
 /** All `team_slug` values the player is on for this season (usually 0–1). */
 export async function listPlayerRosterTeamsForSeason(
   supabase: SupabaseClient,
