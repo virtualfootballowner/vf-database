@@ -158,13 +158,7 @@ export async function handleContractCommand(
     return;
   }
 
-  if (signeeUser.id === interaction.user.id) {
-    await interaction.reply({
-      flags: MessageFlags.Ephemeral,
-      content: "You can’t offer yourself a contract.",
-    });
-    return;
-  }
+  const isSelfContract = signeeUser.id === interaction.user.id;
 
   await interaction.deferReply();
 
@@ -294,7 +288,9 @@ export async function handleContractCommand(
       })
       .setTitle("Contract offer")
       .setDescription(
-        `<@${signeeUser.id}> — you’ve been offered a spot on the **Season ${activeSeason}** roster.\n\nOnly **you** can use the buttons below.\n\n_This offer **voids** if there is no response within **30 minutes**._`,
+        isSelfContract
+          ? `<@${signeeUser.id}> — **self-sign** as manager on the **Season ${activeSeason}** roster.\n\nUse **Approve** below to set your position & role (you’re already on the squad sheet from \`/appoint\` — this won’t duplicate you).\n\n_This offer **voids** if there is no response within **30 minutes**._`
+          : `<@${signeeUser.id}> — you’ve been offered a spot on the **Season ${activeSeason}** roster.\n\nOnly **you** can use the buttons below.\n\n_This offer **voids** if there is no response within **30 minutes**._`,
       )
       .addFields(
         {
@@ -642,19 +638,28 @@ export async function handleContractButton(
       .eq("id", offer.signee_player_id);
     if (posErr) throw posErr;
 
-    const { error: ptsErr } = await supabase.from("player_team_seasons").upsert(
-      {
+    if (alreadyOnThisTeam) {
+      const { error: ptsErr } = await supabase
+        .from("player_team_seasons")
+        .update({
+          roster_position: offer.roster_position,
+          roster_role: offer.roster_role,
+        })
+        .eq("player_id", offer.signee_player_id)
+        .eq("team_slug", offer.team_slug)
+        .eq("season", offer.season);
+      if (ptsErr) throw ptsErr;
+    } else {
+      const { error: ptsErr } = await supabase.from("player_team_seasons").insert({
         player_id: offer.signee_player_id,
         team_slug: offer.team_slug,
         season: offer.season,
         games: 0,
         roster_position: offer.roster_position,
         roster_role: offer.roster_role,
-      },
-      { onConflict: "player_id,team_slug,season" },
-    );
-
-    if (ptsErr) throw ptsErr;
+      });
+      if (ptsErr) throw ptsErr;
+    }
 
     await supabase
       .from("contract_offers")
@@ -678,7 +683,9 @@ export async function handleContractButton(
       })
       .setTitle("Contract signed")
       .setDescription(
-        `<@${offer.signee_discord_id}> **accepted** — added to the **Season ${offer.season}** roster.`,
+        alreadyOnThisTeam
+          ? `<@${offer.signee_discord_id}> **accepted** — roster slot updated on **Season ${offer.season}** (**${offer.roster_position}** · ${offer.roster_role}).`
+          : `<@${offer.signee_discord_id}> **accepted** — added to the **Season ${offer.season}** roster.`,
       )
       .addFields(
         {
