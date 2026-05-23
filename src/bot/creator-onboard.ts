@@ -19,10 +19,6 @@ import {
 import { env } from "@/bot/config";
 import { createBotSupabase } from "@/bot/stats-queries";
 import {
-  resolveApifyTiktokActors,
-  resolveApifyYoutubeActors,
-} from "@/lib/creator-onboard/apify-video-views";
-import {
   listApprovedCreatorsForDirectory,
   parsePostedVideoLinks,
 } from "@/lib/creator-onboard/approved-creators-directory";
@@ -43,7 +39,6 @@ import {
   formatChallengeRobux,
   formatPoolSharePercent,
 } from "@/lib/creator-onboard/road-to-1m";
-import { syncPostedVideoViewsWithSupabase } from "@/lib/creator-onboard/sync-posted-video-views";
 import { expandTiktokUrlIfNeeded } from "@/lib/creator-onboard/expand-posted-video-url";
 import {
   classifyPostedVideoUrl,
@@ -1391,6 +1386,8 @@ export async function handleCreatorPostedCommand(
       `<${directoryUrl}>`,
       "",
       `**Saved** · \`${url.length > 120 ? `${url.slice(0, 117)}…` : url}\``,
+      "",
+      "View counts refresh on the **daily sync** or when staff runs **`/update-content`** — not on each `/posted`.",
     ].join("\n"),
   });
 
@@ -1454,71 +1451,6 @@ export async function handleCreatorPostedCommand(
     })();
   }
 
-  // Fire-and-forget directory sync — same refresh as `/update-content`. Prefer
-  // Apify on the bot; if missing, call the site cron (Apify on Vercel works too).
-  const apifyToken = process.env.APIFY_API_TOKEN?.trim();
-  const cronSecret = process.env.CRON_SECRET?.trim();
-  if (apifyToken) {
-    const yt = resolveApifyYoutubeActors();
-    const tt = resolveApifyTiktokActors();
-    void (async () => {
-      try {
-        const r = await syncPostedVideoViewsWithSupabase({
-          supabase,
-          apifyToken,
-          youtubeActorId: yt.primary,
-          youtubeFallbackActorId: yt.fallback,
-          tiktokActorId: tt.primary,
-          tiktokFallbackActorId: tt.fallback,
-        });
-        console.log(
-          `[creator] /posted auto-sync ok · apps=${r.applicationsConsidered} updated=${r.applicationsUpdated} yt=${r.youtubeUrls} tt=${r.tiktokUrls}`,
-        );
-        if (r.youtubeError) console.error("[creator] /posted YT:", r.youtubeError);
-        if (r.tiktokError) console.error("[creator] /posted TT:", r.tiktokError);
-      } catch (e) {
-        console.error("[creator] /posted auto-sync failed:", e);
-      }
-    })();
-  } else if (cronSecret) {
-    void (async () => {
-      try {
-        const res = await fetch(
-          `${siteBase}/api/cron/sync-creator-post-views`,
-          {
-            method: "GET",
-            headers: { Authorization: `Bearer ${cronSecret}` },
-          },
-        );
-        const bodyText = await res.text().catch(() => "");
-        if (!res.ok) {
-          console.error(
-            "[creator] /posted cron sync:",
-            res.status,
-            bodyText.slice(0, 300),
-          );
-          return;
-        }
-        try {
-          const j = JSON.parse(bodyText) as {
-            applicationsUpdated?: number;
-            ok?: boolean;
-          };
-          console.log(
-            `[creator] /posted cron sync ok · updated=${j.applicationsUpdated ?? "?"}`,
-          );
-        } catch {
-          console.log("[creator] /posted cron sync ok");
-        }
-      } catch (e) {
-        console.error("[creator] /posted cron sync failed:", e);
-      }
-    })();
-  } else {
-    console.warn(
-      "[creator] /posted auto-sync skipped — set APIFY_API_TOKEN (bot) and/or CRON_SECRET (bot) to refresh views after /posted",
-    );
-  }
   } catch (e) {
     console.error("[creator] /posted failed:", e);
     await interaction

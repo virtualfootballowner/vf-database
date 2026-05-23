@@ -828,16 +828,20 @@ export default async function CreatorsChallengePage() {
                   Views sync automatically — and you can force a refresh
                 </p>
                 <p className="mt-1.5 text-white/70">
-                  Once a day the bot pulls fresh view / play counts from
-                  YouTube and TikTok for every logged link, and the
-                  leaderboard updates on the next page load. Staff can also
-                  run{" "}
+                  Running{" "}
+                  <code className="rounded bg-white/10 px-1.5 py-0.5 text-[12px] text-white ring-1 ring-white/15">
+                    /posted
+                  </code>{" "}
+                  only saves your link — it does not scrape views. Once a day
+                  the bot pulls fresh view / play counts from YouTube and
+                  TikTok for every logged link, and the leaderboard updates on
+                  the next page load. Staff can also run{" "}
                   <code className="rounded bg-white/10 px-1.5 py-0.5 text-[12px] text-white ring-1 ring-white/15">
                     /update-content
                   </code>{" "}
                   to trigger an immediate sync if something big lands.
                   Brand-new posts show <strong className="text-white">0 views</strong>
-                  {" "}until the first sync — that&apos;s normal.
+                  {" "}until the next sync — that&apos;s normal.
                 </p>
               </div>
             </li>
