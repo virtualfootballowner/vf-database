@@ -16,7 +16,7 @@ import { getTeamsCatalog, catalogSliceForFileSeason } from "@/lib/site-db";
 export const metadata: Metadata = {
   title: "Fixtures · VF League",
   description:
-    "Season 3 World Cup — sixteen nations, four groups of four, knockouts from the quarters.",
+    "Season 3 World Cup — national squads, group stage and knockouts.",
 };
 
 export const dynamic = "force-dynamic";

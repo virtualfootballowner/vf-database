@@ -51,12 +51,18 @@ const TEAM_NAME_TO_SLUG: Record<string, string | null> = {
   Argentina: "argentina",
   Canada: "canada",
   Russia: "russia",
-  /** Legacy sheet label — USA slot is Russia on the Season 3 roster. */
-  USA: "russia",
+  USA: "usa",
   Mexico: "mexico",
   Nigeria: "nigeria",
   Morocco: "morocco",
   Japan: "japan",
+  Albania: "albania",
+  Greece: "greece",
+  Norway: "norway",
+  Switzerland: "switzerland",
+  Ukraine: "ukraine",
+  "North Korea": "north-korea",
+  Somalia: "somalia",
 };
 
 export function slugFor(name: string): string | null {
