@@ -96,7 +96,7 @@ async function upsertFixtures(): Promise<void> {
     if (error) throw error;
   }
 
-  console.log(`Fixtures: ${s1s2.length} S1/S2 + ${s3.length} S3 (World Cup 16) = ${all.length}.`);
+  console.log(`Fixtures: ${s1s2.length} S1/S2 + ${s3.length} S3 (World Cup 24) = ${all.length}.`);
 }
 
 async function patchTournamentStructures(): Promise<void> {
@@ -143,7 +143,7 @@ async function patchTournamentStructures(): Promise<void> {
     const ins = await supabase
       .from("tournaments")
       .insert({
-        name: "Season 3 · World Cup (4×4)",
+        name: "Season 3 · World Cup (6×4)",
         type: "world_cup",
         format: "groups_knockout",
         status: "upcoming",
@@ -151,7 +151,7 @@ async function patchTournamentStructures(): Promise<void> {
         end_date: "2026-07-15",
         season: 3,
         competition: "World Cup",
-        structure_kind: "s3_world_cup_16",
+        structure_kind: "s3_world_cup_24",
         structure_config: S3_WORLD_CUP_STRUCTURE as unknown as Record<string, unknown>,
       })
       .select("id")
@@ -162,8 +162,8 @@ async function patchTournamentStructures(): Promise<void> {
     const upd = await supabase
       .from("tournaments")
       .update({
-        name: "Season 3 · World Cup (4×4)",
-        structure_kind: "s3_world_cup_16",
+        name: "Season 3 · World Cup (6×4)",
+        structure_kind: "s3_world_cup_24",
         structure_config: S3_WORLD_CUP_STRUCTURE as unknown as Record<string, unknown>,
       })
       .eq("id", s3Existing.data.id);

@@ -11,19 +11,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  S3_WORLD_CUP_GROUP_LETTERS,
+  S3_WORLD_CUP_STRUCTURE,
+} from "@/lib/s3-world-cup-fixtures";
 import { getTeamsCatalog, catalogSliceForFileSeason } from "@/lib/site-db";
 
 export const metadata: Metadata = {
   title: "Fixtures · VF League",
   description:
-    "Season 3 World Cup — national squads, group stage and knockouts.",
+    "Season 3 World Cup — 24 nations, six groups of four, top 16 advance to the Round of 16.",
 };
 
 export const dynamic = "force-dynamic";
 
 const TOURNAMENT_SEASON = 3;
-const GROUP_LETTERS = ["A", "B", "C", "D"] as const;
-const TEAMS_PER_GROUP = 4;
+const TEAMS_PER_GROUP = S3_WORLD_CUP_STRUCTURE.teams_per_group;
 
 export default async function TournamentPage() {
   const { teams } = await getTeamsCatalog();
@@ -52,8 +55,13 @@ export default async function TournamentPage() {
             World <span className="glisten">Cup</span>
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-white/70 sm:text-base">
-            {pool.length} nations are in the pool for Season {TOURNAMENT_SEASON}{" "}
-            — four groups of four. Pots and groups fill once the draw runs.
+            {pool.length} nations · {S3_WORLD_CUP_STRUCTURE.groups} groups of{" "}
+            {TEAMS_PER_GROUP}. Top two from every group qualify, plus the best
+            four third-place sides —{" "}
+            <strong className="font-semibold text-white">
+              {S3_WORLD_CUP_STRUCTURE.knockout_advancers_total} teams
+            </strong>{" "}
+            into the Round of 16.
           </p>
         </section>
 
@@ -117,8 +125,9 @@ export default async function TournamentPage() {
                 Groups
               </h2>
               <p className="mt-2 max-w-xl text-sm leading-6 text-white/65">
-                {GROUP_LETTERS.length} groups of {TEAMS_PER_GROUP}. Slots fill
-                automatically once the draw runs.
+                {S3_WORLD_CUP_GROUP_LETTERS.length} groups of {TEAMS_PER_GROUP}.
+                Every group sends its top two through; four more third-place
+                teams join them in the Round of 16.
               </p>
             </div>
             <Badge
@@ -126,12 +135,12 @@ export default async function TournamentPage() {
               className="h-8 shrink-0 gap-2 border-white/15 bg-white/5 px-3 text-white/85"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.9)]" />
-              0 / {GROUP_LETTERS.length} drawn
+              0 / {S3_WORLD_CUP_GROUP_LETTERS.length} drawn
             </Badge>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {GROUP_LETTERS.map((letter) => (
+            {S3_WORLD_CUP_GROUP_LETTERS.map((letter) => (
               <Card
                 key={letter}
                 className="gap-3 border-white/10 bg-white/[0.03] py-4 transition hover:bg-white/[0.05]"
@@ -174,6 +183,46 @@ export default async function TournamentPage() {
               </Card>
             ))}
           </div>
+        </section>
+
+        <section className="flex flex-col gap-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
+              Knockouts
+            </p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
+              Road to the final
+            </h2>
+          </div>
+          <Card className="border-white/10 bg-white/[0.03]">
+            <CardContent className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                {
+                  stage: "Round of 16",
+                  matches: S3_WORLD_CUP_STRUCTURE.round_of_16_matches,
+                },
+                {
+                  stage: "Quarter-Finals",
+                  matches: S3_WORLD_CUP_STRUCTURE.quarter_final_matches,
+                },
+                {
+                  stage: "Semi-Finals",
+                  matches: S3_WORLD_CUP_STRUCTURE.semi_final_matches,
+                },
+                { stage: "Final", matches: S3_WORLD_CUP_STRUCTURE.final_matches },
+              ].map(({ stage, matches }) => (
+                <div
+                  key={stage}
+                  className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3"
+                >
+                  <p className="text-sm font-semibold text-white">{stage}</p>
+                  <p className="mt-1 text-xs text-white/55">
+                    {matches} match{matches === 1 ? "" : "es"}
+                  </p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </section>
       </div>
     </main>
