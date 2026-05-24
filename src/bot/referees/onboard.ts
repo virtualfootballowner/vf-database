@@ -1,0 +1,483 @@
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
+  MessageFlags,
+  ModalBuilder,
+  PermissionFlagsBits,
+  TextInputBuilder,
+  TextInputStyle,
+  type ButtonInteraction,
+  type ChatInputCommandInteraction,
+  type GuildMember,
+  type GuildTextBasedChannel,
+  type ModalSubmitInteraction,
+} from "discord.js";
+
+import {
+  REFEREE_APPLY_MODAL_ID,
+  REFEREE_APPROVE_PREFIX,
+  REFEREE_DENY_PREFIX,
+  REFEREE_START_APPLY_BUTTON,
+} from "@/lib/referees/discord-constants";
+import {
+  isRefereeGuild,
+  refereeApprovalChannelId,
+  refereeRoleId,
+  refereeStaffRoleId,
+} from "@/bot/referees/config";
+import {
+  approveReferee,
+  denyReferee,
+  findRefereeByDiscordId,
+  listActiveReferees,
+  countRefereeAssignments,
+  refereeDisplayName,
+  upsertRefereeApplication,
+} from "@/bot/referees/queries";
+
+function ensureRefereeGuild(interaction: {
+  guildId: string | null;
+  reply: (opts: object) => Promise<unknown>;
+}): boolean {
+  if (!isRefereeGuild(interaction.guildId)) {
+    void interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "This command is only available in the VF Referee server.",
+    });
+    return false;
+  }
+  return true;
+}
+
+function isRefereeStaff(member: GuildMember): boolean {
+  if (
+    member.permissions.has(PermissionFlagsBits.ManageRoles) ||
+    member.permissions.has(PermissionFlagsBits.ManageGuild)
+  ) {
+    return true;
+  }
+  const staffRole = refereeStaffRoleId();
+  return Boolean(staffRole && member.roles.cache.has(staffRole));
+}
+
+function ensureRefereeStaff(interaction: ButtonInteraction): boolean {
+  const member = interaction.member as GuildMember;
+  if (!isRefereeStaff(member)) {
+    void interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "You need **Manage Roles** or the referee staff role to review applications.",
+    });
+    return false;
+  }
+  return true;
+}
+
+async function resolveSendableChannel(
+  client: ButtonInteraction["client"] | ChatInputCommandInteraction["client"],
+  channelId: string,
+): Promise<GuildTextBasedChannel | null> {
+  try {
+    const ch = await client.channels.fetch(channelId);
+    if (!ch?.isTextBased() || !ch.isSendable()) return null;
+    return ch as GuildTextBasedChannel;
+  } catch {
+    return null;
+  }
+}
+
+function buildApplicationEmbed(input: {
+  discordId: string;
+  discordTag: string;
+  robloxUsername: string;
+  notes: string;
+}): EmbedBuilder {
+  return new EmbedBuilder()
+    .setColor(0xf59e0b)
+    .setTitle("Referee application")
+    .addFields(
+      { name: "Discord", value: `<@${input.discordId}> (${input.discordTag})`, inline: false },
+      { name: "Roblox username", value: input.robloxUsername || "—", inline: true },
+      { name: "Experience / notes", value: input.notes.slice(0, 1024) || "—", inline: false },
+    )
+    .setFooter({ text: "VF Referees · Staff: Approve or Deny" })
+    .setTimestamp(new Date());
+}
+
+function buildReviewButtons(discordId: string): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`${REFEREE_APPROVE_PREFIX}${discordId}`)
+      .setLabel("Approve")
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`${REFEREE_DENY_PREFIX}${discordId}`)
+      .setLabel("Deny")
+      .setStyle(ButtonStyle.Danger),
+  );
+}
+
+export async function postRefereeApplicationForReview(
+  client: ChatInputCommandInteraction["client"],
+  input: {
+    discordId: string;
+    discordTag: string;
+    robloxUsername: string;
+    notes: string;
+  },
+): Promise<{ ok: boolean; error?: string }> {
+  const channel = await resolveSendableChannel(
+    client,
+    refereeApprovalChannelId(),
+  );
+  if (!channel) {
+    return {
+      ok: false,
+      error: "Could not reach the referee approval channel. Check bot permissions and channel id.",
+    };
+  }
+
+  try {
+    await channel.send({
+      embeds: [buildApplicationEmbed(input)],
+      components: [buildReviewButtons(input.discordId)],
+    });
+    return { ok: true };
+  } catch (e) {
+    console.error("[referee] approval channel send:", e);
+    return { ok: false, error: "Could not post your application for staff review." };
+  }
+}
+
+export function buildRefereeApplyModal(): ModalBuilder {
+  const modal = new ModalBuilder()
+    .setCustomId(REFEREE_APPLY_MODAL_ID)
+    .setTitle("Referee application");
+
+  modal.addComponents(
+    new ActionRowBuilder<TextInputBuilder>().addComponents(
+      new TextInputBuilder()
+        .setCustomId("roblox_username")
+        .setLabel("Roblox username")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setMaxLength(64),
+    ),
+    new ActionRowBuilder<TextInputBuilder>().addComponents(
+      new TextInputBuilder()
+        .setCustomId("experience")
+        .setLabel("Referee experience & timezone")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setMaxLength(1000),
+    ),
+  );
+
+  return modal;
+}
+
+export async function handleRefereeStartApplyButton(
+  interaction: ButtonInteraction,
+): Promise<void> {
+  if (!ensureRefereeGuild(interaction)) return;
+  await interaction.showModal(buildRefereeApplyModal());
+}
+
+export async function handleRefereeApplyModal(
+  interaction: ModalSubmitInteraction,
+): Promise<void> {
+  if (!ensureRefereeGuild(interaction)) return;
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const robloxUsername = interaction.fields
+    .getTextInputValue("roblox_username")
+    .trim();
+  const notes = interaction.fields.getTextInputValue("experience").trim();
+
+  if (!robloxUsername) {
+    await interaction.editReply({ content: "Roblox username is required." });
+    return;
+  }
+
+  const save = await upsertRefereeApplication({
+    discordId: interaction.user.id,
+    discordUsername: interaction.user.tag,
+    robloxUsername,
+    notes,
+  });
+  if (!save.ok) {
+    await interaction.editReply({ content: save.error ?? "Could not submit application." });
+    return;
+  }
+
+  const posted = await postRefereeApplicationForReview(interaction.client, {
+    discordId: interaction.user.id,
+    discordTag: interaction.user.tag,
+    robloxUsername,
+    notes,
+  });
+  if (!posted.ok) {
+    await interaction.editReply({
+      content: `Application saved but staff were not notified: ${posted.error}`,
+    });
+    return;
+  }
+
+  await interaction.editReply({
+    content:
+      "Application submitted. Staff will review it in the approval channel — you'll get the **Referee** role if approved.",
+  });
+}
+
+export async function handleApplyRefCommand(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  if (!ensureRefereeGuild(interaction)) return;
+  await interaction.showModal(buildRefereeApplyModal());
+}
+
+export async function handlePostVerifyRefCommand(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  if (!ensureRefereeGuild(interaction)) return;
+  if (
+    !interaction.channel?.isTextBased() ||
+    !interaction.channel.isSendable()
+  ) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Use this command in a sendable text channel.",
+    });
+    return;
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const member = interaction.member as GuildMember;
+  if (!isRefereeStaff(member)) {
+    await interaction.editReply({
+      content: "You need **Manage Roles** or the referee staff role to post the apply card.",
+    });
+    return;
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(0x6366f1)
+    .setTitle("Apply to referee for VF")
+    .setDescription(
+      [
+        "We're looking for referees for league and tournament fixtures.",
+        "",
+        "Click **Apply** below and fill in your Roblox username plus referee experience.",
+        "Staff review applications in the approval channel.",
+      ].join("\n"),
+    )
+    .setFooter({ text: "VF Referees" })
+    .setTimestamp(new Date());
+
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(REFEREE_START_APPLY_BUTTON)
+      .setLabel("Apply")
+      .setStyle(ButtonStyle.Primary),
+  );
+
+  try {
+    await interaction.channel.send({ embeds: [embed], components: [row] });
+    await interaction.editReply({ content: "Posted referee apply card." });
+  } catch (e) {
+    console.error("[referee] postverify card:", e);
+    await interaction.editReply({
+      content: "Could not post the card (check Send Messages / Embed Links).",
+    });
+  }
+}
+
+export async function handleRefereeApproveButton(
+  interaction: ButtonInteraction,
+  targetDiscordId: string,
+): Promise<void> {
+  if (!ensureRefereeStaff(interaction)) return;
+  await interaction.deferUpdate();
+
+  const approve = await approveReferee({
+    discordId: targetDiscordId,
+    approvedByDiscordId: interaction.user.id,
+  });
+  if (!approve.ok || !approve.row) {
+    await interaction.followUp({
+      flags: MessageFlags.Ephemeral,
+      content: approve.error ?? "Approve failed.",
+    });
+    return;
+  }
+
+  let memberNote = "";
+  if (interaction.guild) {
+    try {
+      const member = await interaction.guild.members.fetch(targetDiscordId);
+      const roleId = refereeRoleId();
+      if (member.roles.cache.has(roleId)) {
+        memberNote = " Already had the Referee role.";
+      } else {
+        await member.roles.add(
+          roleId,
+          `Referee approved by ${interaction.user.tag}`,
+        );
+        memberNote = " Referee role granted.";
+      }
+    } catch (e) {
+      console.error("[referee] role add:", e);
+      memberNote =
+        " Could not grant role — check bot **Manage Roles** and hierarchy.";
+    }
+  }
+
+  try {
+    const u = await interaction.client.users.fetch(targetDiscordId);
+    await u.send({
+      content:
+        "**VF Referees — application approved.** You can claim fixtures from the assignments channel when staff post them.",
+    });
+  } catch {
+    /* DMs closed */
+  }
+
+  const original = interaction.message.embeds[0];
+  const builder = original
+    ? EmbedBuilder.from(original)
+    : new EmbedBuilder().setTitle("Referee application");
+  builder.setColor(0x10b981).addFields({
+    name: "Approved",
+    value: `By <@${interaction.user.id}> at <t:${Math.floor(Date.now() / 1000)}:F>${memberNote}`,
+    inline: false,
+  });
+
+  await interaction.editReply({ embeds: [builder], components: [] });
+}
+
+export async function handleRefereeDenyButton(
+  interaction: ButtonInteraction,
+  targetDiscordId: string,
+): Promise<void> {
+  if (!ensureRefereeStaff(interaction)) return;
+  await interaction.deferUpdate();
+
+  const denied = await denyReferee({
+    discordId: targetDiscordId,
+    deniedByDiscordId: interaction.user.id,
+  });
+  if (!denied.ok) {
+    await interaction.followUp({
+      flags: MessageFlags.Ephemeral,
+      content: denied.error ?? "Deny failed.",
+    });
+    return;
+  }
+
+  try {
+    const u = await interaction.client.users.fetch(targetDiscordId);
+    await u.send({
+      content:
+        "Thanks for applying to **VF Referees**. We're not able to approve your application right now.",
+    });
+  } catch {
+    /* DMs closed */
+  }
+
+  const original = interaction.message.embeds[0];
+  const builder = original
+    ? EmbedBuilder.from(original)
+    : new EmbedBuilder().setTitle("Referee application");
+  builder.setColor(0xef4444).addFields({
+    name: "Denied",
+    value: `By <@${interaction.user.id}>`,
+    inline: false,
+  });
+
+  await interaction.editReply({ embeds: [builder], components: [] });
+}
+
+export async function handleRefProfileCommand(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  if (!ensureRefereeGuild(interaction)) return;
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const row = await findRefereeByDiscordId(interaction.user.id);
+  if (!row) {
+    await interaction.editReply({
+      content: "No referee profile found. Run `/apply-ref` to apply.",
+    });
+    return;
+  }
+
+  const assignments =
+    row.status === "active" ? await countRefereeAssignments(row.id) : 0;
+
+  const embed = new EmbedBuilder()
+    .setColor(row.status === "active" ? 0x10b981 : 0x6366f1)
+    .setTitle("Your referee profile")
+    .addFields(
+      { name: "Status", value: row.status, inline: true },
+      { name: "Tier", value: row.tier ?? "—", inline: true },
+      {
+        name: "Roblox",
+        value: row.roblox_username ?? "—",
+        inline: true,
+      },
+      {
+        name: "Assignments (claimed/completed)",
+        value: String(assignments),
+        inline: true,
+      },
+    )
+    .setTimestamp(new Date());
+
+  if (row.approved_at) {
+    embed.addFields({
+      name: "Approved",
+      value: `<t:${Math.floor(new Date(row.approved_at).getTime() / 1000)}:F>`,
+      inline: false,
+    });
+  }
+
+  await interaction.editReply({ embeds: [embed] });
+}
+
+export async function handleRefListCommand(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  if (!ensureRefereeGuild(interaction)) return;
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const member = interaction.member as GuildMember;
+  if (!isRefereeStaff(member)) {
+    await interaction.editReply({
+      content: "Staff only — you need **Manage Roles** or the referee staff role.",
+    });
+    return;
+  }
+
+  const rows = await listActiveReferees(25);
+  if (rows.length === 0) {
+    await interaction.editReply({ content: "No active referees in the roster yet." });
+    return;
+  }
+
+  const lines = rows.map((r, i) => {
+    const name = refereeDisplayName(r);
+    const tier = r.tier ? ` · ${r.tier}` : "";
+    return `${i + 1}. **${name}** (<@${r.discord_id}>)${tier}`;
+  });
+
+  const embed = new EmbedBuilder()
+    .setColor(0x6366f1)
+    .setTitle(`Active referees (${rows.length})`)
+    .setDescription(lines.join("\n").slice(0, 4000))
+    .setTimestamp(new Date());
+
+  await interaction.editReply({ embeds: [embed] });
+}

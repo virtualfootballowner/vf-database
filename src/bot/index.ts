@@ -19,6 +19,7 @@ import {
 
 
 import { env } from "@/bot/config";
+import { logRefereeConfigAtStartup } from "@/bot/referees/config";
 import {
   CONTRACT_BTN_APPROVE,
   CONTRACT_BTN_DENY,
@@ -42,6 +43,20 @@ import {
   handleMediaStaffRejectButton,
 } from "@/bot/media-staff-onboard";
 import { handleMediaJobClaimButton } from "@/bot/media-jobs";
+import {
+  REFEREE_APPLY_MODAL_ID,
+  REFEREE_APPROVE_PREFIX,
+  REFEREE_ASSIGNMENT_CLAIM_PREFIX,
+  REFEREE_DENY_PREFIX,
+  REFEREE_START_APPLY_BUTTON,
+} from "@/lib/referees/discord-constants";
+import {
+  handleRefereeApplyModal,
+  handleRefereeApproveButton,
+  handleRefereeDenyButton,
+  handleRefereeStartApplyButton,
+} from "@/bot/referees/onboard";
+import { handleRefAssignmentClaimButton } from "@/bot/referees/assignments";
 import { MEDIA_ART_JOB_CLAIM_PREFIX } from "@/lib/media-jobs/media-job-discord-constants";
 import {
   handleCreatorApproveButton,
@@ -66,8 +81,8 @@ import {
 import {
   handleAutocomplete,
   handleSlashCommand,
-  slashCommandDefinitions,
 } from "@/bot/commands";
+import { getSlashCommandsForGuild } from "@/bot/slash-command-registry";
 import {
   cancelRoverVerifyDeadline,
   handleLeagueDiscordBanJoinGate,
@@ -169,6 +184,7 @@ client.once(Events.ClientReady, async (readyClient) => {
     console.log(`Install / re-invite this app: ${oauthBotInviteUrl(readyClient.user.id)}`);
   }
   logMemberOutgoingStartup();
+  logRefereeConfigAtStartup();
 
   try {
     const supabase = createBotSupabase();
@@ -214,9 +230,10 @@ client.once(Events.ClientReady, async (readyClient) => {
           }
         }
       }
-      await guild.commands.set(slashCommandDefinitions);
+      const defs = getSlashCommandsForGuild(guild.id);
+      await guild.commands.set(defs);
       console.log(
-        `Registered ${slashCommandDefinitions.length} slash command(s) in **${guild.name}** (${guild.id}).`,
+        `Registered ${defs.length} slash command(s) in **${guild.name}** (${guild.id}).`,
       );
       if (guild.id === env.DISCORD_GUILD_ID) {
         console.log(
@@ -227,7 +244,7 @@ client.once(Events.ClientReady, async (readyClient) => {
 
     try {
       const leagueGuild = await readyClient.guilds.fetch(env.DISCORD_GUILD_ID);
-      const synced = await leagueGuild.commands.set(slashCommandDefinitions);
+      const synced = await leagueGuild.commands.set(getSlashCommandsForGuild(env.DISCORD_GUILD_ID));
       const banCmd = synced.find((c) => c.name === "ban");
       const durationOpt = banCmd?.options?.find((o) => o.name === "duration");
       const choiceCount =
@@ -262,9 +279,10 @@ client.once(Events.ClientReady, async (readyClient) => {
 
 client.on(Events.GuildCreate, async (guild) => {
   try {
-    await guild.commands.set(slashCommandDefinitions);
+    const defs = getSlashCommandsForGuild(guild.id);
+    await guild.commands.set(defs);
     console.log(
-      `[guild-join] Registered ${slashCommandDefinitions.length} slash command(s) in **${guild.name}** (${guild.id}).`,
+      `[guild-join] Registered ${defs.length} slash command(s) in **${guild.name}** (${guild.id}).`,
     );
   } catch (error) {
     console.error(
@@ -288,6 +306,7 @@ client.on(Events.GuildMemberAdd, async (member) => {
 client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
   try {
     const member = newMember as GuildMember;
+    if (member.guild.id !== env.DISCORD_GUILD_ID) return;
     if (
       member.roles.cache.has(env.DISCORD_ROVER_VERIFIED_ROLE_ID) ||
       member.roles.cache.has(env.DISCORD_APPROVED_ROLE_ID)
@@ -413,6 +432,10 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         await handleCreatorPostRemoveRejectModal(interaction);
         return;
       }
+      if (interaction.customId === REFEREE_APPLY_MODAL_ID) {
+        await handleRefereeApplyModal(interaction);
+        return;
+      }
       if (
         interaction.customId.startsWith(CREATOR_REJECT_MODAL_PREFIX)
       ) {
@@ -502,6 +525,32 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
       await handleMediaJobClaimButton(
         interaction,
         customId.slice(MEDIA_ART_JOB_CLAIM_PREFIX.length),
+      );
+      return;
+    }
+
+    if (customId === REFEREE_START_APPLY_BUTTON) {
+      await handleRefereeStartApplyButton(interaction);
+      return;
+    }
+    if (customId.startsWith(REFEREE_APPROVE_PREFIX)) {
+      await handleRefereeApproveButton(
+        interaction,
+        customId.slice(REFEREE_APPROVE_PREFIX.length),
+      );
+      return;
+    }
+    if (customId.startsWith(REFEREE_DENY_PREFIX)) {
+      await handleRefereeDenyButton(
+        interaction,
+        customId.slice(REFEREE_DENY_PREFIX.length),
+      );
+      return;
+    }
+    if (customId.startsWith(REFEREE_ASSIGNMENT_CLAIM_PREFIX)) {
+      await handleRefAssignmentClaimButton(
+        interaction,
+        customId.slice(REFEREE_ASSIGNMENT_CLAIM_PREFIX.length),
       );
       return;
     }

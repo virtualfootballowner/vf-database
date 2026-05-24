@@ -88,6 +88,18 @@ import {
   handleUpdateContentCommand,
   updateContentCommand,
 } from "@/bot/creator-content-sync";
+import {
+  handleApplyRefCommand,
+  handlePostVerifyRefCommand,
+  handleRefListCommand,
+  handleRefProfileCommand,
+} from "@/bot/referees/onboard";
+import {
+  handleRefMyGamesCommand,
+  handleRefPostCommand,
+  handleRefUnclaimCommand,
+} from "@/bot/referees/assignments";
+import { isRefereeGuild } from "@/bot/referees/config";
 
 function formatCommandError(err: unknown): string {
   if (err instanceof Error && err.message.trim()) return err.message.trim();
@@ -173,7 +185,7 @@ function absoluteSiteAssetUrl(
   }
 }
 
-export const slashCommandDefinitions = [
+export const leagueSlashCommandDefinitions = [
   new SlashCommandBuilder()
     .setName("backlog")
     .setDescription(
@@ -544,9 +556,37 @@ export const slashCommandDefinitions = [
   scrimmageSlashCommand,
 ];
 
+/** @deprecated Use leagueSlashCommandDefinitions or getSlashCommandsForGuild */
+export const slashCommandDefinitions = leagueSlashCommandDefinitions;
+
 export async function handleSlashCommand(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
+  const refOnly = new Set([
+    "postverify-ref",
+    "apply-ref",
+    "ref-profile",
+    "ref-list",
+    "ref-post",
+    "ref-my-games",
+    "ref-unclaim",
+  ]);
+  const name = interaction.commandName;
+  if (isRefereeGuild(interaction.guildId) && !refOnly.has(name)) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "That command is not available in the referee server.",
+    });
+    return;
+  }
+  if (!isRefereeGuild(interaction.guildId) && refOnly.has(name)) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Referee commands are only available in the VF Referee server.",
+    });
+    return;
+  }
+
   switch (interaction.commandName) {
     case "backlog":
       await handleBacklog(interaction);
@@ -628,6 +668,27 @@ export async function handleSlashCommand(
       return;
     case "standings":
       await handleStandings(interaction);
+      return;
+    case "postverify-ref":
+      await handlePostVerifyRefCommand(interaction);
+      return;
+    case "apply-ref":
+      await handleApplyRefCommand(interaction);
+      return;
+    case "ref-profile":
+      await handleRefProfileCommand(interaction);
+      return;
+    case "ref-list":
+      await handleRefListCommand(interaction);
+      return;
+    case "ref-post":
+      await handleRefPostCommand(interaction);
+      return;
+    case "ref-my-games":
+      await handleRefMyGamesCommand(interaction);
+      return;
+    case "ref-unclaim":
+      await handleRefUnclaimCommand(interaction);
       return;
     case "scrimmage":
       await handleScrimmageCommand(interaction);
