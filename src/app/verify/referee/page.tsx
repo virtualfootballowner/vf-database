@@ -16,15 +16,10 @@ const REFEREE_VERIFY_ENV_KEYS = [
 
 function missingRefereeVerifyEnvKeys(): string[] {
   const env = process.env;
-  const missing = REFEREE_VERIFY_ENV_KEYS.filter((name) => {
+  return REFEREE_VERIFY_ENV_KEYS.filter((name) => {
     const v = env[name];
     return typeof v !== "string" || v.trim().length === 0;
   }) as string[];
-  const refereeGuild = env.DISCORD_REFEREE_GUILD_ID?.trim();
-  if (!refereeGuild) {
-    missing.push("DISCORD_REFEREE_GUILD_ID");
-  }
-  return missing;
 }
 
 export default function VerifyRefereePage() {
@@ -67,11 +62,10 @@ export default function VerifyRefereePage() {
             ))}
           </ul>
           <p className="text-muted-foreground text-xs leading-relaxed">
-            <code className="text-foreground/90">DISCORD_REFEREE_GUILD_ID</code>{" "}
-            must be the VF Referee guild. The bot needs{" "}
-            <strong>Manage Nicknames</strong> in that server. No extra Discord
-            / Roblox OAuth redirect URIs are required — this flow piggybacks on
-            the league verify URIs that are already registered.
+            The bot needs <strong>Manage Nicknames</strong> in the VF Referee
+            server. No extra Discord / Roblox OAuth redirect URIs are required
+            — this flow piggybacks on the league verify URIs that are already
+            registered.
           </p>
         </div>
       )}
