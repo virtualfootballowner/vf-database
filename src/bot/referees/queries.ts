@@ -77,6 +77,7 @@ export async function upsertRefereeApplication(input: {
   discordId: string;
   discordUsername: string;
   robloxUsername: string;
+  robloxUserId?: string | null;
   notes: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const supabase = createBotSupabase();
@@ -96,6 +97,7 @@ export async function upsertRefereeApplication(input: {
     discord_id: input.discordId,
     discord_username: input.discordUsername,
     roblox_username: input.robloxUsername.trim(),
+    roblox_user_id: input.robloxUserId?.trim() || null,
     notes: input.notes.trim(),
     status: "pending" as const,
     updated_at: now,

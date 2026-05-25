@@ -19,7 +19,7 @@ create table if not exists public.referee_assignments (
   referee_id uuid references public.referees (id) on delete set null,
   claimed_by_discord_id text,
   claimed_at timestamptz,
-  match_id text references public.matches (id) on delete set null,
+  match_id uuid references public.matches (id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

@@ -27,6 +27,11 @@ import {
   refereeRoleId,
   refereeStaffRoleId,
 } from "@/bot/referees/config";
+import { env } from "@/bot/config";
+import {
+  getRobloxHeadshotsForBot,
+  resolveRobloxIdentity,
+} from "@/lib/roblox";
 import {
   approveReferee,
   denyReferee,
@@ -87,22 +92,68 @@ async function resolveSendableChannel(
   }
 }
 
+
+
+type RefereeApplicantRoblox = {
+  robloxUsername: string;
+  robloxUserId: string | null;
+  headshotUrl: string | null;
+};
+
+async function resolveRefereeApplicantRoblox(
+  robloxUsername: string,
+): Promise<RefereeApplicantRoblox> {
+  const trimmed = robloxUsername.trim();
+  if (!trimmed) {
+    return { robloxUsername: "", robloxUserId: null, headshotUrl: null };
+  }
+
+  try {
+    const identity = await resolveRobloxIdentity(trimmed, env.ROBLOX_API_BASE_URL);
+    if (!identity) {
+      return { robloxUsername: trimmed, robloxUserId: null, headshotUrl: null };
+    }
+
+    const headshots = await getRobloxHeadshotsForBot([identity.userId], "180x180");
+    return {
+      robloxUsername: identity.username,
+      robloxUserId: identity.userId,
+      headshotUrl: headshots.get(identity.userId) ?? null,
+    };
+  } catch (e) {
+    console.error("[referee] roblox resolve:", e);
+    return { robloxUsername: trimmed, robloxUserId: null, headshotUrl: null };
+  }
+}
+
 function buildApplicationEmbed(input: {
   discordId: string;
   discordTag: string;
   robloxUsername: string;
+  robloxUserId?: string | null;
+  headshotUrl?: string | null;
   notes: string;
 }): EmbedBuilder {
-  return new EmbedBuilder()
+  const robloxField = input.robloxUserId
+    ? `[${input.robloxUsername}](https://www.roblox.com/users/${input.robloxUserId}/profile)`
+    : input.robloxUsername || "—";
+
+  const embed = new EmbedBuilder()
     .setColor(0xf59e0b)
     .setTitle("Referee application")
     .addFields(
       { name: "Discord", value: `<@${input.discordId}> (${input.discordTag})`, inline: false },
-      { name: "Roblox username", value: input.robloxUsername || "—", inline: true },
+      { name: "Roblox", value: robloxField, inline: true },
       { name: "Experience / notes", value: input.notes.slice(0, 1024) || "—", inline: false },
     )
     .setFooter({ text: "VF Referees · Staff: Approve or Deny" })
     .setTimestamp(new Date());
+
+  if (input.headshotUrl) {
+    embed.setThumbnail(input.headshotUrl);
+  }
+
+  return embed;
 }
 
 function buildReviewButtons(discordId: string): ActionRowBuilder<ButtonBuilder> {
@@ -124,6 +175,8 @@ export async function postRefereeApplicationForReview(
     discordId: string;
     discordTag: string;
     robloxUsername: string;
+    robloxUserId?: string | null;
+    headshotUrl?: string | null;
     notes: string;
   },
 ): Promise<{ ok: boolean; error?: string }> {
@@ -201,10 +254,13 @@ export async function handleRefereeApplyModal(
     return;
   }
 
+  const roblox = await resolveRefereeApplicantRoblox(robloxUsername);
+
   const save = await upsertRefereeApplication({
     discordId: interaction.user.id,
     discordUsername: interaction.user.tag,
-    robloxUsername,
+    robloxUsername: roblox.robloxUsername,
+    robloxUserId: roblox.robloxUserId,
     notes,
   });
   if (!save.ok) {
@@ -215,7 +271,9 @@ export async function handleRefereeApplyModal(
   const posted = await postRefereeApplicationForReview(interaction.client, {
     discordId: interaction.user.id,
     discordTag: interaction.user.tag,
-    robloxUsername,
+    robloxUsername: roblox.robloxUsername,
+    robloxUserId: roblox.robloxUserId,
+    headshotUrl: roblox.headshotUrl,
     notes,
   });
   if (!posted.ok) {
