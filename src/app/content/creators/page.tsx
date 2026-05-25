@@ -14,6 +14,7 @@ import {
   formatPoolSharePercent,
   ROAD_TO_1M_PRIZE_POOL_ROBUX,
   ROAD_TO_1M_TARGET_VIEWS,
+  formatLastMetricsRefresh,
 } from "@/lib/creator-onboard/road-to-1m";
 import {
   tiktokProfileHref,
@@ -299,7 +300,7 @@ export default async function CreatorsChallengePage() {
                 Leaderboard
               </h2>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/55 sm:text-[15px]">
-                Ranked by total synced views &amp; plays. Refreshes every page load.
+                Ranked by total synced views &amp; plays. Last refreshed {formatLastMetricsRefresh(challenge.lastMetricsRefreshAt)}.
               </p>
             </div>
             <div className="flex flex-col gap-2 text-left sm:items-end sm:text-right">

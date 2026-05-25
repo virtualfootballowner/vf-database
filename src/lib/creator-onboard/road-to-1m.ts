@@ -35,6 +35,8 @@ export type RoadTo1MChallenge = {
   participantCount: number;
   totalPostCount: number;
   leaderboard: ChallengeLeaderboardEntry[];
+  /** Latest views_fetched_at across all posted links (Apify/daily sync). */
+  lastMetricsRefreshAt: string | null;
 };
 
 function sumPostViews(links: PostedVideoLink[]): {
@@ -80,6 +82,21 @@ export function buildRoadTo1MChallenge(
   };
 
   const rows: Row[] = [];
+
+  let lastMetricsRefreshAt: string | null = null;
+
+  for (const c of creators) {
+    for (const p of c.posted_video_links ?? []) {
+      const fetched = p.views_fetched_at?.trim();
+      if (!fetched) continue;
+      if (
+        !lastMetricsRefreshAt ||
+        new Date(fetched).getTime() > new Date(lastMetricsRefreshAt).getTime()
+      ) {
+        lastMetricsRefreshAt = fetched;
+      }
+    }
+  }
 
   for (const c of creators) {
     const posts = [...(c.posted_video_links ?? [])].sort(
@@ -153,6 +170,7 @@ export function buildRoadTo1MChallenge(
     participantCount,
     totalPostCount,
     leaderboard,
+    lastMetricsRefreshAt,
   };
 }
 
@@ -168,3 +186,17 @@ export function formatPoolSharePercent(n: number): string {
   if (n >= 10) return `${n.toFixed(1)}%`;
   return `${n.toFixed(2)}%`;
 }
+
+export function formatLastMetricsRefresh(iso: string | null): string {
+  if (!iso?.trim()) return "Never synced yet";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "Unknown";
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+

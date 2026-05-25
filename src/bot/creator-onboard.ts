@@ -37,6 +37,7 @@ import {
   ROAD_TO_1M_TARGET_VIEWS,
   buildRoadTo1MChallenge,
   formatChallengeRobux,
+  formatLastMetricsRefresh,
   formatPoolSharePercent,
 } from "@/lib/creator-onboard/road-to-1m";
 import { expandTiktokUrlIfNeeded } from "@/lib/creator-onboard/expand-posted-video-url";
@@ -775,6 +776,7 @@ export async function handleCreatorLeaderboardCommand(
         `**Pool:** ${formatChallengeRobux(challenge.prizePoolRobux)} · split by view share when the community hits 1M.`,
         `**Progress:** ${totalsFormatted} / ${targetFormatted} views & plays (${progressPctRendered}%)`,
         `${challenge.participantCount} creator${challenge.participantCount === 1 ? "" : "s"} with links · ${challenge.totalPostCount} post${challenge.totalPostCount === 1 ? "" : "s"} live`,
+        `**Last refreshed:** ${formatLastMetricsRefresh(challenge.lastMetricsRefreshAt)}`,
       ].join("\n"),
     )
     .setFooter({ text: "VF Create · Top 10 · web leaderboard for full details" })
