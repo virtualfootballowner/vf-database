@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
-type SiteNavKey = "tournament" | "stats" | "teams" | "players" | "referees";
+type SiteNavKey = "tournament" | "stats" | "teams" | "players";
 
 type SiteNavProps = {
   /** Highlighted link. Omit on the home page (logo is the home link). */
@@ -25,7 +25,6 @@ const links: { href: string; label: string; key: SiteNavKey }[] = [
   { href: "/stats", label: "Stats", key: "stats" },
   { href: "/teams", label: "Teams", key: "teams" },
   { href: "/players", label: "Players", key: "players" },
-  { href: "/referees", label: "Referees", key: "referees" },
 ];
 
 export function SiteNav({ active }: SiteNavProps) {

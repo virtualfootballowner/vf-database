@@ -8,11 +8,11 @@ import { listRefereesForSite } from "@/lib/referees/site-referees";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Referees · VF League",
+  title: "Referees Â· VF League",
   description:
-    "Official VF League referee roster — Roblox profiles and assignment history from the referee program database.",
+    "Official VF League referee roster â€” Roblox profiles and assignment history from the referee program database.",
   openGraph: {
-    title: "Referees · VF League",
+    title: "Referees Â· VF League",
     description: "Active VF League referees and their assignment counts.",
   },
   robots: { index: true, follow: true },
@@ -29,7 +29,7 @@ export default async function RefereesPage() {
   return (
     <main className="relative min-h-dvh min-w-0 w-full overflow-x-clip text-white">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 pb-16 pt-5 sm:px-6 sm:pt-8 md:px-8 md:pt-10">
-        <SiteNav active="referees" />
+        <SiteNav />
 
         <section>
           <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
