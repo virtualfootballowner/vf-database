@@ -73,61 +73,6 @@ export async function findRefereeByDiscordId(
   return (data as RefereeRow | null) ?? null;
 }
 
-export async function upsertRefereeApplication(input: {
-  discordId: string;
-  discordUsername: string;
-  robloxUsername: string;
-  robloxUserId?: string | null;
-  notes: string;
-}): Promise<{ ok: boolean; error?: string }> {
-  const supabase = createBotSupabase();
-  const now = new Date().toISOString();
-  const existing = await findRefereeByDiscordId(input.discordId);
-  if (existing?.status === "active") {
-    return { ok: false, error: "You are already an active referee." };
-  }
-  if (existing?.status === "pending") {
-    return { ok: false, error: "Your application is already pending review." };
-  }
-  if (existing?.status === "suspended") {
-    return { ok: false, error: "Your referee account is suspended. Contact staff." };
-  }
-
-  const payload = {
-    discord_id: input.discordId,
-    discord_username: input.discordUsername,
-    roblox_username: input.robloxUsername.trim(),
-    roblox_user_id: input.robloxUserId?.trim() || null,
-    notes: input.notes.trim(),
-    status: "pending" as const,
-    updated_at: now,
-    denied_by_discord_id: null,
-    denied_at: null,
-  };
-
-  if (existing) {
-    const { error } = await supabase
-      .from("referees")
-      .update(payload)
-      .eq("id", existing.id);
-    if (error) {
-      console.error("[referee] re-apply update:", error);
-      return { ok: false, error: "Could not save your application." };
-    }
-    return { ok: true };
-  }
-
-  const { error } = await supabase.from("referees").insert({
-    ...payload,
-    created_at: now,
-  });
-  if (error) {
-    console.error("[referee] apply insert:", error);
-    return { ok: false, error: "Could not save your application." };
-  }
-  return { ok: true };
-}
-
 export async function approveReferee(input: {
   discordId: string;
   approvedByDiscordId: string;

@@ -44,17 +44,13 @@ import {
 } from "@/bot/media-staff-onboard";
 import { handleMediaJobClaimButton } from "@/bot/media-jobs";
 import {
-  REFEREE_APPLY_MODAL_ID,
   REFEREE_APPROVE_PREFIX,
   REFEREE_ASSIGNMENT_CLAIM_PREFIX,
   REFEREE_DENY_PREFIX,
-  REFEREE_START_APPLY_BUTTON,
 } from "@/lib/referees/discord-constants";
 import {
-  handleRefereeApplyModal,
   handleRefereeApproveButton,
   handleRefereeDenyButton,
-  handleRefereeStartApplyButton,
 } from "@/bot/referees/onboard";
 import { handleRefAssignmentClaimButton } from "@/bot/referees/assignments";
 import { MEDIA_ART_JOB_CLAIM_PREFIX } from "@/lib/media-jobs/media-job-discord-constants";
@@ -432,10 +428,6 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         await handleCreatorPostRemoveRejectModal(interaction);
         return;
       }
-      if (interaction.customId === REFEREE_APPLY_MODAL_ID) {
-        await handleRefereeApplyModal(interaction);
-        return;
-      }
       if (
         interaction.customId.startsWith(CREATOR_REJECT_MODAL_PREFIX)
       ) {
@@ -529,10 +521,6 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
       return;
     }
 
-    if (customId === REFEREE_START_APPLY_BUTTON) {
-      await handleRefereeStartApplyButton(interaction);
-      return;
-    }
     if (customId.startsWith(REFEREE_APPROVE_PREFIX)) {
       await handleRefereeApproveButton(
         interaction,

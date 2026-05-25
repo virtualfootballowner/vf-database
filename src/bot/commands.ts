@@ -89,7 +89,6 @@ import {
   updateContentCommand,
 } from "@/bot/creator-content-sync";
 import {
-  handleApplyRefCommand,
   handlePostVerifyRefCommand,
   handleRefListCommand,
   handleRefProfileCommand,
@@ -564,7 +563,6 @@ export async function handleSlashCommand(
 ): Promise<void> {
   const refOnly = new Set([
     "postverify-ref",
-    "apply-ref",
     "ref-profile",
     "ref-list",
     "ref-post",
@@ -671,9 +669,6 @@ export async function handleSlashCommand(
       return;
     case "postverify-ref":
       await handlePostVerifyRefCommand(interaction);
-      return;
-    case "apply-ref":
-      await handleApplyRefCommand(interaction);
       return;
     case "ref-profile":
       await handleRefProfileCommand(interaction);

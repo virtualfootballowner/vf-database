@@ -5,6 +5,7 @@ import { clearCreatorRobloxOAuthStateOnResponse } from "@/lib/creator-onboard/co
 import { tryCompleteCreatorRobloxOAuthViaVerifyCallback } from "@/lib/creator-onboard/handle-creator-roblox-via-verify-callback";
 import { tryCompleteMediaStaffRobloxViaVerifyCallback } from "@/lib/vfl-verify/handle-media-staff-via-verify-callbacks";
 import { tryCompleteMediaRobloxViaVerifyCallback } from "@/lib/vfl-verify/handle-media-via-verify-callbacks";
+import { tryCompleteRefereeRobloxViaVerifyCallback } from "@/lib/vfl-verify/handle-referee-via-verify-callbacks";
 import { loadVerifyEnv } from "@/lib/vfl-verify/load-verify-env";
 import { applyGuildVerification } from "@/lib/vfl-verify/apply-guild-verification";
 import { exchangeRobloxCode } from "@/lib/vfl-verify/roblox-oauth";
@@ -79,6 +80,15 @@ export async function GET(request: Request) {
   );
   if (mediaReturn) {
     return mediaReturn;
+  }
+
+  const refereeReturn = await tryCompleteRefereeRobloxViaVerifyCallback(
+    request,
+    code,
+    state,
+  );
+  if (refereeReturn) {
+    return refereeReturn;
   }
 
   const cookieStore = await cookies();

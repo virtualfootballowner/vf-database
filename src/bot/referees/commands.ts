@@ -2,13 +2,8 @@ import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 
 export const postVerifyRefCommand = new SlashCommandBuilder()
   .setName("postverify-ref")
-  .setDescription("Post the referee apply card in this channel (staff)")
+  .setDescription("Post the referee verify card in this channel (staff)")
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-  .toJSON();
-
-export const applyRefCommand = new SlashCommandBuilder()
-  .setName("apply-ref")
-  .setDescription("Apply to become a VF referee")
   .toJSON();
 
 export const refProfileCommand = new SlashCommandBuilder()
@@ -90,7 +85,6 @@ export const refUnclaimCommand = new SlashCommandBuilder()
 
 export const refereeSlashCommandDefinitions = [
   postVerifyRefCommand,
-  applyRefCommand,
   refProfileCommand,
   refListCommand,
   refPostCommand,

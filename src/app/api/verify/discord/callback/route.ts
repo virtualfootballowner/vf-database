@@ -6,6 +6,7 @@ import { loadVerifyEnv } from "@/lib/vfl-verify/load-verify-env";
 import { exchangeDiscordCode } from "@/lib/vfl-verify/discord-oauth";
 import { tryCompleteMediaStaffDiscordViaVerifyCallback } from "@/lib/vfl-verify/handle-media-staff-via-verify-callbacks";
 import { tryCompleteMediaDiscordViaVerifyCallback } from "@/lib/vfl-verify/handle-media-via-verify-callbacks";
+import { tryCompleteRefereeDiscordViaVerifyCallback } from "@/lib/vfl-verify/handle-referee-via-verify-callbacks";
 import { generatePkcePair } from "@/lib/vfl-verify/pkce";
 import { robloxAuthorizeUrl } from "@/lib/vfl-verify/roblox-oauth";
 import { sealVerifySession } from "@/lib/vfl-verify/signed-session";
@@ -51,6 +52,13 @@ export async function GET(request: Request) {
     state,
   );
   if (mediaResp) return mediaResp;
+
+  const refereeResp = await tryCompleteRefereeDiscordViaVerifyCallback(
+    request,
+    code,
+    state,
+  );
+  if (refereeResp) return refereeResp;
 
   const cookieStore = await cookies();
   const storedState = cookieStore.get(DISCORD_STATE)?.value ?? null;

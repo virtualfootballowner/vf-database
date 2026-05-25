@@ -29,8 +29,7 @@ Set these on **Railway** (bot service) if you need non-default ids. After deploy
 
 | Command | Who | Action |
 |---------|-----|--------|
-| `/postverify-ref` | Staff | Post apply card with **Apply** button |
-| `/apply-ref` | Anyone | Open apply modal directly |
+| `/postverify-ref` | Staff | Post verify card linking to `/verify/referee` |
 | `/ref-profile` | Referee | Status, tier, assignment count |
 | `/ref-list` | Staff | Active roster from DB |
 | `/ref-post` | Staff | Post fixture with **Claim fixture** button |
@@ -48,7 +47,7 @@ When a referee claims a fixture, the bot tries to set `matches.referee` using `m
 
 ## Flow summary
 
-1. Applicant clicks **Apply** → modal (Roblox username, experience) → card in approval channel.
+1. Applicant opens `/verify/referee` → Discord + Roblox OAuth → nickname set to Roblox username → card in approval channel.
 2. Staff **Approve** → `referees.status = active` + Referee role.
 3. Staff `/ref-post` → referees claim in assignments channel.
 4. Claim updates assignment and syncs referee name to the match archive when possible.
