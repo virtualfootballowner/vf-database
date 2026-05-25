@@ -1,4 +1,7 @@
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   EmbedBuilder,
   MessageFlags,
   PermissionFlagsBits,
@@ -92,15 +95,22 @@ export async function handlePostVerifyRefCommand(
       [
         "We're looking for referees for league and tournament fixtures.",
         "",
-        `Open **[Verify for VF Referees](${verifyUrl})** to link Discord + Roblox.`,
+        "**Click below** to link Discord + Roblox.",
         "Your nickname will be set to your Roblox username. Staff review every applicant before granting the Referee role.",
       ].join("\n"),
     )
     .setFooter({ text: "VF Referees" })
     .setTimestamp(new Date());
 
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setLabel("Verify")
+      .setStyle(ButtonStyle.Link)
+      .setURL(verifyUrl),
+  );
+
   try {
-    await interaction.channel.send({ embeds: [embed] });
+    await interaction.channel.send({ embeds: [embed], components: [row] });
     await interaction.editReply({ content: "Posted referee verify card." });
   } catch (e) {
     console.error("[referee] postverify card:", e);
