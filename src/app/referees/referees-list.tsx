@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import {
   refereeSiteDisplayName,
   type SiteRefereeRow,
-} from "@/lib/referees/site-referees";
+} from "@/lib/referees/site-referees-types";
 
 type RefereesListProps = {
   referees: SiteRefereeRow[];

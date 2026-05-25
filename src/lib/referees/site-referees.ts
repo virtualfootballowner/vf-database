@@ -1,17 +1,9 @@
 import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import type { SiteRefereeRow } from "@/lib/referees/site-referees-types";
 
-export type SiteRefereeRow = {
-  id: string;
-  discord_username: string | null;
-  roblox_user_id: string | null;
-  roblox_username: string | null;
-  tier: string | null;
-  status: "pending" | "active" | "denied" | "suspended" | "removed";
-  approved_at: string | null;
-  assignment_count: number;
-};
+export type { SiteRefereeRow } from "@/lib/referees/site-referees-types";
 
 function assignmentCountsByRefereeId(
   rows: { referee_id: string | null }[],
@@ -63,12 +55,4 @@ export async function listRefereesForSite(): Promise<SiteRefereeRow[]> {
     console.error("[referees-site] fetch failed:", e);
     return [];
   }
-}
-
-export function refereeSiteDisplayName(row: SiteRefereeRow): string {
-  const rbx = row.roblox_username?.trim();
-  if (rbx) return rbx;
-  const disc = row.discord_username?.trim();
-  if (disc) return disc;
-  return "Referee";
 }
