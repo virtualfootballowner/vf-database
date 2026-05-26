@@ -11,7 +11,9 @@ import {
   type ChatInputCommandInteraction,
   type GuildMember,
   type GuildTextBasedChannel,
+  type User,
 } from "discord.js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { env } from "@/bot/config";
 import { fetchTeamLogoUrl } from "@/bot/site-assets";
@@ -19,9 +21,13 @@ import {
   buildTeamNameBySlug,
   createBotSupabase,
   findPlayerByDiscordId,
+  findPlayersByUsername,
   listPlayerRosterTeamsForSeason,
+  listTeamRosterPlayerProfilesForSeason,
   loadTeams,
+  resolveManagerTeamSlugForSeason,
   resolveTeamForSlashCommand,
+  type PlayerProfileRow,
 } from "@/bot/stats-queries";
 
 export const RELEASE_BTN_APPROVE = "vfl:rel:a:";
@@ -74,6 +80,80 @@ function ensureStaffReview(interaction: ButtonInteraction): boolean {
   return true;
 }
 
+function formatReleasePlayerField(
+  profile: PlayerProfileRow,
+  discordUser: User | null,
+): string {
+  const roblox = profile.roblox_username?.trim() || "—";
+  if (discordUser) {
+    return `${discordUser}\n\`${roblox}\``;
+  }
+  const linked = profile.discord_id?.trim();
+  if (linked) {
+    return `<@${linked}> _(left server)_\n\`${roblox}\``;
+  }
+  return `\`${roblox}\`\n_No Discord link on file_`;
+}
+
+async function resolveReleaseTargetProfile(
+  supabase: SupabaseClient,
+  opts: {
+    discordUser: User | null;
+    robloxUsername: string | null;
+  },
+): Promise<
+  | { ok: true; profile: PlayerProfileRow; discordUser: User | null }
+  | { ok: false; message: string }
+> {
+  if (opts.discordUser?.bot) {
+    return { ok: false, message: "Pick a real player, not a bot." };
+  }
+
+  let profile: PlayerProfileRow | null = null;
+
+  if (opts.discordUser) {
+    profile = await findPlayerByDiscordId(supabase, opts.discordUser.id);
+  }
+
+  const robloxRaw = opts.robloxUsername?.trim() ?? "";
+  if (!profile && robloxRaw) {
+    let candidates = await findPlayersByUsername(supabase, robloxRaw);
+    if (candidates.length === 0) {
+      const { data, error } = await supabase
+        .from("players")
+        .select("*")
+        .ilike("roblox_username", `%${robloxRaw}%`)
+        .limit(5);
+      if (error) throw error;
+      candidates = (data ?? []) as PlayerProfileRow[];
+    }
+    if (candidates.length === 0) {
+      return {
+        ok: false,
+        message: "No VF profile for that Roblox username.",
+      };
+    }
+    if (candidates.length > 1) {
+      const list = candidates.map((p) => `\`${p.roblox_username}\``).join(", ");
+      return {
+        ok: false,
+        message: `Several matches — be more specific: ${list}`,
+      };
+    }
+    profile = candidates[0]!;
+  }
+
+  if (!profile) {
+    return {
+      ok: false,
+      message:
+        "Provide **player** (Discord member) or **roblox_username** if they left the server.",
+    };
+  }
+
+  return { ok: true, profile, discordUser: opts.discordUser };
+}
+
 async function finalizeReleaseCard(
   interaction: ButtonInteraction,
   outcome: { verb: string; detail: string; color: number },
@@ -124,17 +204,19 @@ export async function handleReleaseCommand(
   }
 
   const teamRaw = interaction.options.getString("team", true);
-  const targetUser = interaction.options.getUser("player", true);
+  const targetUser = interaction.options.getUser("player");
+  const robloxUsername = interaction.options.getString("roblox_username");
   const reasonRaw = interaction.options.getString("reason");
   const reason =
     reasonRaw?.trim().slice(0, 500) && reasonRaw.trim().length > 0
       ? reasonRaw.trim().slice(0, 500)
       : null;
 
-  if (targetUser.bot) {
+  if (!targetUser && !robloxUsername?.trim()) {
     await interaction.reply({
       flags: MessageFlags.Ephemeral,
-      content: "Pick a real player, not a bot.",
+      content:
+        "Provide **player** (Discord member) or **roblox_username** if they left the server.",
     });
     return;
   }
@@ -158,13 +240,48 @@ export async function handleReleaseCommand(
     }
     const teamRes = { ok: true as const, teamSlug: resolvedTeam.slug };
 
-    const targetProfile = await findPlayerByDiscordId(supabase, targetUser.id);
-    if (!targetProfile) {
-      await interaction.editReply({
-        content: `${targetUser} has no VF profile linked to Discord.`,
-      });
+    const canReleaseAnyTeam =
+      interaction.guild.ownerId === interaction.user.id ||
+      Boolean(
+        interaction.memberPermissions?.has(PermissionFlagsBits.Administrator),
+      );
+
+    if (!canReleaseAnyTeam) {
+      const managerTeam = await resolveManagerTeamSlugForSeason(
+        supabase,
+        interaction.user.id,
+        activeSeason,
+      );
+      if (!managerTeam.ok) {
+        await interaction.editReply({
+          content:
+            "You're not listed as a **S" +
+            activeSeason +
+            "** club manager, so you can't request releases for this team.",
+        });
+        return;
+      }
+      if (managerTeam.teamSlug !== teamRes.teamSlug) {
+        const teamNames = await buildTeamNameBySlug(supabase);
+        const yours =
+          teamNames.get(managerTeam.teamSlug) ?? managerTeam.teamSlug;
+        await interaction.editReply({
+          content:
+            `You can only release players from **your** club (**${yours}** · \`${managerTeam.teamSlug}\`), not \`${teamRes.teamSlug}\`.`,
+        });
+        return;
+      }
+    }
+
+    const resolved = await resolveReleaseTargetProfile(supabase, {
+      discordUser: targetUser,
+      robloxUsername,
+    });
+    if (!resolved.ok) {
+      await interaction.editReply({ content: resolved.message });
       return;
     }
+    const { profile: targetProfile, discordUser } = resolved;
 
     const teamsForPlayer = await listPlayerRosterTeamsForSeason(
       supabase,
@@ -172,11 +289,17 @@ export async function handleReleaseCommand(
       activeSeason,
     );
     if (!teamsForPlayer.includes(teamRes.teamSlug)) {
+      const label = targetProfile.roblox_username?.trim() || "That player";
       await interaction.editReply({
-        content: `${targetUser} is not on your **S${activeSeason}** roster (\`${teamRes.teamSlug}\`).`,
+        content: `**${label}** is not on your **S${activeSeason}** roster (\`${teamRes.teamSlug}\`).`,
       });
       return;
     }
+
+    const targetDiscordId =
+      targetProfile.discord_id?.trim() ||
+      discordUser?.id ||
+      `unlinked:${targetProfile.id}`;
 
     const requestId = randomUUID();
     const { error: insErr } = await supabase
@@ -187,7 +310,7 @@ export async function handleReleaseCommand(
         channel_id: null,
         message_id: null,
         requester_discord_id: interaction.user.id,
-        target_discord_id: targetUser.id,
+        target_discord_id: targetDiscordId,
         player_id: targetProfile.id,
         team_slug: teamRes.teamSlug,
         season: activeSeason,
@@ -261,7 +384,7 @@ export async function handleReleaseCommand(
         },
         {
           name: "Player",
-          value: `${targetUser}\n\`${targetProfile.roblox_username}\``,
+          value: formatReleasePlayerField(targetProfile, discordUser),
           inline: true,
         },
         {

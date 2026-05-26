@@ -50,6 +50,7 @@ import {
   handleScouting,
 } from "@/bot/marketplace";
 import { handleReleaseCommand } from "@/bot/release";
+import { handleReleaseAutocomplete } from "@/bot/release-autocomplete";
 import {
   handleCompetitionAutocomplete,
   handleFixtures,
@@ -415,8 +416,15 @@ export const leagueSlashCommandDefinitions = [
     .addUserOption((opt) =>
       opt
         .setName("player")
-        .setDescription("Player to release from your team’s active-season sheet")
-        .setRequired(true),
+        .setDescription("Discord member (if still in the server)")
+        .setRequired(false),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("roblox_username")
+        .setDescription("Roblox username if they left Discord — pick from your roster")
+        .setRequired(false)
+        .setAutocomplete(true),
     )
     .addStringOption((opt) =>
       opt
@@ -717,6 +725,13 @@ export async function handleAutocomplete(
   if (!teamAutocompleteCommands.has(interaction.commandName)) return;
 
   const focused = interaction.options.getFocused(true);
+  if (
+    interaction.commandName === "release" &&
+    focused.name === "roblox_username"
+  ) {
+    await handleReleaseAutocomplete(interaction);
+    return;
+  }
   if (focused.name !== "team") return;
 
   try {

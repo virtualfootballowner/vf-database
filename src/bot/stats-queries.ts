@@ -651,6 +651,42 @@ export async function listPlayerRosterTeamsForSeason(
   ];
 }
 
+export type TeamRosterPlayerProfile = Pick<
+  PlayerProfileRow,
+  "id" | "roblox_username" | "discord_id"
+>;
+
+/** Active-season squad sheet rows for autocomplete (e.g. /release by Roblox name). */
+export async function listTeamRosterPlayerProfilesForSeason(
+  supabase: SupabaseClient,
+  teamSlug: string,
+  season: number,
+): Promise<TeamRosterPlayerProfile[]> {
+  const { data, error } = await supabase
+    .from("player_team_seasons")
+    .select("players:player_id(id, roblox_username, discord_id)")
+    .eq("team_slug", teamSlug)
+    .eq("season", season);
+
+  if (error) throw error;
+
+  const out: TeamRosterPlayerProfile[] = [];
+  for (const row of data ?? []) {
+    const nested = (row as { players: TeamRosterPlayerProfile | TeamRosterPlayerProfile[] | null })
+      .players;
+    const player = Array.isArray(nested) ? nested[0] : nested;
+    if (!player?.roblox_username?.trim()) continue;
+    out.push(player);
+  }
+
+  out.sort((a, b) =>
+    a.roblox_username
+      .toLowerCase()
+      .localeCompare(b.roblox_username.toLowerCase()),
+  );
+  return out;
+}
+
 type HonorJson = { title?: string; season?: number; team?: string; meta?: string };
 
 export function formatHonorList(raw: unknown, maxLines: number): string {

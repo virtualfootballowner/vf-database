@@ -112,7 +112,7 @@ export async function handleHelp(
         name: `🏟️ Club managers · ${managerRole}`,
         value: [
           "**`/contract`** — offer a roster contract to a player",
-          "**`/release`** — request to release a player from your roster",
+          "**`/release`** — request to release a player from your roster (Discord member or Roblox username if they left)",
           "**`/friendly`** — post a friendly request in the finder",
           "**`/scouting`** — open trials for a position you’re recruiting",
         ].join("\n"),
