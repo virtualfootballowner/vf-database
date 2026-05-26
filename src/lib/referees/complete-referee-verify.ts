@@ -19,6 +19,42 @@ async function fetchDiscordUsername(
   return u.global_name?.trim() || u.username?.trim() || userId;
 }
 
+async function sendRefereeVerifyPendingDm(
+  botToken: string,
+  discordUserId: string,
+  alreadyPending: boolean,
+): Promise<void> {
+  const content = alreadyPending
+    ? "**VF Referees — verification updated.** Your nickname was refreshed. You're still waiting on staff review — you'll get the **Referee** role once approved."
+    : "**VF Referees — verification received.** Your Discord and Roblox are linked and your nickname is set. Staff will review you shortly — you'll get the **Referee** role once approved.";
+
+  try {
+    const dmRes = await fetch(`${DISCORD_API}/users/@me/channels`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bot ${botToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ recipient_id: discordUserId }),
+    });
+    if (!dmRes.ok) return;
+
+    const ch = (await dmRes.json()) as { id?: string };
+    if (!ch.id) return;
+
+    await fetch(`${DISCORD_API}/channels/${ch.id}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bot ${botToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ content }),
+    });
+  } catch (e) {
+    console.warn("[referee] verify pending DM failed:", e);
+  }
+}
+
 export type CompleteRefereeVerifyResult =
   | { ok: true; outcome: "pending" | "already_pending" | "already_active" }
   | {
@@ -62,6 +98,7 @@ export async function completeRefereeVerify(opts: {
   }
 
   if (saved.outcome === "already_pending") {
+    await sendRefereeVerifyPendingDm(opts.botToken, opts.discordUserId, true);
     return { ok: true, outcome: "already_pending" };
   }
 
@@ -85,5 +122,6 @@ export async function completeRefereeVerify(opts: {
     return { ok: false, code: "card_failed", error: posted.detail };
   }
 
+  await sendRefereeVerifyPendingDm(opts.botToken, opts.discordUserId, false);
   return { ok: true, outcome: "pending" };
 }
