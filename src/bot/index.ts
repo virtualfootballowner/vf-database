@@ -23,7 +23,10 @@ import { logRefereeConfigAtStartup } from "@/bot/referees/config";
 import {
   CONTRACT_BTN_APPROVE,
   CONTRACT_BTN_DENY,
+  CONTRACT_STAFF_APPROVE,
+  CONTRACT_STAFF_DENY,
   handleContractButton,
+  handleContractStaffButton,
 } from "@/bot/contracts";
 import {
   MEDIA_STAFF_APPROVE_PREFIX,
@@ -457,6 +460,23 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         interaction,
         "deny",
         customId.slice(CONTRACT_BTN_DENY.length),
+      );
+      return;
+    }
+
+    if (customId.startsWith(CONTRACT_STAFF_APPROVE)) {
+      await handleContractStaffButton(
+        interaction,
+        "approve",
+        customId.slice(CONTRACT_STAFF_APPROVE.length),
+      );
+      return;
+    }
+    if (customId.startsWith(CONTRACT_STAFF_DENY)) {
+      await handleContractStaffButton(
+        interaction,
+        "deny",
+        customId.slice(CONTRACT_STAFF_DENY.length),
       );
       return;
     }

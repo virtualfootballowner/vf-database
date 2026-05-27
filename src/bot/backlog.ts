@@ -7,7 +7,10 @@ import {
 } from "discord.js";
 
 import { env } from "@/bot/config";
-import { CONTRACT_BTN_APPROVE, CONTRACT_BTN_DENY } from "@/bot/contracts";
+import {
+  CONTRACT_STAFF_APPROVE,
+  CONTRACT_STAFF_DENY,
+} from "@/bot/contracts";
 import { RELEASE_BTN_APPROVE, RELEASE_BTN_DENY } from "@/bot/release";
 import { buildTeamNameBySlug, createBotSupabase } from "@/bot/stats-queries";
 import { APPROVE_BUTTON_ID_PREFIX, DENY_BUTTON_ID_PREFIX } from "@/bot/sync";
@@ -101,8 +104,8 @@ function indexMessageButtons(message: Message, scan: ChannelScan): void {
 
   const contractKey = messageHasActiveApproveButton(
     message,
-    CONTRACT_BTN_APPROVE,
-    CONTRACT_BTN_DENY,
+    CONTRACT_STAFF_APPROVE,
+    CONTRACT_STAFF_DENY,
   );
   if (contractKey && !scan.contracts.has(contractKey)) {
     scan.contracts.set(contractKey, url);
@@ -265,11 +268,11 @@ export async function buildBacklogEmbed(guild: Guild): Promise<EmbedBuilder> {
     supabase
       .from("contract_offers")
       .select(
-        "id, guild_id, channel_id, message_id, contractor_discord_id, signee_discord_id, team_slug, season, roster_position, roster_role, created_at, players:signee_player_id(roblox_username)",
+        "id, guild_id, channel_id, message_id, staff_review_channel_id, staff_review_message_id, contractor_discord_id, signee_discord_id, team_slug, season, roster_position, roster_role, accepted_at, created_at, players:signee_player_id(roblox_username)",
       )
       .eq("guild_id", guildId)
-      .eq("status", "pending")
-      .order("created_at", { ascending: true })
+      .eq("status", "accepted")
+      .order("accepted_at", { ascending: true })
       .limit(50),
   ]);
 
@@ -299,12 +302,15 @@ export async function buildBacklogEmbed(guild: Guild): Promise<EmbedBuilder> {
     id: string;
     channel_id: string | null;
     message_id: string | null;
+    staff_review_channel_id: string | null;
+    staff_review_message_id: string | null;
     contractor_discord_id: string;
     signee_discord_id: string;
     team_slug: string;
     season: number;
     roster_position: string;
     roster_role: string;
+    accepted_at: string | null;
     created_at: string;
     players: { roblox_username: string | null }[] | null;
   };
@@ -360,19 +366,24 @@ export async function buildBacklogEmbed(guild: Guild): Promise<EmbedBuilder> {
 
   const pendingContractIds = new Set(contracts.map((c) => c.id));
   const contractLines = contracts.map((row, idx) => {
-    const created = row.created_at
-      ? ` · <t:${Math.floor(new Date(row.created_at).getTime() / 1000)}:R>`
+    const accepted = row.accepted_at
+      ? ` · <t:${Math.floor(new Date(row.accepted_at).getTime() / 1000)}:R>`
       : "";
     const cardUrl =
-      discordMessageUrl(guildId, row.channel_id, row.message_id) ??
+      discordMessageUrl(
+        guildId,
+        row.staff_review_channel_id,
+        row.staff_review_message_id,
+      ) ??
       channelScan.contracts.get(row.id) ??
+      discordMessageUrl(guildId, row.channel_id, row.message_id) ??
       null;
     const teamLabel = teamNames.get(row.team_slug) ?? row.team_slug;
     const playerName =
       row.players?.[0]?.roblox_username ?? row.signee_discord_id;
     return (
       `**${idx + 1}.** \`${playerName}\` · ${teamLabel} · ${row.roster_position}/${row.roster_role}` +
-      ` · signee <@${row.signee_discord_id}>${created}${cardLink(cardUrl)}`
+      ` · signee accepted${accepted}${cardLink(cardUrl)}`
     );
   });
   for (const [offerId, cardUrl] of channelScan.contracts) {
@@ -397,7 +408,7 @@ export async function buildBacklogEmbed(guild: Guild): Promise<EmbedBuilder> {
     formatSection("📺", "Media staff (Discord only)", mediaLines),
     formatSection("🗑️", "VF Create post removals", postRemoveLines),
     formatSection("📤", "Roster releases", releaseLines),
-    formatSection("📝", "Contract offers (signee)", contractLines),
+    formatSection("📝", "Contract signings (staff)", contractLines),
   ].filter((s): s is string => Boolean(s));
 
   const counts = [
@@ -410,7 +421,7 @@ export async function buildBacklogEmbed(guild: Guild): Promise<EmbedBuilder> {
       ? `${postRemoveLines.length} post removal`
       : null,
     releases.length > 0 ? `${releases.length} release` : null,
-    contracts.length > 0 ? `${contracts.length} contract` : null,
+    contracts.length > 0 ? `${contracts.length} signing` : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -420,7 +431,7 @@ export async function buildBacklogEmbed(guild: Guild): Promise<EmbedBuilder> {
       .setColor(0x10b981)
       .setTitle("✅ Backlog")
       .setDescription(
-        "No pending staff approvals across whitelist, VF Create, media staff, releases, contracts, or post removals.",
+        "No pending staff approvals across whitelist, VF Create, media staff, releases, contract signings, or post removals.",
       )
       .setTimestamp(new Date());
   }
@@ -435,7 +446,7 @@ export async function buildBacklogEmbed(guild: Guild): Promise<EmbedBuilder> {
     .setTitle(`📋 Backlog · ${counts}`)
     .setDescription(description)
     .setFooter({
-      text: "Open review cards to approve or deny. Contract rows need the signee on the card.",
+      text: "Open review cards to approve or deny. Contract signings need staff approval after the player accepts.",
     })
     .setTimestamp(new Date());
 }

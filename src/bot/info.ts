@@ -111,7 +111,7 @@ export async function handleHelp(
       {
         name: `🏟️ Club managers · ${managerRole}`,
         value: [
-          "**`/contract`** — offer a roster contract to a player",
+          "**`/contract`** — offer a roster contract (player accepts, then staff approve before roster update)",
           "**`/release`** — request to release a player from your roster (Discord member or Roblox username if they left)",
           "**`/friendly`** — post a friendly request in the finder",
           "**`/scouting`** — open trials for a position you’re recruiting",
@@ -126,7 +126,7 @@ export async function handleHelp(
           "**`/postverify-media-staff`** — VF Media staff verify + application card",
           "**`/help`** — post this command index in this channel",
           "**`/appoint`** — assign a club / nation manager for a season",
-          "**`/backlog`** — all pending staff approvals (whitelist, VF Create, media, releases, contracts)",
+          "**`/backlog`** — all pending staff approvals (whitelist, VF Create, media, releases, contract signings)",
           "**`/creator-remove`** — delete all VF Create DB rows for a user + strip creator role",
           "**`/kick`** · **`/ban`** — moderation",
         ].join("\n"),

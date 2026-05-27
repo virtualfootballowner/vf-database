@@ -58,7 +58,7 @@ async function rosterSpaceForNewSignee(
     .select("signee_player_id")
     .eq("team_slug", teamSlug)
     .eq("season", season)
-    .eq("status", "pending");
+    .in("status", ["pending", "accepted"]);
 
   if (pErr) throw pErr;
 
@@ -75,6 +75,8 @@ async function rosterSpaceForNewSignee(
 
 export const CONTRACT_BTN_APPROVE = "vfl:con:a:";
 export const CONTRACT_BTN_DENY = "vfl:con:d:";
+export const CONTRACT_STAFF_APPROVE = "vfl:con:staff:a:";
+export const CONTRACT_STAFF_DENY = "vfl:con:staff:d:";
 
 /** Slash-command choices (name shown in picker, value stored). */
 export const CONTRACT_POSITION_CHOICES = [
@@ -104,6 +106,8 @@ type ContractOfferRow = {
   guild_id: string;
   channel_id: string | null;
   message_id: string | null;
+  staff_review_channel_id: string | null;
+  staff_review_message_id: string | null;
   contractor_discord_id: string;
   signee_discord_id: string;
   team_slug: string;
@@ -114,9 +118,186 @@ type ContractOfferRow = {
   status: string;
 };
 
+function ensureStaffReview(interaction: ButtonInteraction): boolean {
+  const hasPerm = interaction.memberPermissions?.has(
+    PermissionFlagsBits.ManageRoles,
+  );
+  if (!hasPerm) {
+    void interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content:
+        "You need **Manage Roles** (staff) to approve or deny contract signings.",
+    });
+    return false;
+  }
+  return true;
+}
+
 function formatErr(err: unknown): string {
   if (err instanceof Error && err.message.trim()) return err.message.trim();
   return "Unknown error";
+}
+
+async function validateContractForRoster(
+  supabase: ReturnType<typeof createBotSupabase>,
+  offer: ContractOfferRow,
+  activeSeason: number,
+): Promise<
+  | { ok: true; alreadyOnThisTeam: boolean }
+  | { ok: false; code: "season_locked" | "other_team" | "roster_full" }
+> {
+  if (offer.season !== activeSeason) {
+    return { ok: false, code: "season_locked" };
+  }
+
+  const existingTeams = await listPlayerRosterTeamsForSeason(
+    supabase,
+    offer.signee_player_id,
+    activeSeason,
+  );
+  const otherTeam = existingTeams.find((t) => t !== offer.team_slug);
+  if (otherTeam) {
+    return { ok: false, code: "other_team" };
+  }
+
+  const alreadyOnThisTeam = existingTeams.includes(offer.team_slug);
+  if (!alreadyOnThisTeam) {
+    const { count, error: cntErr } = await supabase
+      .from("player_team_seasons")
+      .select("*", { count: "exact", head: true })
+      .eq("team_slug", offer.team_slug)
+      .eq("season", offer.season);
+    if (cntErr) throw cntErr;
+    if ((count ?? 0) >= MAX_ROSTER_PLAYERS) {
+      return { ok: false, code: "roster_full" };
+    }
+  }
+
+  return { ok: true, alreadyOnThisTeam };
+}
+
+async function applyContractToRoster(
+  supabase: ReturnType<typeof createBotSupabase>,
+  offer: ContractOfferRow,
+  activeSeason: number,
+): Promise<
+  | { ok: true; alreadyOnThisTeam: boolean }
+  | { ok: false; code: "season_locked" | "other_team" | "roster_full" | "db" }
+> {
+  const validation = await validateContractForRoster(
+    supabase,
+    offer,
+    activeSeason,
+  );
+  if (!validation.ok) {
+    return validation;
+  }
+
+  const { alreadyOnThisTeam } = validation;
+
+  const { error: posErr } = await supabase
+    .from("players")
+    .update({ position: offer.roster_position })
+    .eq("id", offer.signee_player_id);
+  if (posErr) throw posErr;
+
+  if (alreadyOnThisTeam) {
+    const { error: ptsErr } = await supabase
+      .from("player_team_seasons")
+      .update({
+        roster_position: offer.roster_position,
+        roster_role: offer.roster_role,
+      })
+      .eq("player_id", offer.signee_player_id)
+      .eq("team_slug", offer.team_slug)
+      .eq("season", offer.season);
+    if (ptsErr) throw ptsErr;
+  } else {
+    const { error: ptsErr } = await supabase.from("player_team_seasons").insert({
+      player_id: offer.signee_player_id,
+      team_slug: offer.team_slug,
+      season: offer.season,
+      games: 0,
+      roster_position: offer.roster_position,
+      roster_role: offer.roster_role,
+    });
+    if (ptsErr) throw ptsErr;
+  }
+
+  return { ok: true, alreadyOnThisTeam };
+}
+
+async function postContractStaffReviewCard(input: {
+  guild: NonNullable<ChatInputCommandInteraction["guild"]>;
+  offer: ContractOfferRow;
+  teamLabel: string;
+  teamUrl: string;
+  logoUrl: string | null;
+  robloxUsername: string;
+}): Promise<{ ok: true; url: string } | { ok: false; detail: string }> {
+  const channel = await input.guild.channels.fetch(
+    env.DISCORD_STAFF_REVIEW_CHANNEL_ID,
+  );
+  if (!channel?.isTextBased() || !channel.isSendable()) {
+    return { ok: false, detail: "Staff review channel missing or not writable." };
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(0x083696)
+    .setAuthor({
+      name: `${input.teamLabel} · contract signing`,
+      iconURL: input.logoUrl ?? undefined,
+      url: input.teamUrl,
+    })
+    .setTitle("Contract signing — staff review")
+    .setDescription(
+      [
+        "The **signee accepted** this contract. Roster changes happen only after staff approve.",
+        "",
+        "Use **Approve signing** to add them to the squad sheet, or **Deny** to reject.",
+      ].join("\n\n"),
+    )
+    .addFields(
+      {
+        name: "Team",
+        value: `[${input.teamLabel}](${input.teamUrl})\n\`${input.offer.team_slug}\` · **S${input.offer.season}**`,
+        inline: false,
+      },
+      {
+        name: "Player",
+        value: `<@${input.offer.signee_discord_id}>\n\`${input.robloxUsername}\``,
+        inline: true,
+      },
+      {
+        name: "Manager",
+        value: `<@${input.offer.contractor_discord_id}>`,
+        inline: true,
+      },
+      {
+        name: "Squad",
+        value: `**${input.offer.roster_position}** · ${input.offer.roster_role}`,
+        inline: false,
+      },
+    )
+    .setThumbnail(input.logoUrl ?? null)
+    .setFooter({
+      text: `Offer ${input.offer.id.slice(0, 8)}… · Manage Roles to act`,
+    })
+    .setTimestamp(new Date());
+
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`${CONTRACT_STAFF_APPROVE}${input.offer.id}`)
+      .setLabel("Approve signing")
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`${CONTRACT_STAFF_DENY}${input.offer.id}`)
+      .setLabel("Deny")
+      .setStyle(ButtonStyle.Danger),
+  );
+
+  const msg = await channel.send({ embeds: [embed], components: [row] });
+  return { ok: true, url: msg.url };
 }
 
 export async function handleContractCommand(
@@ -290,7 +471,7 @@ export async function handleContractCommand(
       .setDescription(
         isSelfContract
           ? `<@${signeeUser.id}> — **self-sign** as manager on the **Season ${activeSeason}** roster.\n\nUse **Approve** below to set your position & role (you’re already on the squad sheet from \`/appoint\` — this won’t duplicate you).\n\n_This offer **voids** if there is no response within **30 minutes**._`
-          : `<@${signeeUser.id}> — you’ve been offered a spot on the **Season ${activeSeason}** roster.\n\nOnly **you** can use the buttons below.\n\n_This offer **voids** if there is no response within **30 minutes**._`,
+          : `<@${signeeUser.id}> — you’ve been offered a spot on the **Season ${activeSeason}** roster.\n\nOnly **you** can use the buttons below. If you **Approve**, staff still review before you’re added to the squad.\n\n_This offer **voids** if there is no response within **30 minutes**._`,
       )
       .addFields(
         {
@@ -503,104 +684,100 @@ export async function handleContractButton(
     return;
   }
 
-  // Approve
+  // Signee accept → staff review (no roster write yet)
   await interaction.deferUpdate();
 
+  const guild = interaction.guild;
+  if (!guild) {
+    await interaction.editReply({
+      content: "This must be used inside the server.",
+      embeds: [],
+      components: [],
+    });
+    return;
+  }
+
   try {
-    if (offer.season !== activeSeason) {
+    const precheck = await validateContractForRoster(
+      supabase,
+      offer,
+      activeSeason,
+    );
+
+    if (!precheck.ok) {
       const teamNames = await teamNamesPromise;
       const logoUrl = await logoUrlPromise;
       const teamLabel = teamNames.get(offer.team_slug) ?? offer.team_slug;
       const teamUrl = `${siteBase}/teams/${encodeURIComponent(offer.team_slug)}?season=${offer.season}`;
 
-      const embedLocked = new EmbedBuilder()
-        .setColor(0xf59e0b)
-        .setAuthor({
-          name: teamLabel,
-          iconURL: logoUrl ?? undefined,
-          url: teamUrl,
-        })
-        .setTitle("Roster locked for this season")
-        .setDescription(
-          [
-            `This offer was for **Season ${offer.season}**, but only **Season ${activeSeason}** accepts signings now.`,
-            "Past-season rosters can’t be changed via contracts.",
-          ].join("\n\n"),
-        )
-        .setThumbnail(logoUrl ?? null)
-        .setFooter({ text: `Offer season ${offer.season} · Active S${activeSeason}` })
-        .setTimestamp(new Date());
+      if (precheck.code === "season_locked") {
+        const embedLocked = new EmbedBuilder()
+          .setColor(0xf59e0b)
+          .setAuthor({
+            name: teamLabel,
+            iconURL: logoUrl ?? undefined,
+            url: teamUrl,
+          })
+          .setTitle("Roster locked for this season")
+          .setDescription(
+            [
+              `This offer was for **Season ${offer.season}**, but only **Season ${activeSeason}** accepts signings now.`,
+              "Past-season rosters can’t be changed via contracts.",
+            ].join("\n\n"),
+          )
+          .setThumbnail(logoUrl ?? null)
+          .setFooter({ text: `Offer season ${offer.season} · Active S${activeSeason}` })
+          .setTimestamp(new Date());
 
-      await supabase
-        .from("contract_offers")
-        .update({
-          status: "denied",
-          resolved_at: new Date().toISOString(),
-        })
-        .eq("id", offerId);
+        await supabase
+          .from("contract_offers")
+          .update({
+            status: "denied",
+            resolved_at: new Date().toISOString(),
+          })
+          .eq("id", offerId);
 
-      await interaction.editReply({ embeds: [embedLocked], components: [] });
-      return;
-    }
+        await interaction.editReply({ embeds: [embedLocked], components: [] });
+        return;
+      }
 
-    const existingTeams = await listPlayerRosterTeamsForSeason(
-      supabase,
-      offer.signee_player_id,
-      activeSeason,
-    );
-    const otherTeam = existingTeams.find((t) => t !== offer.team_slug);
-    if (otherTeam) {
-      const teamNames = await teamNamesPromise;
-      const logoUrl = await logoUrlPromise;
-      const otherLabel = teamNames.get(otherTeam) ?? otherTeam;
-      const teamLabel = teamNames.get(offer.team_slug) ?? offer.team_slug;
-      const teamUrlOther = `${siteBase}/teams/${encodeURIComponent(otherTeam)}?season=${activeSeason}`;
+      if (precheck.code === "other_team") {
+        const existingTeams = await listPlayerRosterTeamsForSeason(
+          supabase,
+          offer.signee_player_id,
+          activeSeason,
+        );
+        const otherTeam = existingTeams.find((t) => t !== offer.team_slug)!;
+        const otherLabel = teamNames.get(otherTeam) ?? otherTeam;
+        const teamUrlOther = `${siteBase}/teams/${encodeURIComponent(otherTeam)}?season=${activeSeason}`;
 
-      const embedBlock = new EmbedBuilder()
-        .setColor(0xef4444)
-        .setAuthor({
-          name: teamLabel,
-          iconURL: logoUrl ?? undefined,
-        })
-        .setTitle(`Already rostered — Season ${activeSeason}`)
-        .setDescription(
-          [
-            `You’re already on **[${otherLabel}](${teamUrlOther})** (\`${otherTeam}\`).`,
-            "Leave that roster (staff) before signing elsewhere.",
-            "",
-            `_This offer: \`${offer.team_slug}\`._`,
-          ].join("\n"),
-        )
-        .setThumbnail(logoUrl ?? null)
-        .setFooter({ text: `Season ${activeSeason}` })
-        .setTimestamp(new Date());
+        const embedBlock = new EmbedBuilder()
+          .setColor(0xef4444)
+          .setAuthor({ name: teamLabel, iconURL: logoUrl ?? undefined })
+          .setTitle(`Already rostered — Season ${activeSeason}`)
+          .setDescription(
+            [
+              `You’re already on **[${otherLabel}](${teamUrlOther})** (\`${otherTeam}\`).`,
+              "Leave that roster (staff) before signing elsewhere.",
+            ].join("\n"),
+          )
+          .setThumbnail(logoUrl ?? null)
+          .setFooter({ text: `Season ${activeSeason}` })
+          .setTimestamp(new Date());
 
-      await supabase
-        .from("contract_offers")
-        .update({
-          status: "denied",
-          resolved_at: new Date().toISOString(),
-        })
-        .eq("id", offerId);
+        await supabase
+          .from("contract_offers")
+          .update({
+            status: "denied",
+            resolved_at: new Date().toISOString(),
+          })
+          .eq("id", offerId);
 
-      await interaction.editReply({ embeds: [embedBlock], components: [] });
-      return;
-    }
+        await interaction.editReply({ embeds: [embedBlock], components: [] });
+        return;
+      }
 
-    const alreadyOnThisTeam = existingTeams.includes(offer.team_slug);
-    if (!alreadyOnThisTeam) {
-      const { count, error: cntErr } = await supabase
-        .from("player_team_seasons")
-        .select("*", { count: "exact", head: true })
-        .eq("team_slug", offer.team_slug)
-        .eq("season", offer.season);
-      if (cntErr) throw cntErr;
-      if ((count ?? 0) >= MAX_ROSTER_PLAYERS) {
-        const teamNames = await teamNamesPromise;
-        const logoUrl = await logoUrlPromise;
-        const teamLabel = teamNames.get(offer.team_slug) ?? offer.team_slug;
-        const teamUrl = `${siteBase}/teams/${encodeURIComponent(offer.team_slug)}?season=${offer.season}`;
-
+      if (precheck.code === "roster_full") {
         const embedFull = new EmbedBuilder()
           .setColor(0xef4444)
           .setAuthor({
@@ -632,60 +809,62 @@ export async function handleContractButton(
       }
     }
 
-    const { error: posErr } = await supabase
+    const { data: signeeRow } = await supabase
       .from("players")
-      .update({ position: offer.roster_position })
-      .eq("id", offer.signee_player_id);
-    if (posErr) throw posErr;
-
-    if (alreadyOnThisTeam) {
-      const { error: ptsErr } = await supabase
-        .from("player_team_seasons")
-        .update({
-          roster_position: offer.roster_position,
-          roster_role: offer.roster_role,
-        })
-        .eq("player_id", offer.signee_player_id)
-        .eq("team_slug", offer.team_slug)
-        .eq("season", offer.season);
-      if (ptsErr) throw ptsErr;
-    } else {
-      const { error: ptsErr } = await supabase.from("player_team_seasons").insert({
-        player_id: offer.signee_player_id,
-        team_slug: offer.team_slug,
-        season: offer.season,
-        games: 0,
-        roster_position: offer.roster_position,
-        roster_role: offer.roster_role,
-      });
-      if (ptsErr) throw ptsErr;
-    }
-
-    await supabase
-      .from("contract_offers")
-      .update({
-        status: "approved",
-        resolved_at: new Date().toISOString(),
-      })
-      .eq("id", offerId);
+      .select("roblox_username")
+      .eq("id", offer.signee_player_id)
+      .maybeSingle();
+    const robloxUsername =
+      (signeeRow as { roblox_username?: string } | null)?.roblox_username?.trim() ||
+      offer.signee_discord_id;
 
     const teamNames = await teamNamesPromise;
     const logoUrl = await logoUrlPromise;
     const teamLabel = teamNames.get(offer.team_slug) ?? offer.team_slug;
     const teamUrl = `${siteBase}/teams/${encodeURIComponent(offer.team_slug)}?season=${offer.season}`;
 
-    const embedOk = new EmbedBuilder()
-      .setColor(0x10b981)
+    const staffCard = await postContractStaffReviewCard({
+      guild,
+      offer,
+      teamLabel,
+      teamUrl,
+      logoUrl,
+      robloxUsername,
+    });
+    if (!staffCard.ok) {
+      await interaction.editReply({
+        content: staffCard.detail,
+        embeds: [],
+        components: [],
+      });
+      return;
+    }
+
+    const acceptedAt = new Date().toISOString();
+    const staffMsgMatch = staffCard.url.match(/\/channels\/\d+\/(\d+)\/(\d+)/);
+    const staffChannelId = staffMsgMatch?.[1] ?? null;
+    const staffMessageId = staffMsgMatch?.[2] ?? null;
+
+    await supabase
+      .from("contract_offers")
+      .update({
+        status: "accepted",
+        accepted_at: acceptedAt,
+        staff_review_channel_id: staffChannelId,
+        staff_review_message_id: staffMessageId,
+      })
+      .eq("id", offerId);
+
+    const embedPending = new EmbedBuilder()
+      .setColor(0x6366f1)
       .setAuthor({
         name: teamLabel,
         iconURL: logoUrl ?? undefined,
         url: teamUrl,
       })
-      .setTitle("Contract signed")
+      .setTitle("Contract accepted — pending staff")
       .setDescription(
-        alreadyOnThisTeam
-          ? `<@${offer.signee_discord_id}> **accepted** — roster slot updated on **Season ${offer.season}** (**${offer.roster_position}** · ${offer.roster_role}).`
-          : `<@${offer.signee_discord_id}> **accepted** — added to the **Season ${offer.season}** roster.`,
+        `<@${offer.signee_discord_id}> **accepted**. Staff will review before you're added to the **Season ${offer.season}** roster.`,
       )
       .addFields(
         {
@@ -704,22 +883,230 @@ export async function handleContractButton(
           inline: true,
         },
         {
-          name: "Manager",
-          value: `<@${offer.contractor_discord_id}>`,
-          inline: true,
+          name: "Staff review",
+          value: `[Open approval card](${staffCard.url})`,
+          inline: false,
         },
       )
       .setThumbnail(logoUrl ?? null)
-      .setFooter({ text: `Season ${offer.season} · VF League` })
+      .setFooter({ text: `Season ${offer.season} · Awaiting staff` })
       .setTimestamp(new Date());
 
-    await interaction.editReply({ embeds: [embedOk], components: [] });
+    await interaction.editReply({ embeds: [embedPending], components: [] });
   } catch (err) {
-    console.error("contract approve:", err);
+    console.error("contract signee accept:", err);
     await interaction.editReply({
-      content: `Could not complete signup: ${formatErr(err)}`,
+      content: `Could not send contract for staff review: ${formatErr(err)}`,
       embeds: [],
       components: [],
+    });
+  }
+}
+
+export async function handleContractStaffButton(
+  interaction: ButtonInteraction,
+  kind: "approve" | "deny",
+  offerIdRaw: string,
+): Promise<void> {
+  if (!ensureStaffReview(interaction)) return;
+
+  const offerId = offerIdRaw.trim();
+  if (!UUID_RE.test(offerId)) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Invalid contract link.",
+    });
+    return;
+  }
+
+  const guild = interaction.guild;
+  if (!guild) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Use this button inside the server.",
+    });
+    return;
+  }
+
+  const activeSeason = env.VF_ACTIVE_ROSTER_SEASON;
+  const supabase = createBotSupabase();
+  const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
+
+  const { data: row, error: fetchErr } = await supabase
+    .from("contract_offers")
+    .select("*")
+    .eq("id", offerId)
+    .maybeSingle();
+
+  if (fetchErr || !row) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Could not load that contract.",
+    });
+    return;
+  }
+
+  const offer = row as ContractOfferRow;
+  if (offer.guild_id !== guild.id) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "This contract belongs to another server.",
+    });
+    return;
+  }
+
+  if (offer.status !== "accepted") {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "This signing was already resolved or is not awaiting staff.",
+    });
+    return;
+  }
+
+  await interaction.deferUpdate();
+  const staffId = interaction.user.id;
+  const resolvedAt = new Date().toISOString();
+  const teamNames = await buildTeamNameBySlug(supabase);
+  const teamLabel = teamNames.get(offer.team_slug) ?? offer.team_slug;
+  const logoUrl = await fetchTeamLogoUrl(supabase, offer.team_slug, siteBase);
+  const teamUrl = `${siteBase}/teams/${encodeURIComponent(offer.team_slug)}?season=${offer.season}`;
+
+  if (kind === "deny") {
+    await supabase
+      .from("contract_offers")
+      .update({
+        status: "denied",
+        staff_discord_id: staffId,
+        resolved_at: resolvedAt,
+      })
+      .eq("id", offerId);
+
+    const embed = EmbedBuilder.from(interaction.message.embeds[0] ?? {})
+      .setColor(0x6b7280)
+      .addFields({
+        name: "Denied by staff",
+        value: `${interaction.user} at <t:${Math.floor(Date.now() / 1000)}:F>`,
+        inline: false,
+      });
+
+    await interaction.editReply({ embeds: [embed], components: [] });
+
+    if (offer.channel_id && offer.message_id) {
+      try {
+        const ch = await guild.channels.fetch(offer.channel_id);
+        if (ch?.isTextBased()) {
+          const msg = await ch.messages.fetch(offer.message_id);
+          const orig = msg.embeds[0];
+          const updated = orig
+            ? EmbedBuilder.from(orig)
+            : new EmbedBuilder().setTitle("Contract");
+          updated
+            .setColor(0x6b7280)
+            .setTitle("Contract denied by staff")
+            .setDescription(
+              `<@${offer.signee_discord_id}> accepted, but staff **denied** the signing.`,
+            );
+          await msg.edit({ embeds: [updated], components: [] });
+        }
+      } catch {
+        /* original offer card may be gone */
+      }
+    }
+    return;
+  }
+
+  try {
+    const applied = await applyContractToRoster(supabase, offer, activeSeason);
+    if (!applied.ok) {
+      const reason =
+        applied.code === "season_locked"
+          ? `Season locked — only **S${activeSeason}** accepts signings.`
+          : applied.code === "other_team"
+            ? "Player is rostered on another team this season."
+            : applied.code === "roster_full"
+              ? `Roster is full (**${MAX_ROSTER_PLAYERS}** players).`
+              : "Could not apply signing.";
+      await interaction.followUp({
+        flags: MessageFlags.Ephemeral,
+        content: reason,
+      });
+      return;
+    }
+
+    await supabase
+      .from("contract_offers")
+      .update({
+        status: "approved",
+        staff_discord_id: staffId,
+        resolved_at: resolvedAt,
+      })
+      .eq("id", offerId);
+
+    const embed = EmbedBuilder.from(interaction.message.embeds[0] ?? {})
+      .setColor(0x10b981)
+      .addFields({
+        name: "Approved",
+        value: `${interaction.user} · added to **S${offer.season}** roster (${offer.roster_position} · ${offer.roster_role}).`,
+        inline: false,
+      });
+
+    await interaction.editReply({ embeds: [embed], components: [] });
+
+    if (offer.channel_id && offer.message_id) {
+      try {
+        const ch = await guild.channels.fetch(offer.channel_id);
+        if (ch?.isTextBased()) {
+          const msg = await ch.messages.fetch(offer.message_id);
+          const embedOk = new EmbedBuilder()
+            .setColor(0x10b981)
+            .setAuthor({
+              name: teamLabel,
+              iconURL: logoUrl ?? undefined,
+              url: teamUrl,
+            })
+            .setTitle("Contract signed")
+            .setDescription(
+              applied.alreadyOnThisTeam
+                ? `<@${offer.signee_discord_id}> **signed** — roster slot updated on **Season ${offer.season}**.`
+                : `<@${offer.signee_discord_id}> **signed** — added to **Season ${offer.season}** roster.`,
+            )
+            .addFields(
+              {
+                name: "Team",
+                value: `[${teamLabel}](${teamUrl})\n\`${offer.team_slug}\``,
+                inline: false,
+              },
+              {
+                name: "Position",
+                value: `**${offer.roster_position}**`,
+                inline: true,
+              },
+              {
+                name: "Role",
+                value: `**${offer.roster_role}**`,
+                inline: true,
+              },
+              {
+                name: "Approved by",
+                value: `${interaction.user}`,
+                inline: true,
+              },
+            )
+            .setThumbnail(logoUrl ?? null)
+            .setFooter({ text: `Season ${offer.season} · VF League` })
+            .setTimestamp(new Date());
+
+          await msg.edit({ embeds: [embedOk], components: [] });
+        }
+      } catch {
+        /* original offer card may be gone */
+      }
+    }
+  } catch (err) {
+    console.error("contract staff approve:", err);
+    await interaction.followUp({
+      flags: MessageFlags.Ephemeral,
+      content: `Could not complete signing: ${formatErr(err)}`,
     });
   }
 }
