@@ -100,6 +100,10 @@ import {
   handleRefUnclaimCommand,
 } from "@/bot/referees/assignments";
 import { isRefereeGuild } from "@/bot/referees/config";
+import {
+  memberHasVerifiedAccess,
+  verifiedAccessHint,
+} from "@/bot/verified-access";
 
 function formatCommandError(err: unknown): string {
   if (err instanceof Error && err.message.trim()) return err.message.trim();
@@ -132,11 +136,10 @@ async function requireVerifiedRole(
     return false;
   }
   const member = interaction.member as GuildMember;
-  if (!member.roles.cache.has(env.DISCORD_ROVER_VERIFIED_ROLE_ID)) {
+  if (!memberHasVerifiedAccess(member)) {
     await interaction.reply({
       flags: MessageFlags.Ephemeral,
-      content:
-        "You need to verify on the website first. Run `/postverify` in the verify channel for the link.",
+      content: verifiedAccessHint(interaction.guild.id),
     });
     return false;
   }

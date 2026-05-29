@@ -114,6 +114,12 @@ const envSchema = z.object({
     const s = String(raw).trim();
     return s.length > 0 ? s : "1504559699025199287";
   }, z.string().min(1)),
+  /** Role granted after VF Media website verify (`/verify/media`). */
+  DISCORD_MEDIA_VERIFIED_ROLE_ID: z.preprocess((raw) => {
+    if (raw == null || raw === "") return "1502942053305159690";
+    const s = String(raw).trim();
+    return s.length > 0 ? s : "1502942053305159690";
+  }, z.string().min(1)),
   /**
    * Admin-only log channel notified whenever a VF Create creator runs
    * `/posted` to add a new directory link. Defaults in code when unset.
@@ -188,6 +194,7 @@ export const env = envSchema.parse({
   DISCORD_MEDIA_STREAMER_ROLE_ID: process.env.DISCORD_MEDIA_STREAMER_ROLE_ID,
   DISCORD_MEDIA_COMMENTATOR_ROLE_ID:
     process.env.DISCORD_MEDIA_COMMENTATOR_ROLE_ID,
+  DISCORD_MEDIA_VERIFIED_ROLE_ID: process.env.DISCORD_MEDIA_VERIFIED_ROLE_ID,
   DISCORD_CREATOR_POSTED_LOG_CHANNEL_ID:
     process.env.DISCORD_CREATOR_POSTED_LOG_CHANNEL_ID,
   DISCORD_CREATOR_POSTED_FEED_CHANNEL_ID:

@@ -36,6 +36,12 @@ export function isRefereeGuild(guildId: string | null | undefined): boolean {
   return guildId === refereeGuildId();
 }
 
+export function isMediaGuild(guildId: string | null | undefined): boolean {
+  if (!guildId) return false;
+  const mediaId = mediaGuildId();
+  return mediaId != null && guildId === mediaId;
+}
+
 export function logRefereeConfigAtStartup(): void {
   console.log(
     `[referee] Guild configured: ${refereeGuildId()} · role ${refereeRoleId()} · approval ${refereeApprovalChannelId()}` +

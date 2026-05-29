@@ -11,6 +11,10 @@ import {
 import { env } from "@/bot/config";
 import { absoluteSiteAssetUrl, fetchTeamLogoUrl } from "@/bot/site-assets";
 import {
+  memberHasVerifiedAccess,
+  verifiedAccessHint,
+} from "@/bot/verified-access";
+import {
   buildTeamNameBySlug,
   createBotSupabase,
   loadTeams,
@@ -32,11 +36,10 @@ async function requireVerifiedRole(
     return false;
   }
   const member = interaction.member as GuildMember;
-  if (!member.roles.cache.has(env.DISCORD_ROVER_VERIFIED_ROLE_ID)) {
+  if (!memberHasVerifiedAccess(member)) {
     await interaction.reply({
       flags: MessageFlags.Ephemeral,
-      content:
-        "You need to verify on the website first. Run `/postverify` in the verify channel for the link.",
+      content: verifiedAccessHint(interaction.guild.id),
     });
     return false;
   }
