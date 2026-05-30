@@ -252,19 +252,19 @@ export const leagueSlashCommandDefinitions = [
   new SlashCommandBuilder()
     .setName("ban")
     .setDescription(
-      "Ban from the league server — you must pick a duration (permanent or timed).",
+      "Ban from VF League entirely — profile, scrimmages, contracts, and league access.",
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
     .addUserOption((opt) =>
       opt
         .setName("user")
-        .setDescription("User to ban")
+        .setDescription("User to ban from VF League")
         .setRequired(true),
     )
     .addStringOption((opt) =>
       opt
         .setName("duration")
-        .setDescription("Ban length on Discord (required)")
+        .setDescription("VF ban length (required)")
         .setRequired(true)
         .addChoices(
           { name: "1 week", value: "1w" },
@@ -297,7 +297,7 @@ export const leagueSlashCommandDefinitions = [
       opt
         .setName("bail")
         .setDescription(
-          "Optional bail amount (>0). User is DM’d to join the league server & open a ticket to pay.",
+          "Optional bail (>0). User is DM'd with steps to pay or discuss via support ticket.",
         )
         .setMinValue(0)
         .setMaxValue(999_999_999)
@@ -871,12 +871,12 @@ async function handlePlayer(
           ? `until ${desc.untilLabel.slice(0, 10)}`
           : "temporary";
       identityParts.push(
-        `> **VF Discord** · **Banned** (${untilLine}) · since ${dateStr}`,
+        `> **VF ban** · **Active** (${untilLine}) · since ${dateStr}`,
       );
       const bailNum = Number(profile.discord_ban_bail_amount);
       if (Number.isFinite(bailNum) && bailNum > 0) {
         identityParts.push(
-          `> **Bail** · **${formatBailAmountForDisplay(bailNum)}** · join league Discord & open a ticket to pay`,
+          `> **Bail** · **${formatBailAmountForDisplay(bailNum)}** · open a support ticket to pay or discuss`,
         );
       }
       const r = profile.discord_ban_reason?.trim();
@@ -1438,7 +1438,7 @@ async function handleBan(
   if (!interaction.memberPermissions?.has(PermissionFlagsBits.BanMembers)) {
     await interaction.reply({
       flags: MessageFlags.Ephemeral,
-      content: "You need the Ban Members permission to use /ban.",
+      content: "You need the Ban Members permission to use `/ban`.",
     });
     return;
   }
@@ -1503,7 +1503,7 @@ async function handleBan(
     try {
       const dm = new EmbedBuilder()
         .setColor(0x991b1b)
-        .setTitle("🔨 You were banned from VFL")
+        .setTitle("🔨 You were banned from VF League")
         .setDescription(
           [
             `**Duration** · ${durationLabel}`,
@@ -1511,7 +1511,7 @@ async function handleBan(
             "**Reason**",
             reason,
             until
-              ? `\n_Ban lifts (synced with Discord)_ · ${until.toISOString()}`
+              ? `\n_Ban lifts_ · ${until.toISOString()}`
               : "",
             ...banBailDmAppendLines(bailForDb ?? 0),
           ]
@@ -1536,7 +1536,7 @@ async function handleBan(
   } catch (error) {
     const msg = error instanceof Error ? error.message : "unknown error";
     await interaction.editReply({
-      content: `Failed to ban **${user.tag}**: ${msg}`,
+      content: `Failed to apply VF ban for **${user.tag}**: ${msg}`,
     });
     return;
   }
@@ -1557,8 +1557,8 @@ async function handleBan(
 
   const result = new EmbedBuilder()
     .setColor(0x991b1b)
-    .setTitle("🔨 Banned")
-    .setDescription(`**${user.tag}** has been banned from the server.`)
+    .setTitle("🔨 VF ban applied")
+    .setDescription(`**${user.tag}** has been banned from VF League.`)
     .addFields(
       { name: "Reason", value: reason, inline: false },
       {

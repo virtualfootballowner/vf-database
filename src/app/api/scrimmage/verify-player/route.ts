@@ -153,7 +153,7 @@ export async function GET(req: Request): Promise<Response> {
   ) {
     return jsonOk({
       authorized: false,
-      reason: "Player is banned from the league Discord.",
+      reason: "Player is banned from VF League.",
       match_code: matchCode,
       match_id: match.id,
       status: match.status,

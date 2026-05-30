@@ -59,13 +59,13 @@ export async function handleLeagueDiscordBanJoinGate(
 
   const desc = describeBanForUi(row);
   const detail = desc.isPermanent
-    ? "permanent league ban"
+    ? "permanent VF ban"
     : desc.untilLabel
-      ? `banned until ${desc.untilLabel}`
-      : "league ban in effect";
+      ? `VF ban until ${desc.untilLabel}`
+      : "VF ban in effect";
 
   try {
-    await member.kick(`VF league Discord — ${detail}.`);
+    await member.kick(`VF League ban — ${detail}.`);
   } catch (e) {
     console.error(`[ban-join-gate] kick failed for ${member.id}:`, e);
   }

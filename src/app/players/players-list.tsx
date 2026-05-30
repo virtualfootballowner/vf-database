@@ -126,7 +126,7 @@ export function PlayersList({ players, headshots }: PlayersListProps) {
                             variant="outline"
                             className="shrink-0 border-red-400/40 text-[10px] font-semibold uppercase tracking-wider text-red-200/95"
                           >
-                            Discord banned
+                            VF banned
                           </Badge>
                         ) : null}
                       </div>

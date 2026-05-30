@@ -240,7 +240,7 @@ export default async function PlayerDetailPage({
             role="status"
             className="rounded-xl border border-red-400/35 bg-red-950/35 px-4 py-3 text-left text-sm text-red-100/95 shadow-[0_12px_40px_-20px_rgba(239,68,68,0.5)]"
           >
-            <p className="font-semibold tracking-tight">Banned from VF Discord</p>
+            <p className="font-semibold tracking-tight">Banned from VF League</p>
             <p className="mt-1 text-xs text-red-100/75">
               {discordBanDate ? `Since ${discordBanDate}` : null}
               {banLiftLabel
@@ -249,8 +249,8 @@ export default async function PlayerDetailPage({
                   ? " · Permanent ban"
                   : null}
               {" · "}
-              This reflects a ban from the league Discord server, not Roblox or the
-              site account.
+              VF-wide ban on your linked profile — scrimmages, contracts, and
+              league access are blocked for the ban period.
             </p>
             {player.discord_ban_reason?.trim() ? (
               <p className="mt-2 rounded-md border border-red-400/20 bg-black/20 px-3 py-2 text-xs leading-relaxed text-red-50/90">
@@ -260,8 +260,8 @@ export default async function PlayerDetailPage({
             {bailDisplay ? (
               <p className="mt-2 text-xs leading-relaxed text-amber-100/90">
                 <span className="font-semibold">Bail · </span>
-                {bailDisplay} — join the VF League Discord and open a support
-                ticket if you want to pay or discuss bail.
+                {bailDisplay} — open a support ticket if you want to pay or
+                discuss bail.
               </p>
             ) : null}
           </div>
@@ -295,7 +295,7 @@ export default async function PlayerDetailPage({
                   variant="outline"
                   className="border-red-400/40 text-[11px] font-semibold text-red-200/95"
                 >
-                  Discord banned
+                  VF banned
                 </Badge>
               ) : null}
               {player.discord_username ? (
@@ -537,7 +537,7 @@ export default async function PlayerDetailPage({
               <Row label="Roblox" value={player.roblox_username} />
               <Row label="Roblox ID" value={player.roblox_user_id} />
               <Row
-                label="VF Discord"
+                label="VF status"
                 value={
                   showDiscordBanBanner
                     ? [
@@ -560,7 +560,7 @@ export default async function PlayerDetailPage({
               {bailDisplay ? (
                 <Row
                   label="Bail"
-                  value={`${bailDisplay} — pay via league Discord ticket`}
+                  value={`${bailDisplay} — pay via support ticket`}
                 />
               ) : null}
               <Row

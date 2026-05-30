@@ -140,7 +140,7 @@ const envSchema = z.object({
     return s.length > 0 ? s : "1504012980533330000";
   }, z.string().min(1)),
   /**
-   * Public channel for league Discord ban announcements (Roblox-linked profile,
+   * Public channel for VF League ban announcements (Roblox-linked profile,
    * duration, reason). Defaults to VF Media bans feed.
    */
   DISCORD_PUBLIC_BAN_LOG_CHANNEL_ID: z.preprocess((raw) => {

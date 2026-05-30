@@ -17,7 +17,7 @@ export function banBailDmAppendLines(bailAmount: number): string[] {
     "",
     "**Bail**",
     `Staff set bail at **${amt}** (amount is decided by staff; ask in your ticket if unsure).`,
-    "To **pay bail** or discuss it: join the **VF League** Discord and **open a support ticket** — staff will walk you through it.",
+    "To **pay bail** or discuss it: open a **VF League support ticket** — staff will walk you through it.",
   ];
   if (invite) lines.push(`**League invite:** ${invite}`);
   if (tickets) lines.push(`**Tickets / appeal:** ${tickets}`);

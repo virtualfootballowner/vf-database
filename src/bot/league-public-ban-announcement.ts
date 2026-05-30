@@ -77,7 +77,7 @@ async function postLeaguePublicBanAnnouncement(
     let durationValue: string;
     if (!player) {
       durationValue =
-        "*No VF player row linked to this Discord — duration may still apply on Discord.*";
+        "*No VF player row linked to this Discord — ban still applies once linked.*";
     } else if (!isDiscordBanActive(banRow)) {
       durationValue = `*Ban flags are syncing — check [players](${siteBase}/players) if this looks wrong.*`;
     } else if (banUi.isPermanent) {
@@ -111,12 +111,12 @@ async function postLeaguePublicBanAnnouncement(
     const bailNum = Number(player?.discord_ban_bail_amount);
     const bailField =
       Number.isFinite(bailNum) && bailNum > 0
-        ? `**${formatBailAmountForDisplay(bailNum)}** — join the league server & open a ticket to discuss or pay (see staff).`
+        ? `**${formatBailAmountForDisplay(bailNum)}** — open a support ticket to pay or discuss (see staff).`
         : null;
 
     const embed = new EmbedBuilder()
       .setColor(0x991b1b)
-      .setTitle("League Discord · ban")
+      .setTitle("VF League · ban")
       .setDescription(
         [
           `**Discord** · \`${discordTag}\` · <@${discordUserId}>`,

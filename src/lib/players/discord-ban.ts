@@ -1,4 +1,4 @@
-/** Shared league Discord ban checks (players table). */
+/** Shared VF League ban checks (players table). */
 
 export type DiscordBanRow = {
   discord_banned_at: string | null;

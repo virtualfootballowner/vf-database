@@ -234,7 +234,7 @@ export async function POST(req: Request): Promise<Response> {
         external_event_id: externalId,
         status: "rejected",
         reason:
-          "Primary player is banned from the league Discord — event blocked.",
+          "Primary player is banned from VF League — event blocked.",
       });
       continue;
     }
@@ -247,7 +247,7 @@ export async function POST(req: Request): Promise<Response> {
           external_event_id: externalId,
           status: "rejected",
           reason:
-            "Assist player is banned from the league Discord — event blocked.",
+            "Assist player is banned from VF League — event blocked.",
         });
         continue;
       }

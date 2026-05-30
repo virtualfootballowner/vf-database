@@ -4,10 +4,16 @@ import Link from "next/link";
 
 import { TeamCrest } from "@/app/teams/team-crest";
 import type { Team } from "@/app/teams/teams-data";
+import { TrophyHonorIcon } from "@/components/trophy-honor-icon";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { MatchRecord } from "@/app/stats/matches-data";
 import { getSiteStatsBundle, getTeamsCatalog } from "@/lib/site-db";
+import {
+  getSeasonIndividualAwards,
+  individualAwardsForSeason,
+  type SeasonIndividualAward,
+} from "@/lib/season-individual-awards";
 import { competitionLogo } from "@/lib/trophy-assets";
 import {
   buildKnockoutRounds,
@@ -58,9 +64,10 @@ function groupCompetitionsBySeason(
 }
 
 export async function TournamentsArchive() {
-  const [bundle, { teams }] = await Promise.all([
+  const [bundle, { teams }, individualAwards] = await Promise.all([
     getSiteStatsBundle(),
     getTeamsCatalog(),
+    getSeasonIndividualAwards(),
   ]);
   const teamBySlug: TeamLookup = new Map();
   const teamByName = new Map<string, Team>();
@@ -125,6 +132,10 @@ export async function TournamentsArchive() {
                 </p>
               </div>
 
+              <IndividualAwardsBlock
+                awards={individualAwardsForSeason(individualAwards, season)}
+              />
+
               <div className="flex flex-col gap-6">
                 {(bySeason.get(season) ?? []).map((competition) => (
                   <CompetitionBlock
@@ -141,6 +152,45 @@ export async function TournamentsArchive() {
         </div>
       )}
     </>
+  );
+}
+
+function IndividualAwardsBlock({
+  awards,
+}: {
+  awards: SeasonIndividualAward[];
+}) {
+  if (awards.length === 0) return null;
+
+  return (
+    <Card className="gap-0 border-white/10 bg-white/[0.03] py-0">
+      <CardHeader className="border-b border-white/10 px-4 py-3 sm:px-5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+          Individual awards
+        </p>
+      </CardHeader>
+      <CardContent className="grid gap-3 px-4 py-4 sm:grid-cols-2 sm:px-5">
+        {awards.map((award) => (
+          <div
+            key={`${award.season}-${award.title}`}
+            className="flex items-center gap-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2.5"
+          >
+            <TrophyHonorIcon accoladeTitle={award.title} />
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">
+                {award.title}
+              </p>
+              <Link
+                href={`/players/${encodeURIComponent(award.roblox_username)}`}
+                className="mt-0.5 block truncate text-sm font-semibold text-white underline decoration-white/25 underline-offset-4 transition hover:decoration-white/60"
+              >
+                {award.roblox_username}
+              </Link>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** Upsert ban info for the player row whose `discord_id` matches the banned user. */
+/** Upsert VF ban info for the player row whose `discord_id` matches the banned user. */
 export async function setPlayerDiscordBanFromGuild(
   supabase: SupabaseClient,
   discordUserId: string,
@@ -34,7 +34,7 @@ export async function setPlayerDiscordBanFromGuild(
   if (error) throw error;
 }
 
-/** Clear ban fields when the user is unbanned from the guild. */
+/** Clear VF ban fields when the ban is lifted. */
 export async function clearPlayerDiscordBanFromGuild(
   supabase: SupabaseClient,
   discordUserId: string,
