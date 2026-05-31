@@ -8,7 +8,7 @@ import { TrophyHonorIcon } from "@/components/trophy-honor-icon";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { MatchRecord } from "@/app/stats/matches-data";
-import { getSiteStatsBundle, getTeamsCatalog } from "@/lib/site-db";
+import { getSiteStatsBundle, getTeamsCatalog, catalogSliceForFileSeason } from "@/lib/site-db";
 import {
   getSeasonIndividualAwards,
   individualAwardsForSeason,
@@ -23,13 +23,18 @@ import {
   type CompetitionChampion,
   type StandingRow,
 } from "@/lib/stats-tournaments";
+import { WorldCupGroupsSection } from "@/app/stats/tournaments/world-cup/world-cup-groups-section";
+import { WorldCupKnockoutSection } from "@/app/stats/tournaments/world-cup/world-cup-knockout-section";
+import { WorldCupNationsSection } from "@/app/stats/tournaments/world-cup/world-cup-nations-section";
 
 type TeamLookup = Map<string, Team>;
+
+const TOURNAMENT_SEASON = 3;
 
 const SEASON_INTRO: Record<number, string> = {
   1: "EuroLeague table plus the EuroBlox Playoffs knockout — bird’s-eye view.",
   2: "British Premier and Serie Italia — league tables only (round robin).",
-  3: "World Cup — group mini-tables and the knockout path when results are in.",
+  3: "World Cup — qualified nations, group draw, and knockout bracket. Match schedule on the fixtures page.",
 };
 
 function abbrevCompetition(competition: string): string {
@@ -86,7 +91,11 @@ export async function TournamentsArchive() {
 
   const pairs = competitionKeysWithResults(bundle.allMatches);
   const bySeason = groupCompetitionsBySeason(pairs);
-  const seasonsToShow = [3, 2, 1].filter((s) => (bySeason.get(s)?.length ?? 0) > 0);
+  const s3Pool = catalogSliceForFileSeason(teams, TOURNAMENT_SEASON);
+  const s3Competitions = bySeason.get(TOURNAMENT_SEASON) ?? [];
+  const archiveSeasons = [3, 2, 1].filter(
+    (s) => s !== TOURNAMENT_SEASON && (bySeason.get(s)?.length ?? 0) > 0,
+  );
 
   return (
     <>
@@ -114,13 +123,49 @@ export async function TournamentsArchive() {
         </Badge>
       </section>
 
-      {seasonsToShow.length === 0 ? (
-        <p className="text-sm text-white/55">
-          No competition results in the archive yet.
-        </p>
-      ) : (
+      <section className="flex flex-col gap-6">
+        <div className="border-b border-white/10 pb-3">
+          <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
+            Season {TOURNAMENT_SEASON}
+          </h2>
+          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-white/55 sm:text-sm">
+            {SEASON_INTRO[TOURNAMENT_SEASON]}{" "}
+            <Link
+              href="/tournament"
+              className="font-semibold text-white/70 underline decoration-white/20 underline-offset-4 transition hover:text-white hover:decoration-white/50"
+            >
+              View fixtures
+            </Link>
+            .
+          </p>
+        </div>
+
+        <IndividualAwardsBlock
+          awards={individualAwardsForSeason(individualAwards, TOURNAMENT_SEASON)}
+        />
+
+        <WorldCupNationsSection teams={s3Pool} season={TOURNAMENT_SEASON} />
+        <WorldCupGroupsSection teamBySlug={teamBySlug} />
+        <WorldCupKnockoutSection />
+
+        {s3Competitions.length > 0 ? (
+          <div className="flex flex-col gap-6">
+            {s3Competitions.map((competition) => (
+              <CompetitionBlock
+                key={`${TOURNAMENT_SEASON}-${competition}`}
+                season={TOURNAMENT_SEASON}
+                competition={competition}
+                allMatches={bundle.allMatches}
+                lookupTeam={lookupTeam}
+              />
+            ))}
+          </div>
+        ) : null}
+      </section>
+
+      {archiveSeasons.length === 0 ? null : (
         <div className="flex flex-col gap-12">
-          {seasonsToShow.map((season) => (
+          {archiveSeasons.map((season) => (
             <section key={season} className="flex flex-col gap-6">
               <div className="border-b border-white/10 pb-3">
                 <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">

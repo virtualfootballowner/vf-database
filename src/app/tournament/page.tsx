@@ -53,7 +53,7 @@ export default async function TournamentPage() {
             {pool.length} nations · {S3_WORLD_CUP_STRUCTURE.groups} groups of{" "}
             {TEAMS_PER_GROUP}. Group stage matchdays and knockout schedule —{" "}
             <Link
-              href="/stats/tournaments/world-cup"
+              href="/stats/tournaments"
               className="font-semibold text-white underline decoration-white/25 underline-offset-4 transition hover:decoration-white/60"
             >
               groups & bracket
