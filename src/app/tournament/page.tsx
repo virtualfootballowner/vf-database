@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { WorldCupKnockoutBracket } from "@/app/tournament/world-cup-knockout-bracket";
 import {
   S3_WORLD_CUP_GROUP_LETTERS,
   S3_WORLD_CUP_STRUCTURE,
@@ -193,34 +194,15 @@ export default async function TournamentPage() {
             <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
               Road to the final
             </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/60">
+              Slot labels follow the official bracket — group winners and
+              runners-up, plus the four best third-place sides. Nations fill in
+              after the draw.
+            </p>
           </div>
           <Card className="border-white/10 bg-white/[0.03]">
-            <CardContent className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                {
-                  stage: "Round of 16",
-                  matches: S3_WORLD_CUP_STRUCTURE.round_of_16_matches,
-                },
-                {
-                  stage: "Quarter-Finals",
-                  matches: S3_WORLD_CUP_STRUCTURE.quarter_final_matches,
-                },
-                {
-                  stage: "Semi-Finals",
-                  matches: S3_WORLD_CUP_STRUCTURE.semi_final_matches,
-                },
-                { stage: "Final", matches: S3_WORLD_CUP_STRUCTURE.final_matches },
-              ].map(({ stage, matches }) => (
-                <div
-                  key={stage}
-                  className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3"
-                >
-                  <p className="text-sm font-semibold text-white">{stage}</p>
-                  <p className="mt-1 text-xs text-white/55">
-                    {matches} match{matches === 1 ? "" : "es"}
-                  </p>
-                </div>
-              ))}
+            <CardContent className="p-4 sm:p-6">
+              <WorldCupKnockoutBracket />
             </CardContent>
           </Card>
         </section>

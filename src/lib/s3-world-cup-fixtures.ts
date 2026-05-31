@@ -7,6 +7,8 @@
  * Group slots use empty team names until the draw; `metadata` carries seeds (A1…F4).
  */
 
+import { S3_WORLD_CUP_KNOCKOUT_MATCHES } from "@/lib/s3-world-cup-knockout-bracket";
+
 export type WorldCupStructureConfig = {
   format: "world_cup_24";
   groups: 6;
@@ -102,33 +104,29 @@ export function buildS3WorldCupFixtureRows(): WorldCupFixtureSeedRow[] {
     });
   }
 
-  const koStages: { stage: string; count: number; prefix: string }[] = [
-    { stage: "Round of 16", count: 8, prefix: "S3-WC-R16" },
-    { stage: "Quarter-Final", count: 4, prefix: "S3-WC-QF" },
-    { stage: "Semi-Final", count: 2, prefix: "S3-WC-SF" },
-    { stage: "Final", count: 1, prefix: "S3-WC-F" },
-  ];
-
-  for (const { stage, count, prefix } of koStages) {
-    for (let i = 1; i <= count; i += 1) {
-      order += 1;
-      rows.push({
-        season: 3,
-        competition: "World Cup",
-        fixture_code: `${prefix}-${String(i).padStart(2, "0")}`,
-        stage,
-        round_order: order,
-        group_code: null,
-        home_team_name: "",
-        away_team_name: "",
-        roblox_match_id: null,
-        metadata: {
-          structure: "s3_world_cup_24",
-          ko_slot: `${prefix}-${i}`,
-          stage,
-        },
-      });
-    }
+  for (const ko of S3_WORLD_CUP_KNOCKOUT_MATCHES) {
+    order += 1;
+    rows.push({
+      season: 3,
+      competition: "World Cup",
+      fixture_code: ko.fixtureCode,
+      stage: ko.stage,
+      round_order: order,
+      group_code: null,
+      home_team_name: "",
+      away_team_name: "",
+      roblox_match_id: null,
+      metadata: {
+        structure: "s3_world_cup_24",
+        ko_slot: ko.fixtureCode,
+        stage: ko.stage,
+        match_no: ko.matchNo,
+        home_slot: ko.homeLabel,
+        away_slot: ko.awayLabel,
+        feeds_home_of: ko.feedsHomeOf ?? null,
+        feeds_away_of: ko.feedsAwayOf ?? null,
+      },
+    });
   }
 
   return rows;
