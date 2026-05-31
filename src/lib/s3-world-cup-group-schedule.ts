@@ -1,22 +1,23 @@
 /**
- * Season 3 World Cup · group-stage schedule (GW1–GW3).
- * Pairings are seeded-shuffled per group; kickoffs 18:00–22:00 BST.
+ * Season 3 World Cup · group-stage schedule (MD1–MD3).
+ * Pairings are seeded-shuffled per group; dates follow the official calendar.
  */
 
 import { teams, type Team } from "@/app/teams/teams-data";
 import {
-  buildKickoffGrid,
-  GW1_KICKOFF_SLOTS_BST,
-  WEEKEND_KICKOFF_SLOTS_BST,
-} from "@/lib/wc-fixture-kickoff";
-
+  S3_WORLD_CUP_GROUP_MATCHDAY_LABELS,
+  S3_WORLD_CUP_SIMULTANEOUS_KICKOFF_BST,
+  S3_WORLD_CUP_STADIUM_TBD,
+  S3_WORLD_CUP_STAGGERED_SLOTS_BST,
+  wcDateForGroupMatchday,
+  type S3WorldCupMatchday,
+} from "@/lib/s3-world-cup-calendar";
 import {
   S3_WORLD_CUP_GROUPS,
   S3_WORLD_CUP_GROUP_LETTERS,
   type S3WorldCupGroupLetter,
 } from "@/lib/s3-world-cup-groups";
-
-export const S3_WORLD_CUP_STADIUM_TBD = "TBD";
+import { bstKickoffIso } from "@/lib/wc-fixture-kickoff";
 
 /** Pair indices for a single round-robin of 4 teams (6 games). */
 const FOUR_TEAM_ROUND_ROBIN: [number, number][] = [
@@ -32,13 +33,17 @@ export type S3WorldCupGroupFixture = {
   fixtureCode: string;
   group: S3WorldCupGroupLetter;
   matchInGroup: number;
-  gameWeek: 1 | 2 | 3;
-  gameWeekLabel: "GW1" | "GW2" | "GW3";
+  matchday: S3WorldCupMatchday;
+  matchdayLabel: string;
+  /** @deprecated use matchday */
+  gameWeek: S3WorldCupMatchday;
+  /** @deprecated use matchdayLabel */
+  gameWeekLabel: string;
   homeSlug: string;
   awaySlug: string;
   homeTeamName: string;
   awayTeamName: string;
-  /** ISO-8601 UTC kickoff (display in BST via formatWcKickoff) */
+  calendarDate: string;
   scheduledAt: string;
   stadium: typeof S3_WORLD_CUP_STADIUM_TBD;
 };
@@ -81,35 +86,14 @@ function teamNameForSlug(slug: string): string {
   return SLUG_TO_TEAM.get(slug)?.name ?? slug;
 }
 
-/** GW1 · Fri 5 – Sun 7 Jun 2026 · 18:00–21:30 BST. */
-const GW1_KICKOFFS_UTC = buildKickoffGrid(
-  ["2026-06-05", "2026-06-06", "2026-06-07"],
-  GW1_KICKOFF_SLOTS_BST,
-);
-
-/** GW2 · Sat 13 – Sun 14 Jun 2026 · 18:00–21:45 BST. */
-const GW2_KICKOFFS_UTC = buildKickoffGrid(
-  ["2026-06-13", "2026-06-14"],
-  WEEKEND_KICKOFF_SLOTS_BST,
-);
-
-/** GW3 · Sat 20 – Sun 21 Jun 2026 · 18:00–21:45 BST. */
-const GW3_KICKOFFS_UTC = buildKickoffGrid(
-  ["2026-06-20", "2026-06-21"],
-  WEEKEND_KICKOFF_SLOTS_BST,
-);
-
-const KICKOFFS_BY_GW: Record<1 | 2 | 3, readonly string[]> = {
-  1: GW1_KICKOFFS_UTC,
-  2: GW2_KICKOFFS_UTC,
-  3: GW3_KICKOFFS_UTC,
-};
-
 function buildRawGroupFixtures(): Omit<
   S3WorldCupGroupFixture,
-  "scheduledAt" | "stadium"
+  "scheduledAt" | "stadium" | "calendarDate"
 >[] {
-  const raw: Omit<S3WorldCupGroupFixture, "scheduledAt" | "stadium">[] = [];
+  const raw: Omit<
+    S3WorldCupGroupFixture,
+    "scheduledAt" | "stadium" | "calendarDate"
+  >[] = [];
 
   for (const group of S3_WORLD_CUP_GROUP_LETTERS) {
     const pool = S3_WORLD_CUP_GROUPS[group];
@@ -117,19 +101,22 @@ function buildRawGroupFixtures(): Omit<
 
     FOUR_TEAM_ROUND_ROBIN.forEach(([hi, ai], idx) => {
       const matchInGroup = idx + 1;
-      const gameWeek = (matchInGroup <= 2 ? 1 : matchInGroup <= 4 ? 2 : 3) as
+      const matchday = (matchInGroup <= 2 ? 1 : matchInGroup <= 4 ? 2 : 3) as
         | 1
         | 2
         | 3;
       const homeSlug = shuffled[hi]!;
       const awaySlug = shuffled[ai]!;
+      const matchdayLabel = S3_WORLD_CUP_GROUP_MATCHDAY_LABELS[matchday];
 
       raw.push({
         fixtureCode: `S3-WC-G-${group}-${String(matchInGroup).padStart(2, "0")}`,
         group,
         matchInGroup,
-        gameWeek,
-        gameWeekLabel: `GW${gameWeek}` as "GW1" | "GW2" | "GW3",
+        matchday,
+        matchdayLabel,
+        gameWeek: matchday,
+        gameWeekLabel: matchdayLabel,
         homeSlug,
         awaySlug,
         homeTeamName: teamNameForSlug(homeSlug),
@@ -142,36 +129,73 @@ function buildRawGroupFixtures(): Omit<
 }
 
 function assignKickoffs(
-  raw: Omit<S3WorldCupGroupFixture, "scheduledAt" | "stadium">[],
+  raw: Omit<S3WorldCupGroupFixture, "scheduledAt" | "stadium" | "calendarDate">[],
 ): S3WorldCupGroupFixture[] {
-  const gwSlot: Record<1 | 2 | 3, number> = { 1: 0, 2: 0, 3: 0 };
-  const sorted = [...raw].sort((a, b) => {
-    if (a.gameWeek !== b.gameWeek) return a.gameWeek - b.gameWeek;
-    if (a.group !== b.group) return a.group.localeCompare(b.group);
-    return a.matchInGroup - b.matchInGroup;
-  });
+  const withDates = raw.map((row) => ({
+    ...row,
+    calendarDate: wcDateForGroupMatchday(row.group, row.matchday),
+  }));
 
-  return sorted.map((row) => {
-    const slots = KICKOFFS_BY_GW[row.gameWeek];
-    const slot = gwSlot[row.gameWeek];
-    gwSlot[row.gameWeek] = slot + 1;
-    const scheduledAt = slots[slot] ?? slots[slots.length - 1]!;
+  const byDate = new Map<string, typeof withDates>();
+  for (const row of withDates) {
+    const list = byDate.get(row.calendarDate) ?? [];
+    list.push(row);
+    byDate.set(row.calendarDate, list);
+  }
 
-    return {
-      ...row,
-      scheduledAt,
-      stadium: S3_WORLD_CUP_STADIUM_TBD,
-    };
-  });
+  const scheduled: S3WorldCupGroupFixture[] = [];
+
+  for (const [date, dayFixtures] of byDate) {
+    const matchday = dayFixtures[0]!.matchday;
+    const sorted = [...dayFixtures].sort((a, b) => {
+      if (a.group !== b.group) return a.group.localeCompare(b.group);
+      return a.matchInGroup - b.matchInGroup;
+    });
+
+    if (matchday === 3) {
+      for (const row of sorted) {
+        scheduled.push({
+          ...row,
+          scheduledAt: bstKickoffIso(date, S3_WORLD_CUP_SIMULTANEOUS_KICKOFF_BST),
+          stadium: S3_WORLD_CUP_STADIUM_TBD,
+        });
+      }
+    } else {
+      sorted.forEach((row, idx) => {
+        const slot =
+          S3_WORLD_CUP_STAGGERED_SLOTS_BST[idx] ??
+          S3_WORLD_CUP_STAGGERED_SLOTS_BST[S3_WORLD_CUP_STAGGERED_SLOTS_BST.length - 1]!;
+        scheduled.push({
+          ...row,
+          scheduledAt: bstKickoffIso(date, slot),
+          stadium: S3_WORLD_CUP_STADIUM_TBD,
+        });
+      });
+    }
+  }
+
+  return scheduled.sort(
+    (a, b) =>
+      a.scheduledAt.localeCompare(b.scheduledAt) ||
+      a.group.localeCompare(b.group) ||
+      a.matchInGroup - b.matchInGroup,
+  );
 }
 
 export const S3_WORLD_CUP_GROUP_FIXTURES: S3WorldCupGroupFixture[] =
   assignKickoffs(buildRawGroupFixtures());
 
-export function s3WorldCupFixturesForGameWeek(
-  gw: 1 | 2 | 3,
+export function s3WorldCupFixturesForMatchday(
+  md: S3WorldCupMatchday,
 ): S3WorldCupGroupFixture[] {
-  return S3_WORLD_CUP_GROUP_FIXTURES.filter((f) => f.gameWeek === gw);
+  return S3_WORLD_CUP_GROUP_FIXTURES.filter((f) => f.matchday === md);
+}
+
+/** @deprecated use s3WorldCupFixturesForMatchday */
+export function s3WorldCupFixturesForGameWeek(
+  gw: S3WorldCupMatchday,
+): S3WorldCupGroupFixture[] {
+  return s3WorldCupFixturesForMatchday(gw);
 }
 
 export function s3WorldCupUpcomingFixtures(limit = 12): S3WorldCupGroupFixture[] {

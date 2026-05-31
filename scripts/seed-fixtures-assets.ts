@@ -149,8 +149,8 @@ async function patchTournamentStructures(): Promise<void> {
         type: "world_cup",
         format: "groups_knockout",
         status: "upcoming",
-        start_date: "2026-06-01",
-        end_date: "2026-07-15",
+        start_date: "2026-06-05",
+        end_date: "2026-07-02",
         season: 3,
         competition: "World Cup",
         structure_kind: "s3_world_cup_24",
@@ -167,6 +167,8 @@ async function patchTournamentStructures(): Promise<void> {
         name: "Season 3 · World Cup (6×4)",
         structure_kind: "s3_world_cup_24",
         structure_config: S3_WORLD_CUP_STRUCTURE as unknown as Record<string, unknown>,
+        start_date: "2026-06-05",
+        end_date: "2026-07-02",
       })
       .eq("id", s3Existing.data.id);
     if (upd.error) throw upd.error;
@@ -270,7 +272,7 @@ async function upsertS3ScheduledGroupMatches(): Promise<void> {
       home_score: 0,
       away_score: 0,
       stage: "Group",
-      match_week: fx.gameWeek,
+      match_week: fx.matchday,
       status: "scheduled",
       scheduled_at: fx.scheduledAt,
       ended_at: null,
@@ -278,7 +280,7 @@ async function upsertS3ScheduledGroupMatches(): Promise<void> {
       referee: null,
       season: 3,
       competition: "World Cup",
-      game_week_label: fx.gameWeekLabel,
+      game_week_label: fx.matchdayLabel,
       fft: "No",
       match_notes: `Stadium: ${fx.stadium}`,
     };

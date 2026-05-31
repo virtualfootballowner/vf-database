@@ -171,13 +171,19 @@ function buildFixtureGroupsDb(
       if (rid) m = matchesByRoblox.get(rid) ?? null;
     }
     const scheduleMeta = parseFixtureScheduleMeta(f.metadata);
+    const meta =
+      f.metadata && typeof f.metadata === "object" && !Array.isArray(f.metadata)
+        ? (f.metadata as Record<string, unknown>)
+        : {};
+    const homeSlot = normStr(meta.home_slot);
+    const awaySlot = normStr(meta.away_slot);
     return {
       id: f.fixture_code,
       season: f.season,
       competition: f.competition,
       stage: f.stage,
-      teamA: f.home_team_name ?? "",
-      teamB: f.away_team_name ?? "",
+      teamA: f.home_team_name?.trim() || homeSlot || "",
+      teamB: f.away_team_name?.trim() || awaySlot || "",
       match: m,
       schedule:
         m?.status === "scheduled"

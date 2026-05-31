@@ -9,6 +9,7 @@
 
 import { S3_WORLD_CUP_KNOCKOUT_MATCHES } from "@/lib/s3-world-cup-knockout-bracket";
 import { S3_WORLD_CUP_GROUP_FIXTURES } from "@/lib/s3-world-cup-group-schedule";
+import { S3_WORLD_CUP_KNOCKOUT_FIXTURES } from "@/lib/s3-world-cup-knockout-schedule";
 
 export {
   S3_WORLD_CUP_GROUP_LETTERS,
@@ -79,8 +80,11 @@ export function buildS3WorldCupFixtureRows(): WorldCupFixtureSeedRow[] {
         structure: "s3_world_cup_24",
         group: fx.group,
         match_in_group: fx.matchInGroup,
-        game_week: fx.gameWeek,
-        game_week_label: fx.gameWeekLabel,
+        matchday: fx.matchday,
+        matchday_label: fx.matchdayLabel,
+        game_week: fx.matchday,
+        game_week_label: fx.matchdayLabel,
+        calendar_date: fx.calendarDate,
         scheduled_at: fx.scheduledAt,
         stadium: fx.stadium,
         home_slug: fx.homeSlug,
@@ -89,8 +93,11 @@ export function buildS3WorldCupFixtureRows(): WorldCupFixtureSeedRow[] {
     });
   }
 
-  for (const ko of S3_WORLD_CUP_KNOCKOUT_MATCHES) {
+  for (const ko of S3_WORLD_CUP_KNOCKOUT_FIXTURES) {
     order += 1;
+    const def = S3_WORLD_CUP_KNOCKOUT_MATCHES.find(
+      (m) => m.fixtureCode === ko.fixtureCode,
+    );
     rows.push({
       season: 3,
       competition: "World Cup",
@@ -100,7 +107,7 @@ export function buildS3WorldCupFixtureRows(): WorldCupFixtureSeedRow[] {
       group_code: null,
       home_team_name: "",
       away_team_name: "",
-      roblox_match_id: null,
+      roblox_match_id: ko.fixtureCode,
       metadata: {
         structure: "s3_world_cup_24",
         ko_slot: ko.fixtureCode,
@@ -108,8 +115,12 @@ export function buildS3WorldCupFixtureRows(): WorldCupFixtureSeedRow[] {
         short_code: ko.shortCode,
         home_slot: ko.homeLabel,
         away_slot: ko.awayLabel,
-        feeds_home_of: ko.feedsHomeOf ?? null,
-        feeds_away_of: ko.feedsAwayOf ?? null,
+        feeds_home_of: def?.feedsHomeOf ?? null,
+        feeds_away_of: def?.feedsAwayOf ?? null,
+        calendar_date: ko.calendarDate,
+        day_label: ko.dayLabel,
+        scheduled_at: ko.scheduledAt,
+        stadium: ko.stadium,
       },
     });
   }
