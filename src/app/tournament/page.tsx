@@ -13,10 +13,12 @@ import {
 } from "@/components/ui/card";
 import { WorldCupKnockoutBracket } from "@/app/tournament/world-cup-knockout-bracket";
 import {
+  S3_WORLD_CUP_GROUPS,
   S3_WORLD_CUP_GROUP_LETTERS,
   S3_WORLD_CUP_STRUCTURE,
 } from "@/lib/s3-world-cup-fixtures";
 import { getTeamsCatalog, catalogSliceForFileSeason } from "@/lib/site-db";
+import type { Team } from "@/app/teams/teams-data";
 
 export const metadata: Metadata = {
   title: "Fixtures · VF League",
@@ -32,6 +34,10 @@ const TEAMS_PER_GROUP = S3_WORLD_CUP_STRUCTURE.teams_per_group;
 export default async function TournamentPage() {
   const { teams } = await getTeamsCatalog();
   const pool = catalogSliceForFileSeason(teams, TOURNAMENT_SEASON);
+  const teamBySlug = new Map<string, Team>(
+    teams.filter((t) => t.slug).map((t) => [t.slug, t]),
+  );
+  const groupsDrawn = S3_WORLD_CUP_GROUP_LETTERS.length;
 
   return (
     <main className="relative min-h-dvh min-w-0 w-full overflow-x-clip text-white">
@@ -48,8 +54,8 @@ export default async function TournamentPage() {
               variant="outline"
               className="h-6 gap-2 border-white/15 bg-white/5 px-2 text-[10px] uppercase tracking-[0.18em] text-white/70"
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.9)]" />
-              Draw pending
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
+              Draw complete
             </Badge>
           </div>
           <h1 className="mt-3 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
@@ -81,7 +87,7 @@ export default async function TournamentPage() {
               className="h-8 shrink-0 gap-2 border-white/15 bg-white/5 px-3 text-white/85"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
-              {pool.length} teams · awaiting draw
+              {pool.length} teams · draw complete
             </Badge>
           </div>
 
@@ -135,13 +141,19 @@ export default async function TournamentPage() {
               variant="outline"
               className="h-8 shrink-0 gap-2 border-white/15 bg-white/5 px-3 text-white/85"
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.9)]" />
-              0 / {S3_WORLD_CUP_GROUP_LETTERS.length} drawn
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
+              {groupsDrawn} / {S3_WORLD_CUP_GROUP_LETTERS.length} drawn
             </Badge>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {S3_WORLD_CUP_GROUP_LETTERS.map((letter) => (
+            {S3_WORLD_CUP_GROUP_LETTERS.map((letter) => {
+              const slugs = S3_WORLD_CUP_GROUPS[letter];
+              const groupTeams = slugs
+                .map((slug) => teamBySlug.get(slug))
+                .filter((team): team is Team => Boolean(team));
+
+              return (
               <Card
                 key={letter}
                 className="gap-3 border-white/10 bg-white/[0.03] py-4 transition hover:bg-white/[0.05]"
@@ -156,33 +168,44 @@ export default async function TournamentPage() {
                         Group {letter}
                       </CardTitle>
                       <CardDescription className="text-[11px] uppercase tracking-[0.2em] text-white/45">
-                        Awaiting draw
+                        {TEAMS_PER_GROUP} nations
                       </CardDescription>
                     </div>
                   </div>
                   <Badge
                     variant="outline"
-                    className="h-6 border-dashed border-white/15 bg-transparent px-2 text-[10px] uppercase tracking-[0.18em] text-white/55"
+                    className="h-6 border-white/15 bg-white/[0.04] px-2 text-[10px] uppercase tracking-[0.18em] text-white/70"
                   >
-                    0 / {TEAMS_PER_GROUP}
+                    {TEAMS_PER_GROUP} / {TEAMS_PER_GROUP}
                   </Badge>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-2">
-                  {Array.from({ length: TEAMS_PER_GROUP }).map((_, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-3 rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-3 py-2"
+                  {groupTeams.map((team, idx) => (
+                    <Link
+                      key={team.slug}
+                      href={`/teams/${team.slug}`}
+                      className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 outline-none transition hover:border-white/20 hover:bg-white/[0.07] focus-visible:ring-2 focus-visible:ring-white/40"
                     >
-                      <span className="font-display flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-[11px] font-semibold text-white/55">
+                      <span className="font-display flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-[11px] font-semibold text-white/60">
                         {idx + 1}
                       </span>
-                      <span className="h-9 w-9 rounded-full border border-dashed border-white/10 bg-white/[0.02]" />
-                      <span className="h-3 flex-1 rounded-full bg-white/[0.04]" />
-                    </div>
+                      <TeamCrest team={team} size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold tracking-tight text-white">
+                          {team.name}
+                        </p>
+                        {team.short ? (
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">
+                            {team.short}
+                          </p>
+                        ) : null}
+                      </div>
+                    </Link>
                   ))}
                 </CardContent>
               </Card>
-            ))}
+            );
+            })}
           </div>
         </section>
 
@@ -196,8 +219,7 @@ export default async function TournamentPage() {
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-white/60">
               Slot labels follow the official bracket — group winners and
-              runners-up, plus the four best third-place sides. Nations fill in
-              after the draw.
+              runners-up, plus the four best third-place sides.
             </p>
           </div>
           <Card className="overflow-hidden border-white/10 bg-white/[0.03]">
