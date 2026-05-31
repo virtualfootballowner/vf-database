@@ -15,7 +15,6 @@ import {
   verifiedAccessHint,
 } from "@/bot/verified-access";
 import {
-  buildTeamNameBySlug,
   createBotSupabase,
   loadTeams,
   normalizeTeamInputForLookup,
@@ -23,6 +22,7 @@ import {
   type ResolvedTeam,
   type TeamRow,
 } from "@/bot/stats-queries";
+import { discordTeamFlag, discordTeamLabel } from "@/bot/discord-team-flags";
 
 /** Verified-only gate for read commands. Mirrors `requireVerifiedRole` in commands.ts. */
 async function requireVerifiedRole(
@@ -373,20 +373,26 @@ async function resolveTeamWithId(
   return { ...base, id };
 }
 
-async function loadTeamNamesById(
+type TeamMeta = { name: string; slug: string | null };
+
+async function loadTeamMetaById(
   supabase: SupabaseClient,
   ids: string[],
-): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
+): Promise<Map<string, TeamMeta>> {
+  const map = new Map<string, TeamMeta>();
   const unique = [...new Set(ids.filter(Boolean))];
   if (unique.length === 0) return map;
   const { data, error } = await supabase
     .from("teams")
-    .select("id, name")
+    .select("id, name, slug")
     .in("id", unique);
   if (error) throw error;
-  for (const r of (data ?? []) as { id: string; name: string }[]) {
-    map.set(r.id, r.name);
+  for (const r of (data ?? []) as {
+    id: string;
+    name: string;
+    slug: string | null;
+  }[]) {
+    map.set(r.id, { name: r.name, slug: r.slug?.trim() || null });
   }
   return map;
 }
@@ -562,8 +568,7 @@ function stageLabelForMatch(
 function renderPastMatches(
   rows: PastMatchRow[],
   team: ResolvedTeamWithId,
-  teamNames: Map<string, string>,
-  idToName: Map<string, string>,
+  idToMeta: Map<string, TeamMeta>,
 ): string {
   if (rows.length === 0) {
     return "*No completed matches on file yet.*";
@@ -572,7 +577,8 @@ function renderPastMatches(
     .map((m) => {
       const isHome = m.home_team_id === team.id;
       const oppId = isHome ? m.away_team_id : m.home_team_id;
-      const oppName = idToName.get(oppId) ?? teamNames.get(oppId) ?? "Unknown";
+      const opp = idToMeta.get(oppId);
+      const oppLabel = discordTeamLabel(opp?.name ?? "Unknown", opp?.slug);
       const ours = isHome ? m.home_score : m.away_score;
       const theirs = isHome ? m.away_score : m.home_score;
       const result =
@@ -589,7 +595,7 @@ function renderPastMatches(
         ? `<t:${Math.floor(new Date(m.scheduled_at).getTime() / 1000)}:R>`
         : "";
       const compTag = m.competition && m.competition !== "—" ? `\`${m.competition.slice(0, 18)}\` · ` : "";
-      return `${result}  **${score}**  ${venue} **${oppName}** · ${compTag}S${m.season ?? "?"} ${ts}`;
+      return `${result}  **${score}**  ${venue} ${oppLabel} · ${compTag}S${m.season ?? "?"} ${ts}`;
     })
     .join("\n");
 }
@@ -598,22 +604,20 @@ function renderUpcomingForTeam(
   scheduled: ScheduledMatchRow[],
   legacy: UpcomingFixtureRow[],
   team: ResolvedTeamWithId,
-  teamNames: Map<string, string>,
+  idToMeta: Map<string, TeamMeta>,
   groupByRoblox: Map<string, string | null>,
 ): string {
   if (scheduled.length > 0) {
     return scheduled
       .map((m) => {
-        const isHome = m.home_team_id === team.id;
-        const oppName =
-          teamNames.get(isHome ? m.away_team_id : m.home_team_id) ?? "TBD";
-        const venue = isHome ? "vs" : "@";
+        const home = idToMeta.get(m.home_team_id);
+        const away = idToMeta.get(m.away_team_id);
         const comp =
           m.competition && m.competition !== "—"
             ? `\`${m.competition}\` · `
             : "";
         const stage = stageLabelForMatch(m, groupByRoblox);
-        return `🆚  ${venue} **${oppName}** · ${comp}${stage} · ${discordWhen(m.scheduled_at)} · 📍 ${parseStadium(m.match_notes)}`;
+        return `${discordTeamLabel(home?.name ?? "TBD", home?.slug)} vs ${discordTeamLabel(away?.name ?? "TBD", away?.slug)} · ${comp}${stage} · ${discordWhen(m.scheduled_at)} · 📍 ${parseStadium(m.match_notes)}`;
       })
       .join("\n");
   }
@@ -631,6 +635,7 @@ function renderUpcomingForTeam(
       const away = f.away_team_name?.trim() ?? "";
       const isHome = candidates.some((c) => home.toLowerCase().includes(c));
       const oppRaw = isHome ? away : home;
+      const selfRaw = isHome ? home : away;
       const seedFallback = (() => {
         const meta = f.metadata ?? {};
         const homeSeed = (meta as { home_seed?: string }).home_seed;
@@ -640,7 +645,7 @@ function renderUpcomingForTeam(
         return "TBD";
       })();
       const opp = oppRaw.length > 0 ? oppRaw : seedFallback;
-      const venue = isHome ? "vs" : "@";
+      const self = selfRaw.length > 0 ? selfRaw : team.name;
       const stage =
         f.stage === "Group" && f.group_code
           ? `Group ${f.group_code}`
@@ -651,14 +656,14 @@ function renderUpcomingForTeam(
       const stadium =
         typeof meta.stadium === "string" ? meta.stadium.trim() : "TBD";
       const when = scheduledAt ? discordWhen(scheduledAt) : "Time TBD";
-      return `🆚  ${venue} **${opp}** · \`${f.competition}\` · ${stage} · ${when} · 📍 ${stadium || "TBD"}`;
+      return `${discordTeamLabel(self)} vs ${discordTeamLabel(opp)} · \`${f.competition}\` · ${stage} · ${when} · 📍 ${stadium || "TBD"}`;
     })
     .join("\n");
 }
 
 function renderMatchweekFixtures(
   rows: ScheduledMatchRow[],
-  teamNames: Map<string, string>,
+  idToMeta: Map<string, TeamMeta>,
   groupByRoblox: Map<string, string | null>,
 ): string {
   if (rows.length === 0) {
@@ -666,14 +671,14 @@ function renderMatchweekFixtures(
   }
   return rows
     .map((m) => {
-      const home = teamNames.get(m.home_team_id) ?? "TBD";
-      const away = teamNames.get(m.away_team_id) ?? "TBD";
+      const home = idToMeta.get(m.home_team_id);
+      const away = idToMeta.get(m.away_team_id);
       const comp =
         m.competition && m.competition !== "—"
           ? `\`${m.competition}\` · `
           : "";
       const stage = stageLabelForMatch(m, groupByRoblox);
-      return `**${home}** vs **${away}** · ${comp}${stage} · ${discordWhen(m.scheduled_at)} · 📍 ${parseStadium(m.match_notes)}`;
+      return `${discordTeamLabel(home?.name ?? "TBD", home?.slug)} vs ${discordTeamLabel(away?.name ?? "TBD", away?.slug)} · ${comp}${stage} · ${discordWhen(m.scheduled_at)} · 📍 ${parseStadium(m.match_notes)}`;
     })
     .join("\n");
 }
@@ -706,14 +711,14 @@ async function replyNextMatchweek(
   const robloxIds = bundle.matches
     .map((m) => m.roblox_match_id)
     .filter((id): id is string => Boolean(id));
-  const [teamNames, groupByRoblox] = await Promise.all([
-    loadTeamNamesById(supabase, teamIds),
+  const [idToMeta, groupByRoblox] = await Promise.all([
+    loadTeamMetaById(supabase, teamIds),
     fetchGroupCodesByRobloxId(supabase, robloxIds),
   ]);
 
   const body = renderMatchweekFixtures(
     bundle.matches,
-    teamNames,
+    idToMeta,
     groupByRoblox,
   );
   const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
@@ -768,13 +773,11 @@ export async function handleFixtures(
       return;
     }
 
-    const [past, upcomingScheduled, upcomingLegacy, teamNames] =
-      await Promise.all([
-        fetchPastMatchesForTeam(supabase, team.id),
-        fetchUpcomingScheduledForTeam(supabase, team.id),
-        fetchUnlinkedFixturesForTeam(supabase, team),
-        buildTeamNameBySlug(supabase),
-      ]);
+    const [past, upcomingScheduled, upcomingLegacy] = await Promise.all([
+      fetchPastMatchesForTeam(supabase, team.id),
+      fetchUpcomingScheduledForTeam(supabase, team.id),
+      fetchUnlinkedFixturesForTeam(supabase, team),
+    ]);
 
     const opponentIds = [
       ...new Set(
@@ -787,16 +790,15 @@ export async function handleFixtures(
       m.home_team_id,
       m.away_team_id,
     ]);
-    const idToName = await loadTeamNamesById(supabase, [
-      ...opponentIds,
-      ...upcomingTeamIds,
+    const [idToMeta, groupByRoblox] = await Promise.all([
+      loadTeamMetaById(supabase, [...opponentIds, ...upcomingTeamIds, team.id]),
+      fetchGroupCodesByRobloxId(
+        supabase,
+        upcomingScheduled
+          .map((m) => m.roblox_match_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
     ]);
-    const groupByRoblox = await fetchGroupCodesByRobloxId(
-      supabase,
-      upcomingScheduled
-        .map((m) => m.roblox_match_id)
-        .filter((id): id is string => Boolean(id)),
-    );
 
     const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
     const teamUrl = `${siteBase}/teams/${encodeURIComponent(team.slug)}`;
@@ -804,10 +806,11 @@ export async function handleFixtures(
     const logoUrl =
       dbLogo ?? absoluteSiteAssetUrl(team.logo_url ?? null, siteBase);
 
+    const teamFlag = discordTeamFlag(team.slug);
     const embed = new EmbedBuilder()
       .setColor(0x083696)
       .setAuthor({
-        name: `${team.name} · VF League`,
+        name: `${teamFlag ? `${teamFlag} ` : ""}${team.name} · VF League`,
         iconURL: logoUrl ?? undefined,
         url: teamUrl,
       })
@@ -822,7 +825,7 @@ export async function handleFixtures(
       .addFields(
         {
           name: "📜 Last 5 results",
-          value: renderPastMatches(past, team, teamNames, idToName).slice(0, 1024),
+          value: renderPastMatches(past, team, idToMeta).slice(0, 1024),
           inline: false,
         },
         {
@@ -831,7 +834,7 @@ export async function handleFixtures(
             upcomingScheduled,
             upcomingLegacy,
             team,
-            idToName,
+            idToMeta,
             groupByRoblox,
           ).slice(0, 1024),
           inline: false,
