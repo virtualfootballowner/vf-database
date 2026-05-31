@@ -200,8 +200,8 @@ export default async function TournamentPage() {
               after the draw.
             </p>
           </div>
-          <Card className="border-white/10 bg-white/[0.03]">
-            <CardContent className="p-4 sm:p-6">
+          <Card className="overflow-hidden border-white/10 bg-white/[0.03]">
+            <CardContent className="p-3 sm:p-5 md:p-6">
               <WorldCupKnockoutBracket />
             </CardContent>
           </Card>
