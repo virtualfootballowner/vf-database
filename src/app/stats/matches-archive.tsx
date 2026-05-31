@@ -20,10 +20,36 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
   year: "numeric",
 });
 
+const TIME_FORMATTER = new Intl.DateTimeFormat("en-GB", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "UTC",
+  timeZoneName: "short",
+});
+
 function formatDate(value: string): string {
   const date = new Date(`${value}T12:00:00Z`);
   if (Number.isNaN(date.getTime())) return value;
   return DATE_FORMATTER.format(date);
+}
+
+function formatKickoff(iso: string): { date: string; time: string } {
+  const d = new Date(iso);
+  return {
+    date: DATE_FORMATTER.format(d),
+    time: TIME_FORMATTER.format(d),
+  };
+}
+
+function isScheduledFixture(row: FixtureRow): boolean {
+  return (
+    row.match?.status === "scheduled" ||
+    (row.match === null && row.schedule != null)
+  );
+}
+
+function isPlayedFixture(row: FixtureRow): boolean {
+  return row.match != null && row.match.status !== "scheduled";
 }
 
 export async function MatchesArchive() {
@@ -41,8 +67,8 @@ export async function MatchesArchive() {
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">
             Every fixture from the league archive. Played matches show full
-            data and link to the match report; missing fixtures are tagged No
-            Data.
+            data and link to the match report; upcoming fixtures show kickoff
+            times; empty knockout slots are tagged No Data.
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -58,6 +84,14 @@ export async function MatchesArchive() {
           >
             {bundle.fixtureCounts.played} played
           </Badge>
+          {bundle.fixtureCounts.scheduled > 0 ? (
+            <Badge
+              variant="outline"
+              className="border-sky-300/30 bg-sky-400/10 text-sky-200"
+            >
+              {bundle.fixtureCounts.scheduled} upcoming
+            </Badge>
+          ) : null}
           <Badge
             variant="outline"
             className="border-white/10 bg-white/5 text-white/55"
@@ -69,8 +103,8 @@ export async function MatchesArchive() {
 
       <section className="flex flex-col gap-8">
         {bundle.fixtureGroups.map((group) => {
-          const playedInGroup = group.rows.filter((r) => r.match !== null)
-            .length;
+          const playedInGroup = group.rows.filter(isPlayedFixture).length;
+          const scheduledInGroup = group.rows.filter(isScheduledFixture).length;
           return (
             <div key={group.key} className="flex flex-col gap-3">
               <div className="flex flex-wrap items-end justify-between gap-2 px-1">
@@ -83,17 +117,22 @@ export async function MatchesArchive() {
                   </h2>
                 </div>
                 <span className="text-[11px] font-medium text-white/55">
-                  {playedInGroup} of {group.rows.length} played
+                  {playedInGroup} played
+                  {scheduledInGroup > 0 ? ` · ${scheduledInGroup} upcoming` : ""}
+                  {" · "}
+                  {group.rows.length} total
                 </span>
               </div>
               <div className="flex flex-col gap-2">
                 {group.rows.map((row) =>
-                  row.match ? (
+                  isPlayedFixture(row) && row.match ? (
                     <PlayedRow
                       key={row.match.id}
                       match={row.match}
                       getTeam={getTeam}
                     />
+                  ) : isScheduledFixture(row) ? (
+                    <ScheduledRow key={row.id} row={row} getTeam={getTeam} />
                   ) : (
                     <MissingRow key={row.id} row={row} getTeam={getTeam} />
                   ),
@@ -180,6 +219,88 @@ function PlayedRow({
         </CardContent>
       </Card>
     </Link>
+  );
+}
+
+function ScheduledRow({
+  row,
+  getTeam,
+}: {
+  row: FixtureRow;
+  getTeam: GetTeam;
+}) {
+  const teamA = row.teamA ? getTeam(null, row.teamA) : null;
+  const teamB = row.teamB ? getTeam(null, row.teamB) : null;
+  const schedule =
+    row.schedule ??
+    (row.match?.scheduledAt
+      ? {
+          scheduledAt: row.match.scheduledAt,
+          gameWeekLabel: row.match.gameWeek,
+          stadium: row.match.stadium ?? "TBD",
+          groupCode: null,
+        }
+      : null);
+  const kickoff = schedule?.scheduledAt
+    ? formatKickoff(schedule.scheduledAt)
+    : null;
+
+  return (
+    <Card className="gap-0 border-sky-400/20 bg-sky-400/[0.04] py-0">
+      <CardContent className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-3 sm:grid-cols-[130px_1fr_auto] sm:gap-4 sm:px-4 sm:py-3.5">
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">
+            {kickoff?.date ?? "—"}
+          </span>
+          <span className="text-[10px] font-medium tabular-nums tracking-[0.08em] text-white/50">
+            {kickoff?.time ?? "—"}
+          </span>
+          <span className="text-[10px] uppercase tracking-[0.18em] text-white/45">
+            S{row.season} · {schedule?.gameWeekLabel ?? row.id}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-4">
+          {teamA ? (
+            <TeamLine team={teamA} name={row.teamA} align="end" />
+          ) : (
+            <span className="justify-self-end text-right text-xs uppercase tracking-[0.2em] text-white/35">
+              TBD
+            </span>
+          )}
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="text-sm font-semibold text-white/40">vs</span>
+            {schedule?.groupCode ? (
+              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                G{schedule.groupCode}
+              </span>
+            ) : null}
+          </div>
+          {teamB ? (
+            <TeamLine team={teamB} name={row.teamB} align="start" />
+          ) : (
+            <span className="justify-self-start text-left text-xs uppercase tracking-[0.2em] text-white/35">
+              TBD
+            </span>
+          )}
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <Badge
+            variant="outline"
+            className="border-white/15 px-2 py-0 text-[10px] text-white/70"
+          >
+            {abbreviate(row.competition)}
+          </Badge>
+          <Badge
+            variant="outline"
+            className="border-sky-300/30 bg-sky-400/10 px-2 py-0 text-[10px] uppercase tracking-wider text-sky-200"
+          >
+            {schedule?.stadium ?? "TBD"}
+          </Badge>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -292,6 +413,8 @@ function abbreviate(competition: string): string {
       return "BP";
     case "Serie Italia":
       return "SI";
+    case "World Cup":
+      return "WC";
     default:
       return competition;
   }

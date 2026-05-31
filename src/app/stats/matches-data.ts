@@ -16,6 +16,9 @@ export type MatchRecord = {
   fft: "No" | "Yes" | "Partial" | "Mercy";
   referee: string;
   notes: string;
+  status?: "scheduled" | "completed" | "live" | "cancelled";
+  scheduledAt?: string | null;
+  stadium?: string | null;
 };
 
 const TEAM_NAME_TO_SLUG: Record<string, string | null> = {

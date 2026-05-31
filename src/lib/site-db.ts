@@ -43,6 +43,7 @@ function mapDbRowToMatchRecord(
     fft: string | null;
     referee: string | null;
     match_notes: string | null;
+    status?: string | null;
     home_team_id: string;
     away_team_id: string;
   },
@@ -51,6 +52,8 @@ function mapDbRowToMatchRecord(
   homeSlug: string | null,
   awaySlug: string | null,
 ): MatchRecord {
+  const notes = normStr(row.match_notes);
+  const stadiumMatch = /Stadium:\s*(.+)/i.exec(notes);
   const day =
     row.scheduled_at == null
       ? ""
@@ -66,6 +69,14 @@ function mapDbRowToMatchRecord(
     fftRaw === "No"
       ? fftRaw
       : "No";
+  const statusRaw = normStr(row.status).toLowerCase();
+  const status =
+    statusRaw === "scheduled" ||
+    statusRaw === "completed" ||
+    statusRaw === "live" ||
+    statusRaw === "cancelled"
+      ? (statusRaw as MatchRecord["status"])
+      : "completed";
 
   return {
     id: row.roblox_match_id ?? "",
@@ -84,7 +95,27 @@ function mapDbRowToMatchRecord(
     stage: row.stage?.trim() || "Group",
     fft,
     referee: normStr(row.referee) || "—",
-    notes: normStr(row.match_notes),
+    notes,
+    status,
+    scheduledAt: row.scheduled_at,
+    stadium: stadiumMatch?.[1]?.trim() ?? null,
+  };
+}
+
+function parseFixtureScheduleMeta(
+  metadata: unknown,
+): FixtureRow["schedule"] {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+  const m = metadata as Record<string, unknown>;
+  const scheduledAt = normStr(m.scheduled_at);
+  if (!scheduledAt) return null;
+  return {
+    scheduledAt,
+    gameWeekLabel: normStr(m.game_week_label) || "—",
+    stadium: normStr(m.stadium) || "TBD",
+    groupCode: normStr(m.group) || null,
   };
 }
 
@@ -117,6 +148,7 @@ function buildFixtureGroupsDb(
     away_team_name: string;
     roblox_match_id: string | null;
     match_id: string | null;
+    metadata?: unknown;
   }[],
   uuidToRoblox: Map<string, string>,
   matchesByRoblox: Map<string, MatchRecord>,
@@ -138,6 +170,7 @@ function buildFixtureGroupsDb(
       const rid = uuidToRoblox.get(f.match_id);
       if (rid) m = matchesByRoblox.get(rid) ?? null;
     }
+    const scheduleMeta = parseFixtureScheduleMeta(f.metadata);
     return {
       id: f.fixture_code,
       season: f.season,
@@ -146,6 +179,15 @@ function buildFixtureGroupsDb(
       teamA: f.home_team_name ?? "",
       teamB: f.away_team_name ?? "",
       match: m,
+      schedule:
+        m?.status === "scheduled"
+          ? {
+              scheduledAt: m.scheduledAt ?? "",
+              gameWeekLabel: m.gameWeek,
+              stadium: m.stadium ?? "TBD",
+              groupCode: scheduleMeta?.groupCode ?? null,
+            }
+          : scheduleMeta,
     };
   });
 
@@ -167,15 +209,21 @@ function buildFixtureGroupsDb(
 
   for (const group of ordered) {
     group.rows.sort((a, b) => {
-      const aDate = a.match?.date ?? "9999-99-99";
-      const bDate = b.match?.date ?? "9999-99-99";
+      const aDate =
+        a.match?.date ||
+        a.schedule?.scheduledAt.slice(0, 10) ||
+        "9999-99-99";
+      const bDate =
+        b.match?.date ||
+        b.schedule?.scheduledAt.slice(0, 10) ||
+        "9999-99-99";
       if (aDate !== bDate) return aDate.localeCompare(bDate);
+      const aTime = a.match?.scheduledAt ?? a.schedule?.scheduledAt ?? "";
+      const bTime = b.match?.scheduledAt ?? b.schedule?.scheduledAt ?? "";
+      if (aTime !== bTime) return aTime.localeCompare(bTime);
       return a.id.localeCompare(b.id);
     });
   }
-
-  const played = rows.filter((r) => r.match !== null).length;
-  const missing = rows.filter((r) => r.match === null).length;
 
   return {
     groups: ordered,
@@ -232,6 +280,7 @@ export type SiteStatsBundle = {
   fixtureCounts: {
     total: number;
     played: number;
+    scheduled: number;
     missing: number;
     expected: number;
   };
@@ -316,16 +365,16 @@ async function tryLoadStatsFromSupabase(): Promise<SiteStatsBundle | null> {
   const { data: matchRows, error: mErr } = await supabase
     .from("matches")
     .select(
-      "id, roblox_match_id, season, competition, game_week_label, match_week, scheduled_at, home_team_id, away_team_id, home_score, away_score, stage, fft, referee, match_notes",
+      "id, roblox_match_id, season, competition, game_week_label, match_week, scheduled_at, home_team_id, away_team_id, home_score, away_score, stage, fft, referee, match_notes, status",
     );
 
-  if (mErr || !matchRows?.length) return null;
+  if (mErr) return null;
 
   const matchesByRoblox = new Map<string, MatchRecord>();
   const uuidToRoblox = new Map<string, string>();
   const allMatches: MatchRecord[] = [];
 
-  for (const row of matchRows) {
+  for (const row of matchRows ?? []) {
     if (!row.roblox_match_id) continue;
     const home = teamById.get(row.home_team_id);
     const away = teamById.get(row.away_team_id);
@@ -350,7 +399,7 @@ async function tryLoadStatsFromSupabase(): Promise<SiteStatsBundle | null> {
   const { data: fxRows, error: fxErr } = await supabase
     .from("fixtures")
     .select(
-      "fixture_code, season, competition, stage, round_order, home_team_name, away_team_name, roblox_match_id, match_id",
+      "fixture_code, season, competition, stage, round_order, home_team_name, away_team_name, roblox_match_id, match_id, metadata",
     )
     .in("season", [...STATS_SEASONS]);
 
@@ -363,11 +412,24 @@ async function tryLoadStatsFromSupabase(): Promise<SiteStatsBundle | null> {
   );
 
   const played = groups.reduce(
-    (n, g) => n + g.rows.filter((r) => r.match !== null).length,
+    (n, g) =>
+      n +
+      g.rows.filter((r) => r.match !== null && r.match.status !== "scheduled")
+        .length,
+    0,
+  );
+  const scheduled = groups.reduce(
+    (n, g) =>
+      n +
+      g.rows.filter(
+        (r) =>
+          r.match?.status === "scheduled" ||
+          (r.match === null && r.schedule != null),
+      ).length,
     0,
   );
   const total = groups.reduce((n, g) => n + g.rows.length, 0);
-  const missing = total - played;
+  const missing = total - played - scheduled;
 
   return {
     source: "supabase",
@@ -376,6 +438,7 @@ async function tryLoadStatsFromSupabase(): Promise<SiteStatsBundle | null> {
     fixtureCounts: {
       total,
       played,
+      scheduled,
       missing,
       expected: templateCount,
     },

@@ -8,6 +8,13 @@
  */
 
 import { S3_WORLD_CUP_KNOCKOUT_MATCHES } from "@/lib/s3-world-cup-knockout-bracket";
+import { S3_WORLD_CUP_GROUP_FIXTURES } from "@/lib/s3-world-cup-group-schedule";
+
+export {
+  S3_WORLD_CUP_GROUP_LETTERS,
+  S3_WORLD_CUP_GROUPS,
+  type S3WorldCupGroupLetter,
+} from "@/lib/s3-world-cup-groups";
 
 export type WorldCupStructureConfig = {
   format: "world_cup_24";
@@ -25,30 +32,6 @@ export type WorldCupStructureConfig = {
   knockout_advancers_total: 16;
 };
 
-export const S3_WORLD_CUP_GROUP_LETTERS = [
-  "A",
-  "B",
-  "C",
-  "D",
-  "E",
-  "F",
-] as const;
-
-export type S3WorldCupGroupLetter = (typeof S3_WORLD_CUP_GROUP_LETTERS)[number];
-
-/** Draw order per group (slot 1–4 → seed A1…F4). Team slugs from the S3 roster. */
-export const S3_WORLD_CUP_GROUPS: Record<
-  S3WorldCupGroupLetter,
-  readonly [string, string, string, string]
-> = {
-  A: ["nigeria", "portugal", "italy", "mexico"],
-  B: ["spain", "albania", "greece", "england"],
-  C: ["canada", "somalia", "france", "usa"],
-  D: ["brazil", "argentina", "belgium", "ukraine"],
-  E: ["germany", "morocco", "switzerland", "netherlands"],
-  F: ["norway", "japan", "russia", "north-korea"],
-};
-
 export const S3_WORLD_CUP_STRUCTURE: WorldCupStructureConfig = {
   format: "world_cup_24",
   groups: 6,
@@ -63,16 +46,6 @@ export const S3_WORLD_CUP_STRUCTURE: WorldCupStructureConfig = {
   knockout_advancers_total: 16,
 };
 
-/** Pair indices for a single round-robin of 4 teams (6 games). */
-const FOUR_TEAM_ROUND_ROBIN: [number, number][] = [
-  [0, 1],
-  [2, 3],
-  [0, 2],
-  [1, 3],
-  [0, 3],
-  [1, 2],
-];
-
 export type WorldCupFixtureSeedRow = {
   season: 3;
   competition: "World Cup";
@@ -82,40 +55,37 @@ export type WorldCupFixtureSeedRow = {
   group_code: string | null;
   home_team_name: string;
   away_team_name: string;
-  roblox_match_id: null;
+  roblox_match_id: string | null;
   metadata: Record<string, unknown>;
 };
-
-function seedLabel(group: string, pos: 1 | 2 | 3 | 4): string {
-  return `${group}${pos}`;
-}
 
 export function buildS3WorldCupFixtureRows(): WorldCupFixtureSeedRow[] {
   const rows: WorldCupFixtureSeedRow[] = [];
   let order = 0;
 
-  for (const g of S3_WORLD_CUP_GROUP_LETTERS) {
-    FOUR_TEAM_ROUND_ROBIN.forEach(([hi, ai], idx) => {
-      order += 1;
-      const gn = idx + 1;
-      rows.push({
-        season: 3,
-        competition: "World Cup",
-        fixture_code: `S3-WC-G-${g}-${String(gn).padStart(2, "0")}`,
-        stage: "Group",
-        round_order: order,
-        group_code: g,
-        home_team_name: "",
-        away_team_name: "",
-        roblox_match_id: null,
-        metadata: {
-          structure: "s3_world_cup_24",
-          group: g,
-          home_seed: seedLabel(g, (hi + 1) as 1 | 2 | 3 | 4),
-          away_seed: seedLabel(g, (ai + 1) as 1 | 2 | 3 | 4),
-          match_in_group: gn,
-        },
-      });
+  for (const fx of S3_WORLD_CUP_GROUP_FIXTURES) {
+    order += 1;
+    rows.push({
+      season: 3,
+      competition: "World Cup",
+      fixture_code: fx.fixtureCode,
+      stage: "Group",
+      round_order: order,
+      group_code: fx.group,
+      home_team_name: fx.homeTeamName,
+      away_team_name: fx.awayTeamName,
+      roblox_match_id: fx.fixtureCode,
+      metadata: {
+        structure: "s3_world_cup_24",
+        group: fx.group,
+        match_in_group: fx.matchInGroup,
+        game_week: fx.gameWeek,
+        game_week_label: fx.gameWeekLabel,
+        scheduled_at: fx.scheduledAt,
+        stadium: fx.stadium,
+        home_slug: fx.homeSlug,
+        away_slug: fx.awaySlug,
+      },
     });
   }
 

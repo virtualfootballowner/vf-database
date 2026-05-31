@@ -9,8 +9,16 @@ export type Fixture = {
   teamB: string;
 };
 
+export type FixtureScheduleInfo = {
+  scheduledAt: string;
+  gameWeekLabel: string;
+  stadium: string;
+  groupCode?: string | null;
+};
+
 export type FixtureRow = Fixture & {
   match: MatchRecord | null;
+  schedule?: FixtureScheduleInfo | null;
 };
 
 export type FixtureScheduleRaw = [
@@ -176,6 +184,7 @@ export const fixtureRows: FixtureRow[] = buildResolvedFixtures();
 export const fixtureCounts = {
   total: fixtureRows.length,
   played: fixtureRows.filter((r) => r.match !== null).length,
+  scheduled: 0,
   missing: fixtureRows.filter((r) => r.match === null).length,
   expected: fixtures.length,
 };

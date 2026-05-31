@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { WorldCupKnockoutBracket } from "@/app/tournament/world-cup-knockout-bracket";
+import { WorldCupFixturesSection } from "@/app/tournament/world-cup-fixtures-section";
 import {
   S3_WORLD_CUP_GROUPS,
   S3_WORLD_CUP_GROUP_LETTERS,
@@ -71,6 +72,8 @@ export default async function TournamentPage() {
             into the Round of 16.
           </p>
         </section>
+
+        <WorldCupFixturesSection teamBySlug={teamBySlug} />
 
         <section className="flex flex-col gap-5">
           <div className="flex flex-wrap items-end justify-between gap-3">
