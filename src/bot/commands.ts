@@ -11,6 +11,9 @@ import {
   type GuildMember,
 } from "discord.js";
 
+import {
+  handleEquipCommand,
+} from "@/bot/equip-honors";
 import { banBailDmAppendLines } from "@/bot/ban-bail-copy";
 import { formatBailAmountForDisplay } from "@/lib/players/format-ban-bail";
 import { env } from "@/bot/config";
@@ -563,6 +566,13 @@ export const leagueSlashCommandDefinitions = [
     )
     .toJSON(),
 
+  new SlashCommandBuilder()
+    .setName("equip")
+    .setDescription(
+      "Equip a Discord role for a trophy or accolade on your VF profile (one at a time)",
+    )
+    .toJSON(),
+
   scrimmageSlashCommand,
 ];
 
@@ -695,6 +705,9 @@ export async function handleSlashCommand(
       return;
     case "ref-unclaim":
       await handleRefUnclaimCommand(interaction);
+      return;
+    case "equip":
+      await handleEquipCommand(interaction);
       return;
     case "scrimmage":
       await handleScrimmageCommand(interaction);

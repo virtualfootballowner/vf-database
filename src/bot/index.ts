@@ -73,6 +73,10 @@ import {
   handleReleaseStaffButton,
 } from "@/bot/release";
 import {
+  handleEquipHonorSelect,
+  isEquipHonorSelect,
+} from "@/bot/equip-honors";
+import {
   handleScrimmageButton,
   handleScrimmageSelect,
   isScrimmageCustomId,
@@ -418,6 +422,10 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     }
 
     if (interaction.isStringSelectMenu()) {
+      if (isEquipHonorSelect(interaction.customId)) {
+        await handleEquipHonorSelect(interaction);
+        return;
+      }
       if (isScrimmageCustomId(interaction.customId)) {
         await handleScrimmageSelect(interaction);
       }
