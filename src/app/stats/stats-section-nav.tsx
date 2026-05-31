@@ -24,7 +24,7 @@ export function StatsSectionNav() {
     if (href === "/stats/tournaments") {
       return (
         pathname === "/stats/tournaments" ||
-        pathname === "/stats/tournaments/"
+        pathname.startsWith("/stats/tournaments/")
       );
     }
     if (href === "/stats/faceit") {

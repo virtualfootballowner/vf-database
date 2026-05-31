@@ -4,10 +4,8 @@ import { TeamCrest } from "@/app/teams/team-crest";
 import type { Team } from "@/app/teams/teams-data";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  S3_WORLD_CUP_GROUP_CALENDAR_DAYS,
-  S3_WORLD_CUP_KNOCKOUT_CALENDAR,
-} from "@/lib/s3-world-cup-calendar";
+import { S3_WORLD_CUP_KNOCKOUT_CALENDAR } from "@/lib/s3-world-cup-calendar";
+import type { S3WorldCupMatchday } from "@/lib/s3-world-cup-calendar";
 import {
   S3_WORLD_CUP_GROUP_FIXTURES,
   type S3WorldCupGroupFixture,
@@ -17,15 +15,6 @@ import {
   type S3WorldCupKnockoutFixture,
 } from "@/lib/s3-world-cup-knockout-schedule";
 import { formatWcKickoff } from "@/lib/wc-fixture-kickoff";
-
-function formatCalendarHeading(date: string): string {
-  const d = new Date(`${date}T12:00:00+01:00`);
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "long",
-    timeZone: "Europe/London",
-  }).format(d);
-}
 
 function GroupFixtureCard({
   fx,
@@ -42,11 +31,11 @@ function GroupFixtureCard({
     <Card className="gap-0 border-white/10 bg-white/[0.03] py-0 transition hover:bg-white/[0.05]">
       <CardContent className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-3 sm:grid-cols-[130px_1fr_auto] sm:gap-4 sm:px-4 sm:py-3.5">
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-medium tabular-nums tracking-[0.08em] text-white/50">
-            {kickoff.time}
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
+            {kickoff.date}
           </span>
-          <span className="text-[10px] uppercase tracking-[0.18em] text-white/40">
-            Group {fx.group}
+          <span className="text-[10px] font-medium tabular-nums tracking-[0.08em] text-white/45">
+            {kickoff.time}
           </span>
         </div>
 
@@ -152,6 +141,28 @@ function TeamFixtureLine({
   );
 }
 
+const MATCHDAY_META: Record<
+  S3WorldCupMatchday,
+  { title: string; dates: string; note?: string }
+> = {
+  1: { title: "Matchday 1", dates: "5–7 June" },
+  2: { title: "Matchday 2", dates: "10–12 June" },
+  3: {
+    title: "Matchday 3",
+    dates: "15–17 June",
+    note: "Final group matches kick off simultaneously",
+  },
+};
+
+function formatCalendarHeading(date: string): string {
+  const d = new Date(`${date}T12:00:00+01:00`);
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "long",
+    timeZone: "Europe/London",
+  }).format(d);
+}
+
 const KO_SECTIONS = [
   { key: "r16", title: "Round of 16", symbol: "◈", days: S3_WORLD_CUP_KNOCKOUT_CALENDAR.r16 },
   { key: "qf", title: "Quarter-Finals", symbol: "◆", days: S3_WORLD_CUP_KNOCKOUT_CALENDAR.qf },
@@ -168,25 +179,26 @@ export function WorldCupFixturesSection({
 }: {
   teamBySlug: Map<string, Team>;
 }) {
-  const groupByDate = new Map<string, S3WorldCupGroupFixture[]>();
-  for (const fx of S3_WORLD_CUP_GROUP_FIXTURES) {
-    const list = groupByDate.get(fx.calendarDate) ?? [];
-    list.push(fx);
-    groupByDate.set(fx.calendarDate, list);
-  }
+  const byMatchday = ([1, 2, 3] as const).map((md) => ({
+    md,
+    meta: MATCHDAY_META[md],
+    fixtures: S3_WORLD_CUP_GROUP_FIXTURES.filter((f) => f.matchday === md).sort(
+      (a, b) => a.scheduledAt.localeCompare(b.scheduledAt),
+    ),
+  }));
 
   return (
     <section className="flex flex-col gap-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
-            Full calendar
+            Group stage
           </p>
           <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
             Fixtures
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-white/65">
-            Official Season 3 schedule · kickoffs 6–10 pm BST · stadium TBD.
+            Three matchdays · kickoffs 6–10 pm BST · stadium TBD.
           </p>
         </div>
         <Badge
@@ -199,53 +211,34 @@ export function WorldCupFixturesSection({
         </Badge>
       </div>
 
-      <div className="flex flex-col gap-6">
-        <h3 className="text-lg font-semibold tracking-tight text-white">
-          Group stage
-        </h3>
-        {S3_WORLD_CUP_GROUP_CALENDAR_DAYS.map((day) => {
-          const fixtures = (groupByDate.get(day.date) ?? []).sort(
-            (a, b) =>
-              a.group.localeCompare(b.group) || a.matchInGroup - b.matchInGroup,
-          );
-          return (
-            <div key={day.date} className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-end justify-between gap-2 px-1">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
-                    {formatCalendarHeading(day.date).toUpperCase()}
-                  </p>
-                  <h4 className="mt-1 text-base font-semibold tracking-tight text-white">
-                    {day.matchday === 1
-                      ? "Matchday 1"
-                      : day.matchday === 2
-                        ? "Matchday 2"
-                        : "Matchday 3"}
-                    {" · "}
-                    Groups {day.groupsLabel}
-                  </h4>
-                  {day.simultaneous ? (
-                    <p className="mt-1 text-[11px] text-white/50">
-                      Final group matches kick off simultaneously
-                    </p>
-                  ) : null}
-                </div>
-                <span className="text-[11px] font-medium text-white/55">
-                  {fixtures.length} fixtures
-                </span>
+      <div className="flex flex-col gap-8">
+        {byMatchday.map(({ md, meta, fixtures }) => (
+          <div key={md} className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end justify-between gap-2 px-1">
+              <div>
+                <h3 className="text-lg font-semibold tracking-tight text-white">
+                  {meta.title}
+                </h3>
+                <p className="mt-1 text-sm text-white/55">{meta.dates}</p>
+                {meta.note ? (
+                  <p className="mt-1 text-[11px] text-white/45">{meta.note}</p>
+                ) : null}
               </div>
-              <div className="flex flex-col gap-2">
-                {fixtures.map((fx) => (
-                  <GroupFixtureCard
-                    key={fx.fixtureCode}
-                    fx={fx}
-                    teamBySlug={teamBySlug}
-                  />
-                ))}
-              </div>
+              <span className="text-[11px] font-medium text-white/55">
+                {fixtures.length} fixtures
+              </span>
             </div>
-          );
-        })}
+            <div className="flex flex-col gap-2">
+              {fixtures.map((fx) => (
+                <GroupFixtureCard
+                  key={fx.fixtureCode}
+                  fx={fx}
+                  teamBySlug={teamBySlug}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       {KO_SECTIONS.map((section) => (
