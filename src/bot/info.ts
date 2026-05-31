@@ -343,6 +343,48 @@ function discordWhen(iso: string | null | undefined): string {
   return `<t:${ts}:f> · <t:${ts}:R>`;
 }
 
+/** Blank line between fixture rows in Discord embeds. */
+const FIXTURE_ENTRY_GAP = "\n\n";
+
+function joinFixtureEntries(lines: string[]): string {
+  return lines.join(FIXTURE_ENTRY_GAP);
+}
+
+/** Split embed field text on fixture boundaries — never mid-line / mid-timestamp. */
+function chunkFixtureEmbedField(text: string, max = 1024): string[] {
+  if (text.length <= max) return [text];
+
+  const entries = text.split(FIXTURE_ENTRY_GAP);
+  const chunks: string[] = [];
+  let current = "";
+
+  for (const entry of entries) {
+    if (!entry.trim()) continue;
+    const next = current.length === 0 ? entry : `${current}${FIXTURE_ENTRY_GAP}${entry}`;
+    if (next.length <= max) {
+      current = next;
+      continue;
+    }
+    if (current.length > 0) {
+      chunks.push(current);
+      current = entry;
+      continue;
+    }
+    // Single fixture longer than max (shouldn't happen) — keep intact, Discord truncates.
+    chunks.push(entry.slice(0, max));
+    current = "";
+  }
+
+  if (current.length > 0) chunks.push(current);
+  return chunks.length > 0 ? chunks : [text.slice(0, max)];
+}
+
+function trimEmbedField(text: string, max = 1024): string {
+  if (text.length <= max) return text;
+  const [first] = chunkFixtureEmbedField(text, max);
+  return first ?? text.slice(0, max);
+}
+
 function matchweekKey(m: ScheduledMatchRow): string {
   const gw = m.game_week_label?.trim();
   if (gw && gw !== "—") {
@@ -573,8 +615,7 @@ function renderPastMatches(
   if (rows.length === 0) {
     return "*No completed matches on file yet.*";
   }
-  return rows
-    .map((m) => {
+  const lines = rows.map((m) => {
       const isHome = m.home_team_id === team.id;
       const oppId = isHome ? m.away_team_id : m.home_team_id;
       const opp = idToMeta.get(oppId);
@@ -596,8 +637,8 @@ function renderPastMatches(
         : "";
       const compTag = m.competition && m.competition !== "—" ? `\`${m.competition.slice(0, 18)}\` · ` : "";
       return `${result}  **${score}**  ${venue} ${oppLabel} · ${compTag}S${m.season ?? "?"} ${ts}`;
-    })
-    .join("\n");
+    });
+  return joinFixtureEntries(lines);
 }
 
 function renderUpcomingForTeam(
@@ -608,8 +649,8 @@ function renderUpcomingForTeam(
   groupByRoblox: Map<string, string | null>,
 ): string {
   if (scheduled.length > 0) {
-    return scheduled
-      .map((m) => {
+    return joinFixtureEntries(
+      scheduled.map((m) => {
         const home = idToMeta.get(m.home_team_id);
         const away = idToMeta.get(m.away_team_id);
         const comp =
@@ -618,16 +659,16 @@ function renderUpcomingForTeam(
             : "";
         const stage = stageLabelForMatch(m, groupByRoblox);
         return `${discordTeamLabel(home?.name ?? "TBD", home?.slug)} vs ${discordTeamLabel(away?.name ?? "TBD", away?.slug)} · ${comp}${stage} · ${discordWhen(m.scheduled_at)} · 📍 ${parseStadium(m.match_notes)}`;
-      })
-      .join("\n");
+      }),
+    );
   }
 
   if (legacy.length === 0) {
     return "*No upcoming fixtures scheduled — once the draw / next slate is set, they'll appear here.*";
   }
 
-  return legacy
-    .map((f) => {
+  return joinFixtureEntries(
+    legacy.map((f) => {
       const candidates = buildFixtureNameCandidates(team).map((c) =>
         c.toLowerCase(),
       );
@@ -657,8 +698,8 @@ function renderUpcomingForTeam(
         typeof meta.stadium === "string" ? meta.stadium.trim() : "TBD";
       const when = scheduledAt ? discordWhen(scheduledAt) : "Time TBD";
       return `${discordTeamLabel(self)} vs ${discordTeamLabel(opp)} · \`${f.competition}\` · ${stage} · ${when} · 📍 ${stadium || "TBD"}`;
-    })
-    .join("\n");
+    }),
+  );
 }
 
 function renderMatchweekFixtures(
@@ -669,8 +710,8 @@ function renderMatchweekFixtures(
   if (rows.length === 0) {
     return "*No upcoming fixtures are scheduled yet.*";
   }
-  return rows
-    .map((m) => {
+  return joinFixtureEntries(
+    rows.map((m) => {
       const home = idToMeta.get(m.home_team_id);
       const away = idToMeta.get(m.away_team_id);
       const comp =
@@ -679,19 +720,8 @@ function renderMatchweekFixtures(
           : "";
       const stage = stageLabelForMatch(m, groupByRoblox);
       return `${discordTeamLabel(home?.name ?? "TBD", home?.slug)} vs ${discordTeamLabel(away?.name ?? "TBD", away?.slug)} · ${comp}${stage} · ${discordWhen(m.scheduled_at)} · 📍 ${parseStadium(m.match_notes)}`;
-    })
-    .join("\n");
-}
-
-function chunkEmbedField(text: string, max = 1024): string[] {
-  if (text.length <= max) return [text];
-  const chunks: string[] = [];
-  let rest = text;
-  while (rest.length > 0) {
-    chunks.push(rest.slice(0, max));
-    rest = rest.slice(max);
-  }
-  return chunks;
+    }),
+  );
 }
 
 async function replyNextMatchweek(
@@ -736,7 +766,7 @@ async function replyNextMatchweek(
     .setFooter({ text: "VF League Database · Times shown in your Discord timezone" })
     .setTimestamp(new Date());
 
-  const chunks = chunkEmbedField(body);
+  const chunks = chunkFixtureEmbedField(body);
   chunks.forEach((chunk, i) => {
     embed.addFields({
       name: i === 0 ? "📅 Fixtures" : `📅 Fixtures (cont. ${i + 1})`,
@@ -825,18 +855,20 @@ export async function handleFixtures(
       .addFields(
         {
           name: "📜 Last 5 results",
-          value: renderPastMatches(past, team, idToMeta).slice(0, 1024),
+          value: trimEmbedField(renderPastMatches(past, team, idToMeta)),
           inline: false,
         },
         {
           name: "📅 Next 5 fixtures",
-          value: renderUpcomingForTeam(
-            upcomingScheduled,
-            upcomingLegacy,
-            team,
-            idToMeta,
-            groupByRoblox,
-          ).slice(0, 1024),
+          value: trimEmbedField(
+            renderUpcomingForTeam(
+              upcomingScheduled,
+              upcomingLegacy,
+              team,
+              idToMeta,
+              groupByRoblox,
+            ),
+          ),
           inline: false,
         },
       )
