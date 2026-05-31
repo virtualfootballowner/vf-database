@@ -19,6 +19,10 @@ import {
 
 
 import { env } from "@/bot/config";
+import {
+  handleMediaChannelForward,
+  logMediaForwardConfigAtStartup,
+} from "@/bot/media-channel-forward";
 import { logRefereeConfigAtStartup } from "@/bot/referees/config";
 import {
   CONTRACT_BTN_APPROVE,
@@ -123,6 +127,7 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildModeration,
   ],
 });
@@ -188,6 +193,7 @@ client.once(Events.ClientReady, async (readyClient) => {
   }
   logMemberOutgoingStartup();
   logRefereeConfigAtStartup();
+  logMediaForwardConfigAtStartup();
 
   try {
     const supabase = createBotSupabase();
@@ -407,6 +413,12 @@ client.on(Events.GuildMemberRemove, async (member) => {
   } catch (error) {
     console.error("Failed to close cards for departing member:", error);
   }
+});
+
+client.on(Events.MessageCreate, (message) => {
+  void handleMediaChannelForward(client, message).catch((err) => {
+    console.error("[media-forward] handler failed:", err);
+  });
 });
 
 client.on(Events.InteractionCreate, async (interaction: Interaction) => {
