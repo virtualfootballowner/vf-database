@@ -536,12 +536,16 @@ export const leagueSlashCommandDefinitions = [
 
   new SlashCommandBuilder()
     .setName("fixtures")
-    .setDescription("Last 5 results and next 5 fixtures for a club")
+    .setDescription(
+      "Next matchweek slate, or last 5 results + next 5 fixtures for a club/nation",
+    )
     .addStringOption((opt) =>
       opt
         .setName("team")
-        .setDescription("Club — pick from suggestions or type name/slug")
-        .setRequired(true)
+        .setDescription(
+          "Club/nation — leave blank for the next matchweek (e.g. Matchday 1)",
+        )
+        .setRequired(false)
         .setAutocomplete(true),
     )
     .toJSON(),

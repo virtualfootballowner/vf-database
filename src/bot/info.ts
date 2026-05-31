@@ -99,7 +99,7 @@ export async function handleHelp(
           "**`/player`** — career profile, goals, assists, trophies",
           "**`/team`** — season record, manager, full squad by position",
           "**`/stats`** — all-time top scorers and assisters",
-          "**`/fixtures`** — last 5 results + next 5 fixtures for a club",
+          "**`/fixtures`** — next matchweek slate, or last 5 + next 5 for a club/nation",
           "**`/standings`** — league table for a competition + season",
         ].join("\n"),
         inline: false,
@@ -299,10 +299,61 @@ export async function handleStats(
 }
 
 /* ------------------------------------------------------------------ */
-/*  /fixtures <team> — past results + upcoming fixtures               */
+/*  /fixtures [team] — matchweek slate or club results + fixtures     */
 /* ------------------------------------------------------------------ */
 
 type ResolvedTeamWithId = ResolvedTeam & { id: string };
+
+type ScheduledMatchRow = {
+  id: string;
+  roblox_match_id: string | null;
+  season: number | null;
+  competition: string | null;
+  stage: string;
+  match_week: number | null;
+  game_week_label: string | null;
+  scheduled_at: string;
+  home_team_id: string;
+  away_team_id: string;
+  match_notes: string | null;
+};
+
+type UpcomingFixtureRow = {
+  fixture_code: string;
+  season: number;
+  competition: string;
+  stage: string;
+  group_code: string | null;
+  home_team_name: string;
+  away_team_name: string;
+  metadata: Record<string, unknown> | null;
+};
+
+function parseStadium(notes: string | null): string {
+  if (!notes?.trim()) return "TBD";
+  const hit = notes.match(/Stadium:\s*(.+)/i);
+  return hit?.[1]?.trim() || "TBD";
+}
+
+function discordWhen(iso: string | null | undefined): string {
+  if (!iso) return "Time TBD";
+  const ms = new Date(iso).getTime();
+  if (Number.isNaN(ms)) return "Time TBD";
+  const ts = Math.floor(ms / 1000);
+  return `<t:${ts}:f> · <t:${ts}:R>`;
+}
+
+function matchweekKey(m: ScheduledMatchRow): string {
+  const gw = m.game_week_label?.trim();
+  if (gw && gw !== "—") {
+    return `${m.season ?? 0}|${m.competition ?? ""}|${gw}`;
+  }
+  if (m.match_week != null) {
+    return `${m.season ?? 0}|${m.competition ?? ""}|mw:${m.match_week}`;
+  }
+  const day = m.scheduled_at?.slice(0, 10) ?? "unknown";
+  return `${m.season ?? 0}|${m.competition ?? ""}|d:${day}`;
+}
 
 async function resolveTeamWithId(
   supabase: SupabaseClient,
@@ -322,6 +373,45 @@ async function resolveTeamWithId(
   return { ...base, id };
 }
 
+async function loadTeamNamesById(
+  supabase: SupabaseClient,
+  ids: string[],
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (unique.length === 0) return map;
+  const { data, error } = await supabase
+    .from("teams")
+    .select("id, name")
+    .in("id", unique);
+  if (error) throw error;
+  for (const r of (data ?? []) as { id: string; name: string }[]) {
+    map.set(r.id, r.name);
+  }
+  return map;
+}
+
+async function fetchGroupCodesByRobloxId(
+  supabase: SupabaseClient,
+  robloxIds: string[],
+): Promise<Map<string, string | null>> {
+  const map = new Map<string, string | null>();
+  const codes = [...new Set(robloxIds.filter(Boolean))];
+  if (codes.length === 0) return map;
+  const { data, error } = await supabase
+    .from("fixtures")
+    .select("roblox_match_id, group_code")
+    .in("roblox_match_id", codes);
+  if (error) throw error;
+  for (const r of (data ?? []) as {
+    roblox_match_id: string | null;
+    group_code: string | null;
+  }[]) {
+    if (r.roblox_match_id) map.set(r.roblox_match_id, r.group_code);
+  }
+  return map;
+}
+
 type PastMatchRow = {
   id: string;
   season: number | null;
@@ -332,17 +422,6 @@ type PastMatchRow = {
   away_team_id: string;
   home_score: number | null;
   away_score: number | null;
-};
-
-type UpcomingFixtureRow = {
-  fixture_code: string;
-  season: number;
-  competition: string;
-  stage: string;
-  group_code: string | null;
-  home_team_name: string;
-  away_team_name: string;
-  metadata: Record<string, unknown> | null;
 };
 
 /**
@@ -360,9 +439,7 @@ function buildFixtureNameCandidates(team: ResolvedTeamWithId): string[] {
   };
   push(team.name);
   push(team.abbreviation ?? null);
-  // Slug → Title-cased ("ac-casole" → "Ac Casole" — fine for ilike).
   push(team.slug.replace(/-/g, " "));
-  // Strip common club suffixes/prefixes.
   const stripped = team.name
     .replace(/\b(FC|AC|FK|CF|SC|SSC|AFC)\b/gi, "")
     .replace(/\s+/g, " ")
@@ -388,20 +465,50 @@ async function fetchPastMatchesForTeam(
   return (data ?? []) as PastMatchRow[];
 }
 
-async function fetchUpcomingFixturesForTeam(
+async function fetchScheduledMatches(
+  supabase: SupabaseClient,
+): Promise<ScheduledMatchRow[]> {
+  const { data, error } = await supabase
+    .from("matches")
+    .select(
+      "id, roblox_match_id, season, competition, stage, match_week, game_week_label, scheduled_at, home_team_id, away_team_id, match_notes",
+    )
+    .eq("status", "scheduled")
+    .order("scheduled_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as ScheduledMatchRow[];
+}
+
+async function fetchUpcomingScheduledForTeam(
+  supabase: SupabaseClient,
+  teamId: string,
+  limit = 5,
+): Promise<ScheduledMatchRow[]> {
+  const { data, error } = await supabase
+    .from("matches")
+    .select(
+      "id, roblox_match_id, season, competition, stage, match_week, game_week_label, scheduled_at, home_team_id, away_team_id, match_notes",
+    )
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+    .eq("status", "scheduled")
+    .order("scheduled_at", { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as ScheduledMatchRow[];
+}
+
+async function fetchUnlinkedFixturesForTeam(
   supabase: SupabaseClient,
   team: ResolvedTeamWithId,
 ): Promise<UpcomingFixtureRow[]> {
   const candidates = buildFixtureNameCandidates(team)
-    // PostgREST `.or()` parses commas/parens — strip anything that would break the filter string.
-    .map((c) => c.replace(/[,()*]/g, "").trim())
+    .map((c) => c.replace(/[,()*%]/g, "").trim())
     .filter((c) => c.length >= 3);
   if (candidates.length === 0) return [];
-  // PostgREST `.or()` uses `*` as the wildcard token inside ilike patterns.
   const orClauses = candidates
     .flatMap((c) => [
-      `home_team_name.ilike.*${c}*`,
-      `away_team_name.ilike.*${c}*`,
+      `home_team_name.ilike.%${c}%`,
+      `away_team_name.ilike.%${c}%`,
     ])
     .join(",");
   const { data, error } = await supabase
@@ -416,6 +523,40 @@ async function fetchUpcomingFixturesForTeam(
     .limit(5);
   if (error) throw error;
   return (data ?? []) as UpcomingFixtureRow[];
+}
+
+async function fetchNextMatchweekBundle(
+  supabase: SupabaseClient,
+): Promise<{ label: string; competition: string; season: number; matches: ScheduledMatchRow[] } | null> {
+  const scheduled = await fetchScheduledMatches(supabase);
+  if (scheduled.length === 0) return null;
+
+  const first = scheduled[0]!;
+  const key = matchweekKey(first);
+  const bucket = scheduled.filter((m) => matchweekKey(m) === key);
+  const label =
+    first.game_week_label?.trim() ||
+    (first.match_week != null ? `Matchweek ${first.match_week}` : "Next fixtures");
+
+  return {
+    label,
+    competition: first.competition?.trim() || "—",
+    season: first.season ?? 0,
+    matches: bucket,
+  };
+}
+
+function stageLabelForMatch(
+  m: ScheduledMatchRow,
+  groupByRoblox: Map<string, string | null>,
+): string {
+  if (m.stage === "Group") {
+    const g = m.roblox_match_id
+      ? groupByRoblox.get(m.roblox_match_id)
+      : null;
+    return g ? `Group ${g}` : "Group";
+  }
+  return m.stage?.trim() || "Fixture";
 }
 
 function renderPastMatches(
@@ -453,16 +594,39 @@ function renderPastMatches(
     .join("\n");
 }
 
-function renderUpcomingFixtures(
-  rows: UpcomingFixtureRow[],
+function renderUpcomingForTeam(
+  scheduled: ScheduledMatchRow[],
+  legacy: UpcomingFixtureRow[],
   team: ResolvedTeamWithId,
+  teamNames: Map<string, string>,
+  groupByRoblox: Map<string, string | null>,
 ): string {
-  if (rows.length === 0) {
+  if (scheduled.length > 0) {
+    return scheduled
+      .map((m) => {
+        const isHome = m.home_team_id === team.id;
+        const oppName =
+          teamNames.get(isHome ? m.away_team_id : m.home_team_id) ?? "TBD";
+        const venue = isHome ? "vs" : "@";
+        const comp =
+          m.competition && m.competition !== "—"
+            ? `\`${m.competition}\` · `
+            : "";
+        const stage = stageLabelForMatch(m, groupByRoblox);
+        return `🆚  ${venue} **${oppName}** · ${comp}${stage} · ${discordWhen(m.scheduled_at)} · 📍 ${parseStadium(m.match_notes)}`;
+      })
+      .join("\n");
+  }
+
+  if (legacy.length === 0) {
     return "*No upcoming fixtures scheduled — once the draw / next slate is set, they'll appear here.*";
   }
-  return rows
+
+  return legacy
     .map((f) => {
-      const candidates = buildFixtureNameCandidates(team).map((c) => c.toLowerCase());
+      const candidates = buildFixtureNameCandidates(team).map((c) =>
+        c.toLowerCase(),
+      );
       const home = f.home_team_name?.trim() ?? "";
       const away = f.away_team_name?.trim() ?? "";
       const isHome = candidates.some((c) => home.toLowerCase().includes(c));
@@ -477,24 +641,123 @@ function renderUpcomingFixtures(
       })();
       const opp = oppRaw.length > 0 ? oppRaw : seedFallback;
       const venue = isHome ? "vs" : "@";
-      const stageLabel =
+      const stage =
         f.stage === "Group" && f.group_code
           ? `Group ${f.group_code}`
           : f.stage;
-      return `🆚  ${venue} **${opp}** · \`${f.competition}\` · ${stageLabel} · S${f.season} · \`${f.fixture_code}\``;
+      const meta = f.metadata ?? {};
+      const scheduledAt =
+        typeof meta.scheduled_at === "string" ? meta.scheduled_at : null;
+      const stadium =
+        typeof meta.stadium === "string" ? meta.stadium.trim() : "TBD";
+      const when = scheduledAt ? discordWhen(scheduledAt) : "Time TBD";
+      return `🆚  ${venue} **${opp}** · \`${f.competition}\` · ${stage} · ${when} · 📍 ${stadium || "TBD"}`;
     })
     .join("\n");
+}
+
+function renderMatchweekFixtures(
+  rows: ScheduledMatchRow[],
+  teamNames: Map<string, string>,
+  groupByRoblox: Map<string, string | null>,
+): string {
+  if (rows.length === 0) {
+    return "*No upcoming fixtures are scheduled yet.*";
+  }
+  return rows
+    .map((m) => {
+      const home = teamNames.get(m.home_team_id) ?? "TBD";
+      const away = teamNames.get(m.away_team_id) ?? "TBD";
+      const comp =
+        m.competition && m.competition !== "—"
+          ? `\`${m.competition}\` · `
+          : "";
+      const stage = stageLabelForMatch(m, groupByRoblox);
+      return `**${home}** vs **${away}** · ${comp}${stage} · ${discordWhen(m.scheduled_at)} · 📍 ${parseStadium(m.match_notes)}`;
+    })
+    .join("\n");
+}
+
+function chunkEmbedField(text: string, max = 1024): string[] {
+  if (text.length <= max) return [text];
+  const chunks: string[] = [];
+  let rest = text;
+  while (rest.length > 0) {
+    chunks.push(rest.slice(0, max));
+    rest = rest.slice(max);
+  }
+  return chunks;
+}
+
+async function replyNextMatchweek(
+  interaction: ChatInputCommandInteraction,
+  supabase: SupabaseClient,
+): Promise<void> {
+  const bundle = await fetchNextMatchweekBundle(supabase);
+  if (!bundle || bundle.matches.length === 0) {
+    await interaction.editReply({
+      content:
+        "No upcoming fixtures are scheduled yet. Check back once the next matchweek is on the calendar.",
+    });
+    return;
+  }
+
+  const teamIds = bundle.matches.flatMap((m) => [m.home_team_id, m.away_team_id]);
+  const robloxIds = bundle.matches
+    .map((m) => m.roblox_match_id)
+    .filter((id): id is string => Boolean(id));
+  const [teamNames, groupByRoblox] = await Promise.all([
+    loadTeamNamesById(supabase, teamIds),
+    fetchGroupCodesByRobloxId(supabase, robloxIds),
+  ]);
+
+  const body = renderMatchweekFixtures(
+    bundle.matches,
+    teamNames,
+    groupByRoblox,
+  );
+  const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
+  const fixturesUrl = `${siteBase}/tournament`;
+
+  const embed = new EmbedBuilder()
+    .setColor(0x083696)
+    .setTitle(`${bundle.label} · fixtures`)
+    .setDescription(
+      [
+        `All **${bundle.matches.length}** scheduled fixtures for the next matchweek — **${bundle.competition}** · Season ${bundle.season}.`,
+        `[Full schedule on the site](${fixturesUrl})`,
+      ].join("\n"),
+    )
+    .setFooter({ text: "VF League Database · Times shown in your Discord timezone" })
+    .setTimestamp(new Date());
+
+  const chunks = chunkEmbedField(body);
+  chunks.forEach((chunk, i) => {
+    embed.addFields({
+      name: i === 0 ? "📅 Fixtures" : `📅 Fixtures (cont. ${i + 1})`,
+      value: chunk,
+      inline: false,
+    });
+  });
+
+  await interaction.editReply({ embeds: [embed] });
 }
 
 export async function handleFixtures(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
   if (!(await requireVerifiedRole(interaction))) return;
-  const teamRaw = interaction.options.getString("team", true);
+  const teamRaw = interaction.options.getString("team");
   await interaction.deferReply();
 
   try {
     const supabase = createBotSupabase();
+
+    if (!teamRaw?.trim()) {
+      await replyNextMatchweek(interaction, supabase);
+      return;
+    }
+
     const teamRows = await loadTeams(supabase);
     const team = await resolveTeamWithId(supabase, teamRows, teamRaw);
     if (!team) {
@@ -505,13 +768,14 @@ export async function handleFixtures(
       return;
     }
 
-    const [past, upcoming, teamNames] = await Promise.all([
-      fetchPastMatchesForTeam(supabase, team.id),
-      fetchUpcomingFixturesForTeam(supabase, team),
-      buildTeamNameBySlug(supabase),
-    ]);
+    const [past, upcomingScheduled, upcomingLegacy, teamNames] =
+      await Promise.all([
+        fetchPastMatchesForTeam(supabase, team.id),
+        fetchUpcomingScheduledForTeam(supabase, team.id),
+        fetchUnlinkedFixturesForTeam(supabase, team),
+        buildTeamNameBySlug(supabase),
+      ]);
 
-    // Resolve opponent UUIDs → names (matches table uses ids).
     const opponentIds = [
       ...new Set(
         past.map((m) =>
@@ -519,17 +783,20 @@ export async function handleFixtures(
         ),
       ),
     ];
-    const idToName = new Map<string, string>();
-    if (opponentIds.length > 0) {
-      const { data: oppRows, error: oppErr } = await supabase
-        .from("teams")
-        .select("id, name")
-        .in("id", opponentIds);
-      if (oppErr) throw oppErr;
-      for (const r of (oppRows ?? []) as { id: string; name: string }[]) {
-        idToName.set(r.id, r.name);
-      }
-    }
+    const upcomingTeamIds = upcomingScheduled.flatMap((m) => [
+      m.home_team_id,
+      m.away_team_id,
+    ]);
+    const idToName = await loadTeamNamesById(supabase, [
+      ...opponentIds,
+      ...upcomingTeamIds,
+    ]);
+    const groupByRoblox = await fetchGroupCodesByRobloxId(
+      supabase,
+      upcomingScheduled
+        .map((m) => m.roblox_match_id)
+        .filter((id): id is string => Boolean(id)),
+    );
 
     const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
     const teamUrl = `${siteBase}/teams/${encodeURIComponent(team.slug)}`;
@@ -560,11 +827,17 @@ export async function handleFixtures(
         },
         {
           name: "📅 Next 5 fixtures",
-          value: renderUpcomingFixtures(upcoming, team).slice(0, 1024),
+          value: renderUpcomingForTeam(
+            upcomingScheduled,
+            upcomingLegacy,
+            team,
+            idToName,
+            groupByRoblox,
+          ).slice(0, 1024),
           inline: false,
         },
       )
-      .setFooter({ text: "VF League Database · Future fixtures appear once drawn" })
+      .setFooter({ text: "VF League Database · Times shown in your Discord timezone" })
       .setTimestamp(new Date());
 
     if (logoUrl) embed.setThumbnail(logoUrl);
