@@ -5,20 +5,19 @@
 
 export type WorldCupKnockoutMatchDef = {
   fixtureCode: string;
-  matchNo: number;
+  /** Simple display id (KO1, QF1, SF1, F1). */
+  shortCode: string;
   stage: "Round of 16" | "Quarter-Final" | "Semi-Final" | "Final";
   homeLabel: string;
   awayLabel: string;
-  /** Winner of this fixture code feeds the home side of the target. */
   feedsHomeOf?: string;
-  /** Winner feeds the away side of the target. */
   feedsAwayOf?: string;
 };
 
 export const S3_WORLD_CUP_KNOCKOUT_MATCHES: WorldCupKnockoutMatchDef[] = [
   {
     fixtureCode: "S3-WC-R16-01",
-    matchNo: 37,
+    shortCode: "KO1",
     stage: "Round of 16",
     homeLabel: "1A",
     awayLabel: "3C/D/E",
@@ -26,7 +25,7 @@ export const S3_WORLD_CUP_KNOCKOUT_MATCHES: WorldCupKnockoutMatchDef[] = [
   },
   {
     fixtureCode: "S3-WC-R16-02",
-    matchNo: 38,
+    shortCode: "KO2",
     stage: "Round of 16",
     homeLabel: "2A",
     awayLabel: "2C",
@@ -34,7 +33,7 @@ export const S3_WORLD_CUP_KNOCKOUT_MATCHES: WorldCupKnockoutMatchDef[] = [
   },
   {
     fixtureCode: "S3-WC-R16-03",
-    matchNo: 39,
+    shortCode: "KO3",
     stage: "Round of 16",
     homeLabel: "1B",
     awayLabel: "3A/D/E/F",
@@ -42,7 +41,7 @@ export const S3_WORLD_CUP_KNOCKOUT_MATCHES: WorldCupKnockoutMatchDef[] = [
   },
   {
     fixtureCode: "S3-WC-R16-04",
-    matchNo: 40,
+    shortCode: "KO4",
     stage: "Round of 16",
     homeLabel: "2B",
     awayLabel: "2F",
@@ -50,7 +49,7 @@ export const S3_WORLD_CUP_KNOCKOUT_MATCHES: WorldCupKnockoutMatchDef[] = [
   },
   {
     fixtureCode: "S3-WC-R16-05",
-    matchNo: 41,
+    shortCode: "KO5",
     stage: "Round of 16",
     homeLabel: "1C",
     awayLabel: "3A/B/F",
@@ -58,7 +57,7 @@ export const S3_WORLD_CUP_KNOCKOUT_MATCHES: WorldCupKnockoutMatchDef[] = [
   },
   {
     fixtureCode: "S3-WC-R16-06",
-    matchNo: 42,
+    shortCode: "KO6",
     stage: "Round of 16",
     homeLabel: "1D",
     awayLabel: "2E",
@@ -66,7 +65,7 @@ export const S3_WORLD_CUP_KNOCKOUT_MATCHES: WorldCupKnockoutMatchDef[] = [
   },
   {
     fixtureCode: "S3-WC-R16-07",
-    matchNo: 43,
+    shortCode: "KO7",
     stage: "Round of 16",
     homeLabel: "1E",
     awayLabel: "3A/B/C/D",
@@ -74,7 +73,7 @@ export const S3_WORLD_CUP_KNOCKOUT_MATCHES: WorldCupKnockoutMatchDef[] = [
   },
   {
     fixtureCode: "S3-WC-R16-08",
-    matchNo: 44,
+    shortCode: "KO8",
     stage: "Round of 16",
     homeLabel: "1F",
     awayLabel: "2D",
@@ -82,63 +81,67 @@ export const S3_WORLD_CUP_KNOCKOUT_MATCHES: WorldCupKnockoutMatchDef[] = [
   },
   {
     fixtureCode: "S3-WC-QF-01",
-    matchNo: 45,
+    shortCode: "QF1",
     stage: "Quarter-Final",
-    homeLabel: "W37",
-    awayLabel: "W38",
+    homeLabel: "KO1",
+    awayLabel: "KO2",
     feedsHomeOf: "S3-WC-SF-01",
   },
   {
     fixtureCode: "S3-WC-QF-02",
-    matchNo: 46,
+    shortCode: "QF2",
     stage: "Quarter-Final",
-    homeLabel: "W39",
-    awayLabel: "W40",
+    homeLabel: "KO3",
+    awayLabel: "KO4",
     feedsAwayOf: "S3-WC-SF-01",
   },
   {
     fixtureCode: "S3-WC-QF-03",
-    matchNo: 47,
+    shortCode: "QF3",
     stage: "Quarter-Final",
-    homeLabel: "W41",
-    awayLabel: "W42",
+    homeLabel: "KO5",
+    awayLabel: "KO6",
     feedsHomeOf: "S3-WC-SF-02",
   },
   {
     fixtureCode: "S3-WC-QF-04",
-    matchNo: 48,
+    shortCode: "QF4",
     stage: "Quarter-Final",
-    homeLabel: "W43",
-    awayLabel: "W44",
+    homeLabel: "KO7",
+    awayLabel: "KO8",
     feedsAwayOf: "S3-WC-SF-02",
   },
   {
     fixtureCode: "S3-WC-SF-01",
-    matchNo: 49,
+    shortCode: "SF1",
     stage: "Semi-Final",
-    homeLabel: "W45",
-    awayLabel: "W46",
+    homeLabel: "QF1",
+    awayLabel: "QF2",
     feedsHomeOf: "S3-WC-F-01",
   },
   {
     fixtureCode: "S3-WC-SF-02",
-    matchNo: 50,
+    shortCode: "SF2",
     stage: "Semi-Final",
-    homeLabel: "W47",
-    awayLabel: "W48",
+    homeLabel: "QF3",
+    awayLabel: "QF4",
     feedsAwayOf: "S3-WC-F-01",
   },
   {
     fixtureCode: "S3-WC-F-01",
-    matchNo: 51,
+    shortCode: "F1",
     stage: "Final",
-    homeLabel: "W49",
-    awayLabel: "W50",
+    homeLabel: "SF1",
+    awayLabel: "SF2",
   },
 ];
 
 const matchByCode = new Map(
   S3_WORLD_CUP_KNOCKOUT_MATCHES.map((m) => [m.fixtureCode, m]),
+);
+
+const shortCodeByRef = new Map(
+  S3_WORLD_CUP_KNOCKOUT_MATCHES.map((m) => [m.shortCode, m]),
 );
 
 export function worldCupKnockoutMatch(
@@ -147,58 +150,9 @@ export function worldCupKnockoutMatch(
   return matchByCode.get(fixtureCode);
 }
 
-/** Left-to-right bracket columns for the “Road to the final” UI. */
-export const S3_WORLD_CUP_BRACKET_COLUMNS: {
-  side: "left" | "center" | "right";
-  rounds: { stage: string; fixtureCodes: string[] }[];
-}[] = [
-  {
-    side: "left",
-    rounds: [
-      {
-        stage: "Round of 16",
-        fixtureCodes: [
-          "S3-WC-R16-01",
-          "S3-WC-R16-02",
-          "S3-WC-R16-03",
-          "S3-WC-R16-04",
-        ],
-      },
-      {
-        stage: "Quarter-Finals",
-        fixtureCodes: ["S3-WC-QF-01", "S3-WC-QF-02"],
-      },
-      { stage: "Semi-Finals", fixtureCodes: ["S3-WC-SF-01"] },
-    ],
-  },
-  {
-    side: "center",
-    rounds: [{ stage: "Final", fixtureCodes: ["S3-WC-F-01"] }],
-  },
-  {
-    side: "right",
-    rounds: [
-      { stage: "Semi-Finals", fixtureCodes: ["S3-WC-SF-02"] },
-      {
-        stage: "Quarter-Finals",
-        fixtureCodes: ["S3-WC-QF-03", "S3-WC-QF-04"],
-      },
-      {
-        stage: "Round of 16",
-        fixtureCodes: [
-          "S3-WC-R16-05",
-          "S3-WC-R16-06",
-          "S3-WC-R16-07",
-          "S3-WC-R16-08",
-        ],
-      },
-    ],
-  },
-];
-
-/** Short legend for winner placeholders (W37 = winner of M37). */
+/** Labels in later rounds reference earlier short codes (KO1, QF1, …). */
 export function formatKnockoutSlotLabel(label: string): string {
-  const w = /^W(\d+)$/.exec(label.trim());
-  if (w) return `Winner M${w[1]}`;
-  return label;
+  const t = label.trim();
+  if (shortCodeByRef.has(t)) return t;
+  return t;
 }

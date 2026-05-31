@@ -120,7 +120,7 @@ export function buildS3WorldCupFixtureRows(): WorldCupFixtureSeedRow[] {
         structure: "s3_world_cup_24",
         ko_slot: ko.fixtureCode,
         stage: ko.stage,
-        match_no: ko.matchNo,
+        short_code: ko.shortCode,
         home_slot: ko.homeLabel,
         away_slot: ko.awayLabel,
         feeds_home_of: ko.feedsHomeOf ?? null,

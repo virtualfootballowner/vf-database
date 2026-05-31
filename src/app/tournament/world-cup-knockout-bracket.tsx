@@ -88,7 +88,7 @@ function BracketMatchTile({
           isFinal ? "text-amber-200/70" : "text-white/40"
         }`}
       >
-        M{m.matchNo}
+        {m.shortCode}
       </p>
       <div className="border-b border-white/8 pb-1">
         <span
