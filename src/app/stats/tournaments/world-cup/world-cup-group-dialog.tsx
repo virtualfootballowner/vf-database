@@ -24,10 +24,10 @@ function GroupStandingsTable({
   teamsBySlug: Record<string, Team>;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-white/10 bg-black/30">
+    <div className="overflow-x-auto rounded-lg border border-white/12 bg-[#083696]/20">
       <table className="w-full min-w-[360px] border-collapse text-[11px] sm:text-xs">
         <thead>
-          <tr className="border-b border-white/10 text-left text-[9px] font-semibold uppercase tracking-wider text-white/45">
+          <tr className="border-b border-white/12 bg-white/[0.04] text-left text-[9px] font-semibold uppercase tracking-wider text-white/55">
             <th className="px-2 py-2">#</th>
             <th className="px-2 py-2">Team</th>
             <th className="px-1 py-2 tabular-nums">P</th>
@@ -46,7 +46,7 @@ function GroupStandingsTable({
             return (
               <tr
                 key={r.slug ?? r.team}
-                className="border-b border-white/5 last:border-0 hover:bg-white/[0.04]"
+                className="border-b border-white/8 last:border-0 hover:bg-[#083696]/25"
               >
                 <td className="px-2 py-1.5 tabular-nums text-white/50">{i + 1}</td>
                 <td className="max-w-[140px] px-2 py-1.5 sm:max-w-[180px]">
@@ -111,12 +111,15 @@ export function WorldCupGroupDialog({
       >
         {children}
       </DialogTrigger>
-      <DialogContent className="max-h-[min(90vh,720px)] overflow-y-auto border-white/10 bg-zinc-950 text-white sm:max-w-xl">
+      <DialogContent
+        overlayClassName="bg-[#081838]/60 backdrop-blur-sm"
+        className="glass-blue max-h-[min(90vh,720px)] overflow-y-auto border-white/18 text-popover-foreground shadow-[0_30px_60px_-15px_rgba(8,54,150,0.55)] sm:max-w-xl"
+      >
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold tracking-tight text-white">
+          <DialogTitle className="text-lg font-semibold tracking-tight text-[#f5f6fa]">
             Group {bundle.letter}
           </DialogTitle>
-          <DialogDescription className="text-white/55">
+          <DialogDescription className="text-[#f5f6fa]/65">
             Standings and results — top two advance, plus best third-place sides
             across the tournament.
           </DialogDescription>
@@ -124,18 +127,18 @@ export function WorldCupGroupDialog({
 
         <div className="flex flex-col gap-5">
           <div>
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#cfd9ff]/70">
               Table
             </p>
             <GroupStandingsTable rows={bundle.standings} teamsBySlug={teamsBySlug} />
           </div>
 
           <div>
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#cfd9ff]/70">
               Results
             </p>
             {played.length === 0 ? (
-              <p className="rounded-lg border border-white/10 bg-black/25 px-3 py-4 text-sm text-white/55">
+              <p className="rounded-lg border border-white/12 bg-[#083696]/20 px-3 py-4 text-sm text-[#f5f6fa]/65">
                 No group matches played yet.
               </p>
             ) : (
@@ -151,7 +154,7 @@ export function WorldCupGroupDialog({
                     <li key={m.id}>
                       <Link
                         href={`/stats/matches/${encodeURIComponent(m.id)}`}
-                        className="flex flex-col gap-1 rounded-lg border border-white/10 bg-black/25 px-3 py-2.5 outline-none transition hover:border-white/20 hover:bg-black/40 focus-visible:ring-2 focus-visible:ring-white/35 sm:flex-row sm:items-center sm:justify-between"
+                        className="flex flex-col gap-1 rounded-lg border border-white/12 bg-[#083696]/20 px-3 py-2.5 outline-none transition hover:border-white/22 hover:bg-[#083696]/35 focus-visible:ring-2 focus-visible:ring-[#083696]/70 sm:flex-row sm:items-center sm:justify-between"
                       >
                         <div className="flex min-w-0 flex-1 items-center justify-between gap-2 sm:justify-center sm:gap-3">
                           <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
@@ -170,7 +173,7 @@ export function WorldCupGroupDialog({
                               {m.homeTeam}
                             </span>
                           </div>
-                          <span className="shrink-0 rounded-md bg-white/10 px-2 py-0.5 text-xs font-bold tabular-nums text-white sm:text-sm">
+                          <span className="shrink-0 rounded-md bg-[#083696]/55 px-2 py-0.5 text-xs font-bold tabular-nums text-white ring-1 ring-white/15 sm:text-sm">
                             {m.homeScore} – {m.awayScore}
                           </span>
                           <div className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -204,14 +207,14 @@ export function WorldCupGroupDialog({
 
           {upcoming.length > 0 ? (
             <div>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#cfd9ff]/70">
                 Upcoming ({upcoming.length})
               </p>
               <ul className="flex flex-col gap-1">
                 {upcoming.map((m) => (
                   <li
                     key={m.id}
-                    className="rounded-md border border-white/8 bg-white/[0.03] px-3 py-2 text-[11px] text-white/55 sm:text-xs"
+                    className="rounded-md border border-white/10 bg-white/[0.05] px-3 py-2 text-[11px] text-[#f5f6fa]/65 sm:text-xs"
                   >
                     <span className="font-medium text-white/75">{m.homeTeam}</span>
                     <span className="mx-1.5 text-white/30">vs</span>
