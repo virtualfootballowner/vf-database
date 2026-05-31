@@ -140,7 +140,10 @@ export async function TournamentsArchive() {
           awards={individualAwardsForSeason(individualAwards, TOURNAMENT_SEASON)}
         />
 
-        <WorldCupKnockoutSection teamBySlug={teamBySlug} />
+        <WorldCupKnockoutSection
+          teamBySlug={teamBySlug}
+          allMatches={bundle.allMatches}
+        />
       </section>
 
       {archiveSeasons.length === 0 ? null : (
