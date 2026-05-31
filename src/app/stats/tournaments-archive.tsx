@@ -8,7 +8,7 @@ import { TrophyHonorIcon } from "@/components/trophy-honor-icon";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { MatchRecord } from "@/app/stats/matches-data";
-import { getSiteStatsBundle, getTeamsCatalog, catalogSliceForFileSeason } from "@/lib/site-db";
+import { getSiteStatsBundle, getTeamsCatalog } from "@/lib/site-db";
 import {
   getSeasonIndividualAwards,
   individualAwardsForSeason,
@@ -23,9 +23,7 @@ import {
   type CompetitionChampion,
   type StandingRow,
 } from "@/lib/stats-tournaments";
-import { WorldCupGroupsSection } from "@/app/stats/tournaments/world-cup/world-cup-groups-section";
 import { WorldCupKnockoutSection } from "@/app/stats/tournaments/world-cup/world-cup-knockout-section";
-import { WorldCupNationsSection } from "@/app/stats/tournaments/world-cup/world-cup-nations-section";
 
 type TeamLookup = Map<string, Team>;
 
@@ -34,7 +32,7 @@ const TOURNAMENT_SEASON = 3;
 const SEASON_INTRO: Record<number, string> = {
   1: "EuroLeague table plus the EuroBlox Playoffs knockout — bird’s-eye view.",
   2: "British Premier and Serie Italia — league tables only (round robin).",
-  3: "World Cup — qualified nations, group draw, and knockout bracket. Match schedule on the fixtures page.",
+  3: "World Cup — group draw and knockout bracket. Match schedule on the fixtures page.",
 };
 
 function abbrevCompetition(competition: string): string {
@@ -91,8 +89,6 @@ export async function TournamentsArchive() {
 
   const pairs = competitionKeysWithResults(bundle.allMatches);
   const bySeason = groupCompetitionsBySeason(pairs);
-  const s3Pool = catalogSliceForFileSeason(teams, TOURNAMENT_SEASON);
-  const s3Competitions = bySeason.get(TOURNAMENT_SEASON) ?? [];
   const archiveSeasons = [3, 2, 1].filter(
     (s) => s !== TOURNAMENT_SEASON && (bySeason.get(s)?.length ?? 0) > 0,
   );
@@ -144,23 +140,7 @@ export async function TournamentsArchive() {
           awards={individualAwardsForSeason(individualAwards, TOURNAMENT_SEASON)}
         />
 
-        <WorldCupNationsSection teams={s3Pool} season={TOURNAMENT_SEASON} />
-        <WorldCupGroupsSection teamBySlug={teamBySlug} />
-        <WorldCupKnockoutSection />
-
-        {s3Competitions.length > 0 ? (
-          <div className="flex flex-col gap-6">
-            {s3Competitions.map((competition) => (
-              <CompetitionBlock
-                key={`${TOURNAMENT_SEASON}-${competition}`}
-                season={TOURNAMENT_SEASON}
-                competition={competition}
-                allMatches={bundle.allMatches}
-                lookupTeam={lookupTeam}
-              />
-            ))}
-          </div>
-        ) : null}
+        <WorldCupKnockoutSection teamBySlug={teamBySlug} />
       </section>
 
       {archiveSeasons.length === 0 ? null : (

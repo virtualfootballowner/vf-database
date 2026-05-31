@@ -1,3 +1,11 @@
+import Link from "next/link";
+
+import { TeamCrest } from "@/app/teams/team-crest";
+import type { Team } from "@/app/teams/teams-data";
+import {
+  S3_WORLD_CUP_GROUPS,
+  type S3WorldCupGroupLetter,
+} from "@/lib/s3-world-cup-groups";
 import {
   formatKnockoutSlotLabel,
   worldCupKnockoutMatch,
@@ -64,6 +72,69 @@ const LAYOUT_CLASS: Record<ColumnLayout, string> = {
   "pair-2": "justify-around py-[14%]",
   "center-1": "justify-center",
 };
+
+function GroupBracketColumn({
+  letters,
+  teamBySlug,
+  side,
+}: {
+  letters: S3WorldCupGroupLetter[];
+  teamBySlug: Map<string, Team>;
+  side: "left" | "right";
+}) {
+  return (
+    <div
+      className={`relative flex min-w-[108px] shrink-0 flex-col sm:min-w-[124px] md:min-w-[136px] ${
+        side === "left" ? "pr-1 md:pr-2" : "pl-1 md:pl-2"
+      }`}
+    >
+      <p className="mb-2 shrink-0 text-center text-[9px] font-semibold uppercase tracking-[0.16em] text-white/45 sm:text-[10px]">
+        Groups
+      </p>
+      <div className="flex min-h-[380px] flex-1 flex-col justify-between py-1 sm:min-h-[440px]">
+        {letters.map((letter) => {
+          const slugs = S3_WORLD_CUP_GROUPS[letter];
+          const groupTeams = slugs
+            .map((slug) => teamBySlug.get(slug))
+            .filter((team): team is Team => Boolean(team));
+
+          return (
+            <div
+              key={letter}
+              className="w-full rounded-lg border border-white/12 bg-white/[0.04] px-2 py-2 backdrop-blur-sm"
+            >
+              <div className="mb-1.5 flex items-center gap-1.5 border-b border-white/8 pb-1">
+                <span className="font-display flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-[11px] font-semibold text-white">
+                  {letter}
+                </span>
+                <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                  Group {letter}
+                </span>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                {groupTeams.map((team, idx) => (
+                  <Link
+                    key={team.slug}
+                    href={`/teams/${team.slug}`}
+                    className="flex items-center gap-1.5 rounded-md px-0.5 py-0.5 outline-none transition hover:bg-white/[0.06] focus-visible:ring-2 focus-visible:ring-white/35"
+                  >
+                    <span className="w-3 shrink-0 text-center text-[9px] font-semibold tabular-nums text-white/35">
+                      {idx + 1}
+                    </span>
+                    <TeamCrest team={team} size="xs" />
+                    <span className="min-w-0 truncate text-[10px] font-medium leading-tight text-white/85 sm:text-[11px]">
+                      {team.short ?? team.name}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function BracketMatchTile({
   fixtureCode,
@@ -166,11 +237,28 @@ function BracketColumn({
   );
 }
 
-export function WorldCupKnockoutBracket() {
+export function WorldCupKnockoutBracket({
+  teamBySlug,
+}: {
+  teamBySlug?: Map<string, Team>;
+}) {
+  const showGroups = Boolean(teamBySlug?.size);
+
   return (
     <div className="w-full">
       <div className="overflow-x-auto pb-1">
-        <div className="mx-auto flex w-full min-w-[680px] gap-1.5 sm:gap-2 md:gap-3 lg:gap-4">
+        <div
+          className={`mx-auto flex w-full gap-1.5 sm:gap-2 md:gap-3 lg:gap-4 ${
+            showGroups ? "min-w-[860px]" : "min-w-[680px]"
+          }`}
+        >
+          {showGroups ? (
+            <GroupBracketColumn
+              letters={["A", "B", "C"]}
+              teamBySlug={teamBySlug!}
+              side="left"
+            />
+          ) : null}
           {BRACKET_COLUMNS.map((col, idx) => (
             <BracketColumn
               key={`${col.stage}-${idx}`}
@@ -183,10 +271,18 @@ export function WorldCupKnockoutBracket() {
               }
             />
           ))}
+          {showGroups ? (
+            <GroupBracketColumn
+              letters={["D", "E", "F"]}
+              teamBySlug={teamBySlug!}
+              side="right"
+            />
+          ) : null}
         </div>
       </div>
       <p className="mt-3 text-center text-[10px] text-white/35 sm:text-xs">
-        Scroll horizontally on small screens · slot labels update after the draw
+        Scroll horizontally on small screens · group standings feed the Round
+        of 16 slots
       </p>
     </div>
   );
