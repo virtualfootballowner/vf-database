@@ -86,7 +86,7 @@ export async function TournamentsArchive() {
 
   const pairs = competitionKeysWithResults(bundle.allMatches);
   const bySeason = groupCompetitionsBySeason(pairs);
-  const seasonsToShow = [1, 2, 3].filter((s) => (bySeason.get(s)?.length ?? 0) > 0);
+  const seasonsToShow = [3, 2, 1].filter((s) => (bySeason.get(s)?.length ?? 0) > 0);
 
   return (
     <>

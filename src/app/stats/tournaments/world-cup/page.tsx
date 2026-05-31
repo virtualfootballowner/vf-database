@@ -1,27 +1,30 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { WorldCupFixturesSection } from "@/app/tournament/world-cup-fixtures-section";
 import { SiteNav } from "@/components/site-nav";
 import { Badge } from "@/components/ui/badge";
-import { getTeamsCatalog } from "@/lib/site-db";
+import { getTeamsCatalog, catalogSliceForFileSeason } from "@/lib/site-db";
 import type { Team } from "@/app/teams/teams-data";
 import { S3_WORLD_CUP_STRUCTURE } from "@/lib/s3-world-cup-fixtures";
 
 import { StatsSectionNav } from "../../stats-section-nav";
 import { WorldCupGroupsSection } from "./world-cup-groups-section";
 import { WorldCupKnockoutSection } from "./world-cup-knockout-section";
+import { WorldCupNationsSection } from "./world-cup-nations-section";
 
 export const metadata: Metadata = {
   title: "World Cup · VF League",
   description:
-    "Season 3 World Cup — fixtures, groups, and knockout bracket.",
+    "Season 3 World Cup — nations, groups, and knockout bracket.",
 };
 
 export const dynamic = "force-dynamic";
 
+const TOURNAMENT_SEASON = 3;
+
 export default async function WorldCupTournamentPage() {
   const { teams } = await getTeamsCatalog();
+  const pool = catalogSliceForFileSeason(teams, TOURNAMENT_SEASON);
   const teamBySlug = new Map<string, Team>(
     teams.filter((t) => t.slug).map((t) => [t.slug, t]),
   );
@@ -58,11 +61,18 @@ export default async function WorldCupTournamentPage() {
           <p className="mt-4 max-w-2xl text-sm leading-7 text-white/70 sm:text-base">
             {S3_WORLD_CUP_STRUCTURE.groups} groups ·{" "}
             {S3_WORLD_CUP_STRUCTURE.knockout_advancers_total} into the Round of
-            16 · final 2 July.
+            16.{" "}
+            <Link
+              href="/tournament"
+              className="font-semibold text-white underline decoration-white/25 underline-offset-4 transition hover:decoration-white/60"
+            >
+              View fixtures
+            </Link>
+            .
           </p>
         </section>
 
-        <WorldCupFixturesSection teamBySlug={teamBySlug} />
+        <WorldCupNationsSection teams={pool} season={TOURNAMENT_SEASON} />
         <WorldCupGroupsSection teamBySlug={teamBySlug} />
         <WorldCupKnockoutSection />
       </div>
