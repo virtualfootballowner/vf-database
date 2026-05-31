@@ -23,7 +23,7 @@ const DEFAULT_MEDIA_FORWARD_SOURCE_CHANNEL_IDS = [
   "1507792663993385050",
 ] as const;
 
-const DEFAULT_MEDIA_FORWARD_DEST_CHANNEL_ID = "1486459530370879702";
+const DEFAULT_MEDIA_FORWARD_DEST_CHANNEL_ID = "1509842800815116288";
 
 function parseChannelIdList(raw: string | undefined): Set<string> {
   if (!raw?.trim()) return new Set();
@@ -93,20 +93,20 @@ export async function handleMediaChannelForward(
   if (message.system) return;
   if (!hasForwardablePayload(message)) return;
 
-  const leagueGuild = await client.guilds.fetch(leagueGuildId()).catch(() => null);
-  if (!leagueGuild) {
-    console.error("[media-forward] league guild not available");
-    return;
-  }
-
-  const dest = await leagueGuild.channels
-    .fetch(mediaForwardDestChannelId())
-    .catch(() => null);
+  const destId = mediaForwardDestChannelId();
+  const dest = await client.channels.fetch(destId).catch(() => null);
 
   if (!dest?.isTextBased() || dest.isDMBased()) {
     console.error(
       "[media-forward] destination channel missing or not text:",
-      mediaForwardDestChannelId(),
+      destId,
+    );
+    return;
+  }
+
+  if (dest.guildId && dest.guildId !== leagueGuildId()) {
+    console.error(
+      `[media-forward] destination ${destId} is in guild ${dest.guildId}, expected league ${leagueGuildId()}`,
     );
     return;
   }
@@ -145,6 +145,9 @@ export async function handleMediaChannelForward(
       allowedMentions: { parse: [] },
     });
   } catch (err) {
-    console.error("[media-forward] send failed:", err);
+    console.error(
+      `[media-forward] send to ${destId} failed (check bot can View + Send Messages there):`,
+      err,
+    );
   }
 }
