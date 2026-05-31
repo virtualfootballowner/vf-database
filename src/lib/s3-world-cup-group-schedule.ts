@@ -1,9 +1,14 @@
 /**
  * Season 3 World Cup · group-stage schedule (GW1–GW3).
- * Pairings are seeded-shuffled per group; kickoffs are fixed UTC slots.
+ * Pairings are seeded-shuffled per group; kickoffs 18:00–22:00 BST.
  */
 
 import { teams, type Team } from "@/app/teams/teams-data";
+import {
+  buildKickoffGrid,
+  GW1_KICKOFF_SLOTS_BST,
+  WEEKEND_KICKOFF_SLOTS_BST,
+} from "@/lib/wc-fixture-kickoff";
 
 import {
   S3_WORLD_CUP_GROUPS,
@@ -33,7 +38,7 @@ export type S3WorldCupGroupFixture = {
   awaySlug: string;
   homeTeamName: string;
   awayTeamName: string;
-  /** ISO-8601 UTC kickoff */
+  /** ISO-8601 UTC kickoff (display in BST via formatWcKickoff) */
   scheduledAt: string;
   stadium: typeof S3_WORLD_CUP_STADIUM_TBD;
 };
@@ -76,53 +81,23 @@ function teamNameForSlug(slug: string): string {
   return SLUG_TO_TEAM.get(slug)?.name ?? slug;
 }
 
-/** GW1 · Fri 5 – Sun 7 Jun 2026 (12 slots). */
-const GW1_KICKOFFS_UTC = [
-  "2026-06-05T17:00:00.000Z",
-  "2026-06-05T19:30:00.000Z",
-  "2026-06-05T21:00:00.000Z",
-  "2026-06-05T21:45:00.000Z",
-  "2026-06-06T14:00:00.000Z",
-  "2026-06-06T16:30:00.000Z",
-  "2026-06-06T19:00:00.000Z",
-  "2026-06-06T21:30:00.000Z",
-  "2026-06-07T14:00:00.000Z",
-  "2026-06-07T16:30:00.000Z",
-  "2026-06-07T19:00:00.000Z",
-  "2026-06-07T21:30:00.000Z",
-] as const;
+/** GW1 · Fri 5 – Sun 7 Jun 2026 · 18:00–21:30 BST. */
+const GW1_KICKOFFS_UTC = buildKickoffGrid(
+  ["2026-06-05", "2026-06-06", "2026-06-07"],
+  GW1_KICKOFF_SLOTS_BST,
+);
 
-/** GW2 · Sat 13 – Sun 14 Jun 2026. */
-const GW2_KICKOFFS_UTC = [
-  "2026-06-13T14:00:00.000Z",
-  "2026-06-13T15:45:00.000Z",
-  "2026-06-13T17:30:00.000Z",
-  "2026-06-13T19:15:00.000Z",
-  "2026-06-13T21:00:00.000Z",
-  "2026-06-13T21:45:00.000Z",
-  "2026-06-14T14:00:00.000Z",
-  "2026-06-14T15:45:00.000Z",
-  "2026-06-14T17:30:00.000Z",
-  "2026-06-14T19:15:00.000Z",
-  "2026-06-14T21:00:00.000Z",
-  "2026-06-14T21:45:00.000Z",
-] as const;
+/** GW2 · Sat 13 – Sun 14 Jun 2026 · 18:00–21:45 BST. */
+const GW2_KICKOFFS_UTC = buildKickoffGrid(
+  ["2026-06-13", "2026-06-14"],
+  WEEKEND_KICKOFF_SLOTS_BST,
+);
 
-/** GW3 · Sat 20 – Sun 21 Jun 2026. */
-const GW3_KICKOFFS_UTC = [
-  "2026-06-20T14:00:00.000Z",
-  "2026-06-20T15:45:00.000Z",
-  "2026-06-20T17:30:00.000Z",
-  "2026-06-20T19:15:00.000Z",
-  "2026-06-20T21:00:00.000Z",
-  "2026-06-20T21:45:00.000Z",
-  "2026-06-21T14:00:00.000Z",
-  "2026-06-21T15:45:00.000Z",
-  "2026-06-21T17:30:00.000Z",
-  "2026-06-21T19:15:00.000Z",
-  "2026-06-21T21:00:00.000Z",
-  "2026-06-21T21:45:00.000Z",
-] as const;
+/** GW3 · Sat 20 – Sun 21 Jun 2026 · 18:00–21:45 BST. */
+const GW3_KICKOFFS_UTC = buildKickoffGrid(
+  ["2026-06-20", "2026-06-21"],
+  WEEKEND_KICKOFF_SLOTS_BST,
+);
 
 const KICKOFFS_BY_GW: Record<1 | 2 | 3, readonly string[]> = {
   1: GW1_KICKOFFS_UTC,

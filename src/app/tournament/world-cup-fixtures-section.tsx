@@ -8,28 +8,7 @@ import {
   S3_WORLD_CUP_GROUP_FIXTURES,
   type S3WorldCupGroupFixture,
 } from "@/lib/s3-world-cup-group-schedule";
-
-const DATE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
-  weekday: "short",
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-});
-
-const TIME_FORMATTER = new Intl.DateTimeFormat("en-GB", {
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "UTC",
-  timeZoneName: "short",
-});
-
-function formatKickoff(iso: string): { date: string; time: string } {
-  const d = new Date(iso);
-  return {
-    date: DATE_FORMATTER.format(d),
-    time: TIME_FORMATTER.format(d),
-  };
-}
+import { formatWcKickoff } from "@/lib/wc-fixture-kickoff";
 
 function FixtureCard({
   fx,
@@ -40,7 +19,7 @@ function FixtureCard({
 }) {
   const home = teamBySlug.get(fx.homeSlug);
   const away = teamBySlug.get(fx.awaySlug);
-  const kickoff = formatKickoff(fx.scheduledAt);
+  const kickoff = formatWcKickoff(fx.scheduledAt);
 
   return (
     <Card className="gap-0 border-white/10 bg-white/[0.03] py-0 transition hover:bg-white/[0.05]">
@@ -153,8 +132,8 @@ export function WorldCupFixturesSection({
             Fixtures
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-white/65">
-            GW1–GW3 · randomized draw · all kickoffs UTC · stadium TBD until
-            venues are confirmed.
+            GW1–GW3 · randomized draw · kickoffs 6–10 pm BST · stadium TBD
+            until venues are confirmed.
           </p>
         </div>
         <Badge

@@ -11,6 +11,7 @@ import {
 
 import type { FixtureRow } from "./fixtures-data";
 import type { MatchRecord } from "./matches-data";
+import { formatWcKickoff } from "@/lib/wc-fixture-kickoff";
 
 type GetTeam = (slug: string | null, name: string) => Team;
 
@@ -20,13 +21,6 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
   year: "numeric",
 });
 
-const TIME_FORMATTER = new Intl.DateTimeFormat("en-GB", {
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "UTC",
-  timeZoneName: "short",
-});
-
 function formatDate(value: string): string {
   const date = new Date(`${value}T12:00:00Z`);
   if (Number.isNaN(date.getTime())) return value;
@@ -34,11 +28,7 @@ function formatDate(value: string): string {
 }
 
 function formatKickoff(iso: string): { date: string; time: string } {
-  const d = new Date(iso);
-  return {
-    date: DATE_FORMATTER.format(d),
-    time: TIME_FORMATTER.format(d),
-  };
+  return formatWcKickoff(iso);
 }
 
 function isScheduledFixture(row: FixtureRow): boolean {
