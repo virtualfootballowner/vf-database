@@ -21,9 +21,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { env } from "@/bot/config";
 import {
+  DEFAULT_POSTPONE_TIMEZONE,
   formatCaseNumber,
   formatFixtureWhen,
+  formatFixtureWhenWithZone,
   parseProposedDateTime,
+  postponeTimezoneLabel,
   renderDenialLog,
 } from "@/bot/postpone/format";
 import {
@@ -188,6 +191,8 @@ export async function handlePostponeCommand(
 
   const dateRaw = interaction.options.getString("date", true);
   const timeRaw = interaction.options.getString("time", true);
+  const timeZone =
+    interaction.options.getString("timezone", true) ?? DEFAULT_POSTPONE_TIMEZONE;
   const reasonRaw = interaction.options.getString("reason", true).trim();
   if (!reasonRaw) {
     await interaction.reply({
@@ -198,7 +203,7 @@ export async function handlePostponeCommand(
   }
   const reason = reasonRaw.slice(0, 500);
 
-  const parsed = parseProposedDateTime(dateRaw, timeRaw);
+  const parsed = parseProposedDateTime(dateRaw, timeRaw, timeZone);
   if (!parsed.ok) {
     await interaction.reply({
       flags: MessageFlags.Ephemeral,
@@ -325,8 +330,9 @@ export async function handlePostponeCommand(
         [
           `**${requesterName}** wants to move your upcoming fixture`,
           "",
-          `📅 **Original:** ${formatFixtureWhen(match.scheduled_at)}`,
-          `📅 **Proposed:** ${formatFixtureWhen(parsed.iso)}`,
+          `📅 **Original:** ${formatFixtureWhen(match.scheduled_at)} (UK)`,
+          `📅 **Proposed:** ${formatFixtureWhenWithZone(parsed.iso, timeZone)}`,
+          `🌐 **Timezone:** ${postponeTimezoneLabel(timeZone)}`,
           `💬 **Reason:** "${reason}"`,
         ].join("\n"),
       )

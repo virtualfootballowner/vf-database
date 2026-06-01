@@ -55,6 +55,7 @@ import {
 import { handleReleaseCommand } from "@/bot/release";
 import { handleReleaseAutocomplete } from "@/bot/release-autocomplete";
 import { handlePostponeCommand } from "@/bot/postpone/handlers";
+import { POSTPONE_TIMEZONE_CHOICES } from "@/bot/postpone/format";
 import {
   handleCompetitionAutocomplete,
   handleFixtures,
@@ -528,14 +529,26 @@ export const leagueSlashCommandDefinitions = [
     .addStringOption((opt) =>
       opt
         .setName("date")
-        .setDescription("Proposed date (YYYY-MM-DD, UK time)")
+        .setDescription("Proposed date (YYYY-MM-DD)")
         .setRequired(true),
     )
     .addStringOption((opt) =>
       opt
         .setName("time")
-        .setDescription("Proposed kickoff (e.g. 17:00 or 5:00 PM, UK / London)")
+        .setDescription("Proposed kickoff (e.g. 17:00 or 5:00 PM)")
         .setRequired(true),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("timezone")
+        .setDescription("Timezone for the date and time above")
+        .setRequired(true)
+        .addChoices(
+          ...POSTPONE_TIMEZONE_CHOICES.map((c) => ({
+            name: c.name,
+            value: c.value,
+          })),
+        ),
     )
     .addStringOption((opt) =>
       opt
