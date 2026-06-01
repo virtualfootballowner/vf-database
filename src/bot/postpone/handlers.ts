@@ -8,6 +8,7 @@ import {
   MessageFlags,
   ModalBuilder,
   PermissionFlagsBits,
+  StringSelectMenuBuilder,
   TextInputBuilder,
   TextInputStyle,
   type ButtonInteraction,
@@ -16,6 +17,7 @@ import {
   type GuildMember,
   type GuildTextBasedChannel,
   type ModalSubmitInteraction,
+  type StringSelectMenuInteraction,
 } from "discord.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -25,7 +27,9 @@ import {
   formatCaseNumber,
   formatFixtureWhen,
   formatFixtureWhenWithZone,
+  isValidPostponeTimezone,
   parseProposedDateTime,
+  POSTPONE_TIMEZONE_CHOICES,
   postponeTimezoneLabel,
   renderDenialLog,
 } from "@/bot/postpone/format";
@@ -56,6 +60,7 @@ export const POSTPONE_BTN_STAFF_APPROVE = "vfl:post:stf:a:";
 export const POSTPONE_BTN_STAFF_FORCE = "vfl:post:stf:o:";
 export const POSTPONE_BTN_STAFF_TIME = "vfl:post:stf:t:";
 export const POSTPONE_MODAL_STAFF_TIME = "vfl:post:stf:m:";
+export const POSTPONE_STAFF_TZ_SELECT = "vfl:post:stf:tz:";
 export const POSTPONE_MODAL_DENY_REASON = "vfl:post:den:m:";
 
 export const OPPONENT_RESPONSE_MS = 48 * 60 * 60 * 1000;
@@ -78,7 +83,97 @@ function isUniqueViolation(err: unknown): boolean {
   );
 }
 
-function ensureStaff(interaction: ButtonInteraction | ModalSubmitInteraction): boolean {
+function parseStaffTimeModalSuffix(
+  suffix: string,
+): { requestId: string; timeZone: string } | null {
+  const pipe = suffix.indexOf("|");
+  if (pipe === -1) return null;
+  const requestId = suffix.slice(0, pipe);
+  const timeZone = suffix.slice(pipe + 1);
+  if (!UUID_RE.test(requestId) || !isValidPostponeTimezone(timeZone)) return null;
+  return { requestId, timeZone };
+}
+
+function buildStaffTimeModal(requestId: string, timeZone: string): ModalBuilder {
+  const tzLabel = postponeTimezoneLabel(timeZone);
+  const modal = new ModalBuilder()
+    .setCustomId(`${POSTPONE_MODAL_STAFF_TIME}${requestId}|${timeZone}`)
+    .setTitle("Set new kickoff time");
+
+  const dateInput = new TextInputBuilder()
+    .setCustomId("date")
+    .setLabel("Date (YYYY-MM-DD)")
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setPlaceholder("2026-07-06");
+
+  const timeInput = new TextInputBuilder()
+    .setCustomId("time")
+    .setLabel(`Time (${tzLabel})`)
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setPlaceholder("5:00 PM");
+
+  modal.addComponents(
+    new ActionRowBuilder<TextInputBuilder>().addComponents(dateInput),
+    new ActionRowBuilder<TextInputBuilder>().addComponents(timeInput),
+  );
+  return modal;
+}
+
+function staffTimezoneSelectRow(requestId: string): ActionRowBuilder<StringSelectMenuBuilder> {
+  return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`${POSTPONE_STAFF_TZ_SELECT}${requestId}`)
+      .setPlaceholder("Pick a timezone for the new kickoff")
+      .addOptions(
+        POSTPONE_TIMEZONE_CHOICES.map((c) => ({
+          label: c.name.slice(0, 100),
+          value: c.value,
+        })),
+      ),
+  );
+}
+
+export async function handlePostponeStaffTimezoneSelect(
+  interaction: StringSelectMenuInteraction,
+  requestId: string,
+): Promise<void> {
+  if (!ensureStaff(interaction)) return;
+
+  if (!UUID_RE.test(requestId)) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Invalid request.",
+    });
+    return;
+  }
+
+  const timeZone = interaction.values[0];
+  if (!timeZone || !isValidPostponeTimezone(timeZone)) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Pick a valid timezone.",
+    });
+    return;
+  }
+
+  const supabase = createBotSupabase();
+  const row = await fetchRequestById(supabase, requestId);
+  if (!row || row.status !== "escalated") {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "This escalation is no longer active.",
+    });
+    return;
+  }
+
+  await interaction.showModal(buildStaffTimeModal(requestId, timeZone));
+}
+
+function ensureStaff(
+  interaction: ButtonInteraction | ModalSubmitInteraction | StringSelectMenuInteraction,
+): boolean {
   const hasPerm = interaction.memberPermissions?.has(
     PermissionFlagsBits.ManageRoles,
   );
@@ -770,29 +865,21 @@ export async function handlePostponeStaffButton(
       return;
     }
 
-    const modal = new ModalBuilder()
-      .setCustomId(`${POSTPONE_MODAL_STAFF_TIME}${requestId}`)
-      .setTitle("Set new kickoff time");
+    const supabase = createBotSupabase();
+    const row = await fetchRequestById(supabase, requestId);
+    if (!row || row.status !== "escalated") {
+      await interaction.reply({
+        flags: MessageFlags.Ephemeral,
+        content: "This escalation is no longer active.",
+      });
+      return;
+    }
 
-    const dateInput = new TextInputBuilder()
-      .setCustomId("date")
-      .setLabel("Date (YYYY-MM-DD, UK)")
-      .setStyle(TextInputStyle.Short)
-      .setRequired(true)
-      .setPlaceholder("2026-07-06");
-
-    const timeInput = new TextInputBuilder()
-      .setCustomId("time")
-      .setLabel("Time (UK / London)")
-      .setStyle(TextInputStyle.Short)
-      .setRequired(true)
-      .setPlaceholder("5:00 PM");
-
-    modal.addComponents(
-      new ActionRowBuilder<TextInputBuilder>().addComponents(dateInput),
-      new ActionRowBuilder<TextInputBuilder>().addComponents(timeInput),
-    );
-    await interaction.showModal(modal);
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Pick a **timezone**, then enter the new date and time.",
+      components: [staffTimezoneSelectRow(requestId)],
+    });
     return;
   }
 
@@ -871,19 +958,21 @@ export async function handlePostponeStaffButton(
 
 export async function handlePostponeStaffTimeModal(
   interaction: ModalSubmitInteraction,
-  requestId: string,
+  modalSuffix: string,
 ): Promise<void> {
   if (!ensureStaff(interaction)) return;
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  if (!UUID_RE.test(requestId)) {
+  const parsedIds = parseStaffTimeModalSuffix(modalSuffix);
+  if (!parsedIds) {
     await interaction.editReply({ content: "Invalid request." });
     return;
   }
+  const { requestId, timeZone } = parsedIds;
 
   const dateRaw = interaction.fields.getTextInputValue("date");
   const timeRaw = interaction.fields.getTextInputValue("time");
-  const parsed = parseProposedDateTime(dateRaw, timeRaw);
+  const parsed = parseProposedDateTime(dateRaw, timeRaw, timeZone);
   if (!parsed.ok) {
     await interaction.editReply({ content: parsed.message });
     return;
@@ -920,7 +1009,7 @@ export async function handlePostponeStaffTimeModal(
 
   await updateMatchScheduledAt(supabase, row.match_id, parsed.iso);
 
-  const notify = `🔄 Staff set a new kickoff: **${formatFixtureWhen(parsed.iso)}**.`;
+  const notify = `🔄 Staff set a new kickoff: **${formatFixtureWhenWithZone(parsed.iso, timeZone)}**.`;
   await dmUser(interaction.client, row.requester_discord_id, { content: notify });
   await dmUser(interaction.client, row.opponent_discord_id, { content: notify });
 

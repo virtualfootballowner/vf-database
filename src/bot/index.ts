@@ -118,6 +118,7 @@ import {
   POSTPONE_BTN_STAFF_TIME,
   POSTPONE_MODAL_DENY_REASON,
   POSTPONE_MODAL_STAFF_TIME,
+  POSTPONE_STAFF_TZ_SELECT,
   handlePostponeAcceptButton,
   handlePostponeDenyButton,
   handlePostponeDenyReasonModal,
@@ -125,6 +126,7 @@ import {
   handlePostponeSkipReasonButton,
   handlePostponeStaffButton,
   handlePostponeStaffTimeModal,
+  handlePostponeStaffTimezoneSelect,
 } from "@/bot/postpone/handlers";
 import { scheduleLeaguePublicBanAnnouncement } from "@/bot/league-public-ban-announcement";
 import {
@@ -456,6 +458,13 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     if (interaction.isStringSelectMenu()) {
       if (isEquipHonorSelect(interaction.customId)) {
         await handleEquipHonorSelect(interaction);
+        return;
+      }
+      if (interaction.customId.startsWith(POSTPONE_STAFF_TZ_SELECT)) {
+        await handlePostponeStaffTimezoneSelect(
+          interaction,
+          interaction.customId.slice(POSTPONE_STAFF_TZ_SELECT.length),
+        );
         return;
       }
       if (isScrimmageCustomId(interaction.customId)) {
