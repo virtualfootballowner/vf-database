@@ -177,6 +177,15 @@ function buildFixtureGroupsDb(
         : {};
     const homeSlot = normStr(meta.home_slot);
     const awaySlot = normStr(meta.away_slot);
+    const liveSchedule =
+      m?.scheduledAt?.trim()
+        ? {
+            scheduledAt: m.scheduledAt,
+            gameWeekLabel: m.gameWeek,
+            stadium: m.stadium ?? scheduleMeta?.stadium ?? "TBD",
+            groupCode: scheduleMeta?.groupCode ?? null,
+          }
+        : scheduleMeta;
     return {
       id: f.fixture_code,
       season: f.season,
@@ -185,15 +194,7 @@ function buildFixtureGroupsDb(
       teamA: f.home_team_name?.trim() || homeSlot || "",
       teamB: f.away_team_name?.trim() || awaySlot || "",
       match: m,
-      schedule:
-        m?.status === "scheduled"
-          ? {
-              scheduledAt: m.scheduledAt ?? "",
-              gameWeekLabel: m.gameWeek,
-              stadium: m.stadium ?? "TBD",
-              groupCode: scheduleMeta?.groupCode ?? null,
-            }
-          : scheduleMeta,
+      schedule: liveSchedule,
     };
   });
 

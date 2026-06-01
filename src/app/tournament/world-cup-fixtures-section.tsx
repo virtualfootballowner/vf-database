@@ -20,6 +20,15 @@ import {
 import { formatWcKickoff } from "@/lib/wc-fixture-kickoff";
 import { cn } from "@/lib/utils";
 
+function kickoffFromMatchOrStatic(
+  fixtureCode: string,
+  staticScheduledAt: string,
+  matchesByRobloxId: Map<string, MatchRecord>,
+): ReturnType<typeof formatWcKickoff> {
+  const live = matchesByRobloxId.get(fixtureCode)?.scheduledAt?.trim();
+  return formatWcKickoff(live || staticScheduledAt);
+}
+
 function FixtureMatchLink({
   href,
   children,
@@ -42,14 +51,20 @@ function GroupFixtureCard({
   fx,
   teamBySlug,
   matchHref,
+  matchesByRobloxId,
 }: {
   fx: S3WorldCupGroupFixture;
   teamBySlug: Map<string, Team>;
   matchHref: string | null;
+  matchesByRobloxId: Map<string, MatchRecord>;
 }) {
   const home = teamBySlug.get(fx.homeSlug);
   const away = teamBySlug.get(fx.awaySlug);
-  const kickoff = formatWcKickoff(fx.scheduledAt);
+  const kickoff = kickoffFromMatchOrStatic(
+    fx.fixtureCode,
+    fx.scheduledAt,
+    matchesByRobloxId,
+  );
 
   return (
     <FixtureMatchLink href={matchHref}>
@@ -106,11 +121,17 @@ function GroupFixtureCard({
 function KnockoutFixtureCard({
   fx,
   matchHref,
+  matchesByRobloxId,
 }: {
   fx: S3WorldCupKnockoutFixture;
   matchHref: string | null;
+  matchesByRobloxId: Map<string, MatchRecord>;
 }) {
-  const kickoff = formatWcKickoff(fx.scheduledAt);
+  const kickoff = kickoffFromMatchOrStatic(
+    fx.fixtureCode,
+    fx.scheduledAt,
+    matchesByRobloxId,
+  );
 
   return (
     <FixtureMatchLink href={matchHref}>
@@ -287,6 +308,7 @@ export function WorldCupFixturesSection({
                   fx={fx}
                   teamBySlug={teamBySlug}
                   matchHref={hrefFor(fx.fixtureCode)}
+                  matchesByRobloxId={matchesByRobloxId}
                 />
               ))}
             </div>
@@ -319,6 +341,7 @@ export function WorldCupFixturesSection({
                       key={code}
                       fx={fx}
                       matchHref={hrefFor(code)}
+                      matchesByRobloxId={matchesByRobloxId}
                     />
                   );
                 })}

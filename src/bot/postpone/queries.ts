@@ -52,6 +52,98 @@ export type PostponementStateRow = {
 
 const ACTIVE_STATUSES = ["pending_opponent", "escalated"] as const;
 
+export type BlockingPostponementKind =
+  | "awaiting_opponent_response"
+  | "awaiting_your_response"
+  | "escalated";
+
+export type BlockingPostponement = {
+  row: PostponementRequestRow;
+  kind: BlockingPostponementKind;
+};
+
+function classifyBlockingPostponement(
+  row: PostponementRequestRow,
+  callerDiscordId: string,
+  callerTeamSlug?: string | null,
+): BlockingPostponement {
+  if (row.status === "escalated") {
+    return { row, kind: "escalated" };
+  }
+  if (row.opponent_discord_id === callerDiscordId) {
+    return { row, kind: "awaiting_your_response" };
+  }
+  if (row.requester_discord_id === callerDiscordId) {
+    return { row, kind: "awaiting_opponent_response" };
+  }
+  const teamSlug = callerTeamSlug?.trim();
+  if (teamSlug) {
+    if (row.opponent_team_slug === teamSlug) {
+      return { row, kind: "awaiting_your_response" };
+    }
+    if (row.requester_team_slug === teamSlug) {
+      return { row, kind: "awaiting_opponent_response" };
+    }
+  }
+  return { row, kind: "awaiting_opponent_response" };
+}
+
+export async function fetchActiveRequestForMatch(
+  supabase: SupabaseClient,
+  matchId: string,
+): Promise<PostponementRequestRow | null> {
+  const { data, error } = await supabase
+    .from("match_postponement_requests")
+    .select("*")
+    .eq("match_id", matchId)
+    .in("status", [...ACTIVE_STATUSES])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapRequestRow(data) : null;
+}
+
+/** Blocks a second /postpone while either side has a pending request or staff escalation is open. */
+export async function fetchBlockingPostponementForFixture(
+  supabase: SupabaseClient,
+  input: {
+    matchId: string;
+    homeSlug: string;
+    awaySlug: string;
+    callerDiscordId: string;
+    callerTeamSlug?: string | null;
+  },
+): Promise<BlockingPostponement | null> {
+  const byMatch = await fetchActiveRequestForMatch(supabase, input.matchId);
+  if (byMatch) {
+    return classifyBlockingPostponement(
+      byMatch,
+      input.callerDiscordId,
+      input.callerTeamSlug,
+    );
+  }
+
+  const slugs = [input.homeSlug, input.awaySlug];
+  const { data, error } = await supabase
+    .from("match_postponement_requests")
+    .select("*")
+    .in("status", [...ACTIVE_STATUSES])
+    .in("requester_team_slug", slugs)
+    .in("opponent_team_slug", slugs)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  return classifyBlockingPostponement(
+    mapRequestRow(data),
+    input.callerDiscordId,
+    input.callerTeamSlug,
+  );
+}
+
 export async function fetchTeamIdBySlug(
   supabase: SupabaseClient,
   slug: string,
@@ -230,20 +322,6 @@ export async function fetchNextUpcomingMatchForTeam(
   };
 }
 
-export async function fetchActiveRequestForMatch(
-  supabase: SupabaseClient,
-  matchId: string,
-): Promise<PostponementRequestRow | null> {
-  const { data, error } = await supabase
-    .from("match_postponement_requests")
-    .select("*")
-    .eq("match_id", matchId)
-    .in("status", [...ACTIVE_STATUSES])
-    .maybeSingle();
-  if (error) throw error;
-  return data ? mapRequestRow(data) : null;
-}
-
 export async function fetchPostponementState(
   supabase: SupabaseClient,
   matchId: string,
@@ -368,6 +446,66 @@ export async function updateMatchScheduledAt(
     .update({ scheduled_at: scheduledAt })
     .eq("id", matchId);
   if (error) throw error;
+
+  await syncFixtureCatalogKickoff(supabase, matchId, scheduledAt);
+}
+
+/** Keep `fixtures.metadata` in sync so the website schedule reflects postponements. */
+async function syncFixtureCatalogKickoff(
+  supabase: SupabaseClient,
+  matchId: string,
+  scheduledAt: string,
+): Promise<void> {
+  const { data: matchRow, error: matchErr } = await supabase
+    .from("matches")
+    .select("roblox_match_id")
+    .eq("id", matchId)
+    .maybeSingle();
+  if (matchErr) {
+    console.warn("[postpone] fixture sync: match lookup failed:", matchErr);
+    return;
+  }
+
+  const robloxMatchId = matchRow?.roblox_match_id?.trim() || null;
+  const calendarDate = scheduledAt.slice(0, 10);
+  const now = new Date().toISOString();
+
+  let query = supabase.from("fixtures").select("id, metadata");
+  if (robloxMatchId) {
+    query = query.or(
+      `match_id.eq.${matchId},roblox_match_id.eq.${robloxMatchId}`,
+    );
+  } else {
+    query = query.eq("match_id", matchId);
+  }
+
+  const { data: rows, error: fxErr } = await query;
+  if (fxErr) {
+    console.warn("[postpone] fixture sync: list failed:", fxErr);
+    return;
+  }
+  if (!rows?.length) return;
+
+  for (const row of rows) {
+    const prev =
+      row.metadata &&
+      typeof row.metadata === "object" &&
+      !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : {};
+    const metadata = {
+      ...prev,
+      scheduled_at: scheduledAt,
+      calendar_date: calendarDate,
+    };
+    const { error: upErr } = await supabase
+      .from("fixtures")
+      .update({ metadata, updated_at: now })
+      .eq("id", row.id as string);
+    if (upErr) {
+      console.warn(`[postpone] fixture sync: update ${row.id} failed:`, upErr);
+    }
+  }
 }
 
 export async function lockOriginalKickoff(

@@ -121,6 +121,7 @@ import { scheduleCreatorPostingInactivityJob } from "@/bot/creator-posting-inact
 import { scheduleDiscordBanExpiryJob } from "@/bot/discord-ban-expiry-job";
 import { scheduleContractOfferExpiryJob } from "@/bot/contract-offer-expiry-job";
 import { scheduleFixtureReminderJob } from "@/bot/fixture-reminders/job";
+import { scheduleFanJoinAlertJob } from "@/bot/fan-join-alerts/job";
 import { schedulePostponementJob } from "@/bot/postpone/expiry-job";
 import { scheduleRefereeUnclaimedAlertJob } from "@/bot/referees/unclaimed-alerts/job";
 import {
@@ -322,6 +323,7 @@ client.once(Events.ClientReady, async (readyClient) => {
   scheduleContractOfferExpiryJob(readyClient);
   schedulePostponementJob(readyClient);
   scheduleFixtureReminderJob(readyClient);
+  scheduleFanJoinAlertJob(readyClient);
   scheduleRefereeUnclaimedAlertJob(readyClient);
 });
 

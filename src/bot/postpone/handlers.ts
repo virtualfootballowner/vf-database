@@ -35,6 +35,7 @@ import {
 import {
   appendDenialReason,
   fetchActiveRequestForMatch,
+  fetchBlockingPostponementForFixture,
   resolveManagerDiscordId,
   fetchNextUpcomingMatchForTeam,
   fetchPostponementState,
@@ -431,16 +432,44 @@ export async function handlePostponeCommand(
       return;
     }
 
-    const active = await fetchActiveRequestForMatch(supabase, match.id);
-    if (active) {
-      await interaction.editReply({
-        content:
-          "A **postponement request is already pending** on your upcoming fixture. Wait for a response or staff resolution before trying again.",
-      });
+    const teamNames = await buildTeamNameBySlug(supabase);
+    const blocking = await fetchBlockingPostponementForFixture(supabase, {
+      matchId: match.id,
+      homeSlug: match.home_slug,
+      awaySlug: match.away_slug,
+      callerDiscordId: interaction.user.id,
+      callerTeamSlug: requesterSlug,
+    });
+    if (blocking) {
+      let content: string;
+      switch (blocking.kind) {
+        case "awaiting_your_response": {
+          const fromTeam =
+            teamNames.get(blocking.row.requester_team_slug) ??
+            blocking.row.requester_team_slug;
+          content =
+            `**${fromTeam}** already sent a postponement request for this fixture. ` +
+            `Check your **DMs from VF Control** and **Accept** or **Deny** before submitting your own.`;
+          break;
+        }
+        case "awaiting_opponent_response": {
+          const toTeam =
+            teamNames.get(blocking.row.opponent_team_slug) ??
+            blocking.row.opponent_team_slug;
+          content =
+            `You already have a **pending postponement request** with **${toTeam}**. ` +
+            `Wait for their response before trying again.`;
+          break;
+        }
+        case "escalated":
+          content =
+            "This fixture has an **open postponement escalation** with staff. Wait for staff to resolve it before using **/postpone** again.";
+          break;
+      }
+      await interaction.editReply({ content });
       return;
     }
 
-    const teamNames = await buildTeamNameBySlug(supabase);
     const isHome = match.home_slug === requesterSlug;
     const opponentSlug = isHome ? match.away_slug : match.home_slug;
     const opponentName = teamNames.get(opponentSlug) ?? opponentSlug;
@@ -501,7 +530,7 @@ export async function handlePostponeCommand(
       if (isUniqueViolation(insErr)) {
         await interaction.editReply({
           content:
-            "Another postponement request was just submitted for this fixture. Try again in a moment.",
+            "A postponement request is already open for this fixture — respond to your opponent's DM or wait for staff if it was escalated.",
         });
         return;
       }
