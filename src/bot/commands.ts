@@ -100,9 +100,8 @@ import {
   handleRefProfileCommand,
 } from "@/bot/referees/onboard";
 import {
+  handleRefFixturesCommand,
   handleRefMyGamesCommand,
-  handleRefPostCommand,
-  handleRefUnclaimCommand,
 } from "@/bot/referees/assignments";
 import { isRefereeGuild } from "@/bot/referees/config";
 import {
@@ -630,9 +629,8 @@ export async function handleSlashCommand(
     "postverify-ref",
     "ref-profile",
     "ref-list",
-    "ref-post",
+    "ref-fixtures",
     "ref-my-games",
-    "ref-unclaim",
   ]);
   const name = interaction.commandName;
   if (isRefereeGuild(interaction.guildId) && !refOnly.has(name)) {
@@ -744,14 +742,11 @@ export async function handleSlashCommand(
     case "ref-list":
       await handleRefListCommand(interaction);
       return;
-    case "ref-post":
-      await handleRefPostCommand(interaction);
+    case "ref-fixtures":
+      await handleRefFixturesCommand(interaction);
       return;
     case "ref-my-games":
       await handleRefMyGamesCommand(interaction);
-      return;
-    case "ref-unclaim":
-      await handleRefUnclaimCommand(interaction);
       return;
     case "equip":
       await handleEquipCommand(interaction);

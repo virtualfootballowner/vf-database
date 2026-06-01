@@ -41,10 +41,30 @@ export type RefereeAssignmentRow = {
   referee_id: string | null;
   claimed_by_discord_id: string | null;
   claimed_at: string | null;
+  main_referee_id: string | null;
+  main_claimed_by_discord_id: string | null;
+  main_claimed_at: string | null;
+  linesman_referee_id: string | null;
+  linesman_claimed_by_discord_id: string | null;
+  linesman_claimed_at: string | null;
   match_id: string | null;
   created_at: string;
   updated_at: string;
 };
+
+export function assignmentBothSlotsFilled(row: RefereeAssignmentRow): boolean {
+  return Boolean(
+    row.main_claimed_by_discord_id?.trim() &&
+      row.linesman_claimed_by_discord_id?.trim(),
+  );
+}
+
+export function assignmentStatusFromSlots(
+  row: RefereeAssignmentRow,
+): RefereeAssignmentRow["status"] {
+  if (row.status === "cancelled" || row.status === "completed") return row.status;
+  return assignmentBothSlotsFilled(row) ? "claimed" : "open";
+}
 
 export function refereeDisplayName(row: Pick<
   RefereeRow,
@@ -141,8 +161,10 @@ export async function countRefereeAssignments(
   const { count, error } = await supabase
     .from("referee_assignments")
     .select("id", { count: "exact", head: true })
-    .eq("referee_id", refereeId)
-    .in("status", ["claimed", "completed"]);
+    .or(
+      `main_referee_id.eq.${refereeId},linesman_referee_id.eq.${refereeId},referee_id.eq.${refereeId}`,
+    )
+    .in("status", ["open", "claimed", "completed"]);
   if (error) {
     console.error("[referee] assignment count:", error);
     return 0;

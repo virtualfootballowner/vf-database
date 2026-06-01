@@ -54,12 +54,19 @@ import {
   REFEREE_APPROVE_PREFIX,
   REFEREE_ASSIGNMENT_CLAIM_PREFIX,
   REFEREE_DENY_PREFIX,
+  REFEREE_SLOT_CLAIM_LINES,
+  REFEREE_SLOT_CLAIM_MAIN,
+  REFEREE_SLOT_UNCLAIM_LINES,
+  REFEREE_SLOT_UNCLAIM_MAIN,
 } from "@/lib/referees/discord-constants";
 import {
   handleRefereeApproveButton,
   handleRefereeDenyButton,
 } from "@/bot/referees/onboard";
-import { handleRefAssignmentClaimButton } from "@/bot/referees/assignments";
+import {
+  handleRefAssignmentClaimButton,
+  handleRefAssignmentSlotButton,
+} from "@/bot/referees/assignments";
 import { MEDIA_ART_JOB_CLAIM_PREFIX } from "@/lib/media-jobs/media-job-discord-constants";
 import {
   handleCreatorApproveButton,
@@ -678,6 +685,42 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
       await handleRefAssignmentClaimButton(
         interaction,
         customId.slice(REFEREE_ASSIGNMENT_CLAIM_PREFIX.length),
+      );
+      return;
+    }
+    if (customId.startsWith(REFEREE_SLOT_CLAIM_MAIN)) {
+      await handleRefAssignmentSlotButton(
+        interaction,
+        "claim",
+        "main",
+        customId.slice(REFEREE_SLOT_CLAIM_MAIN.length),
+      );
+      return;
+    }
+    if (customId.startsWith(REFEREE_SLOT_CLAIM_LINES)) {
+      await handleRefAssignmentSlotButton(
+        interaction,
+        "claim",
+        "linesman",
+        customId.slice(REFEREE_SLOT_CLAIM_LINES.length),
+      );
+      return;
+    }
+    if (customId.startsWith(REFEREE_SLOT_UNCLAIM_MAIN)) {
+      await handleRefAssignmentSlotButton(
+        interaction,
+        "unclaim",
+        "main",
+        customId.slice(REFEREE_SLOT_UNCLAIM_MAIN.length),
+      );
+      return;
+    }
+    if (customId.startsWith(REFEREE_SLOT_UNCLAIM_LINES)) {
+      await handleRefAssignmentSlotButton(
+        interaction,
+        "unclaim",
+        "linesman",
+        customId.slice(REFEREE_SLOT_UNCLAIM_LINES.length),
       );
       return;
     }
