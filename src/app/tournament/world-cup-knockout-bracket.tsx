@@ -246,6 +246,9 @@ export function WorldCupKnockoutBracket({
 
   return (
     <div className="w-full">
+      <p className="mb-3 text-center font-display text-sm font-semibold uppercase tracking-[0.12em] text-white/90 sm:text-base">
+        24-Team Knockout · ABF / EDC Bracket Map
+      </p>
       <div className="overflow-x-auto pb-1">
         <div
           className={`mx-auto flex w-full gap-1.5 sm:gap-2 md:gap-3 lg:gap-4 ${
