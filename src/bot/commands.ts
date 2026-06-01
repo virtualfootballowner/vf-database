@@ -54,6 +54,7 @@ import {
 } from "@/bot/marketplace";
 import { handleReleaseCommand } from "@/bot/release";
 import { handleReleaseAutocomplete } from "@/bot/release-autocomplete";
+import { handlePostponeCommand } from "@/bot/postpone/handlers";
 import {
   handleCompetitionAutocomplete,
   handleFixtures,
@@ -520,6 +521,32 @@ export const leagueSlashCommandDefinitions = [
     .toJSON(),
 
   new SlashCommandBuilder()
+    .setName("postpone")
+    .setDescription(
+      "Request to move your next scheduled fixture (opponent accepts or denies via DM)",
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("date")
+        .setDescription("Proposed date (YYYY-MM-DD, UK time)")
+        .setRequired(true),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("time")
+        .setDescription("Proposed kickoff (e.g. 17:00 or 5:00 PM, UK / London)")
+        .setRequired(true),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("reason")
+        .setDescription("Why you need to move the fixture")
+        .setRequired(true)
+        .setMaxLength(500),
+    )
+    .toJSON(),
+
+  new SlashCommandBuilder()
     .setName("help")
     .setDescription(
       "Post the VFL bot command index in this channel (stays permanently)",
@@ -670,6 +697,9 @@ export async function handleSlashCommand(
       return;
     case "release":
       await handleReleaseCommand(interaction);
+      return;
+    case "postpone":
+      await handlePostponeCommand(interaction);
       return;
     case "freeagent":
       await handleFreeAgent(interaction);

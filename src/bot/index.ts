@@ -107,6 +107,25 @@ import {
 import { scheduleCreatorPostingInactivityJob } from "@/bot/creator-posting-inactivity";
 import { scheduleDiscordBanExpiryJob } from "@/bot/discord-ban-expiry-job";
 import { scheduleContractOfferExpiryJob } from "@/bot/contract-offer-expiry-job";
+import { schedulePostponementJob } from "@/bot/postpone/expiry-job";
+import {
+  POSTPONE_BTN_ACCEPT,
+  POSTPONE_BTN_DENY,
+  POSTPONE_BTN_REASON,
+  POSTPONE_BTN_SKIP,
+  POSTPONE_BTN_STAFF_APPROVE,
+  POSTPONE_BTN_STAFF_FORCE,
+  POSTPONE_BTN_STAFF_TIME,
+  POSTPONE_MODAL_DENY_REASON,
+  POSTPONE_MODAL_STAFF_TIME,
+  handlePostponeAcceptButton,
+  handlePostponeDenyButton,
+  handlePostponeDenyReasonModal,
+  handlePostponeReasonButton,
+  handlePostponeSkipReasonButton,
+  handlePostponeStaffButton,
+  handlePostponeStaffTimeModal,
+} from "@/bot/postpone/handlers";
 import { scheduleLeaguePublicBanAnnouncement } from "@/bot/league-public-ban-announcement";
 import {
   createBotSupabase,
@@ -284,6 +303,7 @@ client.once(Events.ClientReady, async (readyClient) => {
   scheduleCreatorPostingInactivityJob(readyClient);
   scheduleDiscordBanExpiryJob(readyClient);
   scheduleContractOfferExpiryJob(readyClient);
+  schedulePostponementJob(readyClient);
 });
 
 client.on(Events.GuildCreate, async (guild) => {
@@ -455,6 +475,21 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         interaction.customId.startsWith(CREATOR_REJECT_MODAL_PREFIX)
       ) {
         await handleCreatorRejectModal(interaction);
+        return;
+      }
+      if (interaction.customId.startsWith(POSTPONE_MODAL_DENY_REASON)) {
+        await handlePostponeDenyReasonModal(
+          interaction,
+          interaction.customId.slice(POSTPONE_MODAL_DENY_REASON.length),
+        );
+        return;
+      }
+      if (interaction.customId.startsWith(POSTPONE_MODAL_STAFF_TIME)) {
+        await handlePostponeStaffTimeModal(
+          interaction,
+          interaction.customId.slice(POSTPONE_MODAL_STAFF_TIME.length),
+        );
+        return;
       }
       return;
     }
@@ -514,6 +549,59 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         interaction,
         "deny",
         customId.slice(RELEASE_BTN_DENY.length),
+      );
+      return;
+    }
+
+    if (customId.startsWith(POSTPONE_BTN_ACCEPT)) {
+      await handlePostponeAcceptButton(
+        interaction,
+        customId.slice(POSTPONE_BTN_ACCEPT.length),
+      );
+      return;
+    }
+    if (customId.startsWith(POSTPONE_BTN_DENY)) {
+      await handlePostponeDenyButton(
+        interaction,
+        customId.slice(POSTPONE_BTN_DENY.length),
+      );
+      return;
+    }
+    if (customId.startsWith(POSTPONE_BTN_REASON)) {
+      await handlePostponeReasonButton(
+        interaction,
+        customId.slice(POSTPONE_BTN_REASON.length),
+      );
+      return;
+    }
+    if (customId.startsWith(POSTPONE_BTN_SKIP)) {
+      await handlePostponeSkipReasonButton(
+        interaction,
+        customId.slice(POSTPONE_BTN_SKIP.length),
+      );
+      return;
+    }
+    if (customId.startsWith(POSTPONE_BTN_STAFF_APPROVE)) {
+      await handlePostponeStaffButton(
+        interaction,
+        "approve",
+        customId.slice(POSTPONE_BTN_STAFF_APPROVE.length),
+      );
+      return;
+    }
+    if (customId.startsWith(POSTPONE_BTN_STAFF_FORCE)) {
+      await handlePostponeStaffButton(
+        interaction,
+        "force",
+        customId.slice(POSTPONE_BTN_STAFF_FORCE.length),
+      );
+      return;
+    }
+    if (customId.startsWith(POSTPONE_BTN_STAFF_TIME)) {
+      await handlePostponeStaffButton(
+        interaction,
+        "time",
+        customId.slice(POSTPONE_BTN_STAFF_TIME.length),
       );
       return;
     }
