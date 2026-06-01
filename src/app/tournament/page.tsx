@@ -5,7 +5,7 @@ import { WorldCupFixturesSection } from "@/app/tournament/world-cup-fixtures-sec
 import { SiteNav } from "@/components/site-nav";
 import { Badge } from "@/components/ui/badge";
 import { S3_WORLD_CUP_STRUCTURE } from "@/lib/s3-world-cup-fixtures";
-import { getTeamsCatalog, catalogSliceForFileSeason } from "@/lib/site-db";
+import { getSiteStatsBundle, getTeamsCatalog, catalogSliceForFileSeason } from "@/lib/site-db";
 import type { Team } from "@/app/teams/teams-data";
 
 export const metadata: Metadata = {
@@ -20,7 +20,10 @@ const TOURNAMENT_SEASON = 3;
 const TEAMS_PER_GROUP = S3_WORLD_CUP_STRUCTURE.teams_per_group;
 
 export default async function TournamentPage() {
-  const { teams } = await getTeamsCatalog();
+  const [{ teams }, bundle] = await Promise.all([
+    getTeamsCatalog(),
+    getSiteStatsBundle(),
+  ]);
   const pool = catalogSliceForFileSeason(teams, TOURNAMENT_SEASON);
   const teamBySlug = new Map<string, Team>(
     teams.filter((t) => t.slug).map((t) => [t.slug, t]),
@@ -62,7 +65,10 @@ export default async function TournamentPage() {
           </p>
         </section>
 
-        <WorldCupFixturesSection teamBySlug={teamBySlug} />
+        <WorldCupFixturesSection
+          teamBySlug={teamBySlug}
+          matchesByRobloxId={bundle.matchesByRobloxId}
+        />
       </div>
     </main>
   );

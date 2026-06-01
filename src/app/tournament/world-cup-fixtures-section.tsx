@@ -1,9 +1,12 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
+import type { MatchRecord } from "@/app/stats/matches-data";
 import { TeamCrest } from "@/app/teams/team-crest";
 import type { Team } from "@/app/teams/teams-data";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { fixtureCodeMatchHref } from "@/lib/match-page-context";
 import { S3_WORLD_CUP_KNOCKOUT_CALENDAR } from "@/lib/s3-world-cup-calendar";
 import type { S3WorldCupMatchday } from "@/lib/s3-world-cup-calendar";
 import {
@@ -15,20 +18,49 @@ import {
   type S3WorldCupKnockoutFixture,
 } from "@/lib/s3-world-cup-knockout-schedule";
 import { formatWcKickoff } from "@/lib/wc-fixture-kickoff";
+import { cn } from "@/lib/utils";
+
+function FixtureMatchLink({
+  href,
+  children,
+}: {
+  href: string | null;
+  children: ReactNode;
+}) {
+  if (!href) return <>{children}</>;
+  return (
+    <Link
+      href={href}
+      className="block rounded-xl outline-none transition focus-visible:ring-2 focus-visible:ring-white/40"
+    >
+      {children}
+    </Link>
+  );
+}
 
 function GroupFixtureCard({
   fx,
   teamBySlug,
+  matchHref,
 }: {
   fx: S3WorldCupGroupFixture;
   teamBySlug: Map<string, Team>;
+  matchHref: string | null;
 }) {
   const home = teamBySlug.get(fx.homeSlug);
   const away = teamBySlug.get(fx.awaySlug);
   const kickoff = formatWcKickoff(fx.scheduledAt);
 
   return (
-    <Card className="gap-0 border-white/10 bg-white/[0.03] py-0 transition hover:bg-white/[0.05]">
+    <FixtureMatchLink href={matchHref}>
+      <Card
+        className={cn(
+          "gap-0 border-white/10 bg-white/[0.03] py-0 transition",
+          matchHref
+            ? "cursor-pointer hover:border-sky-300/30 hover:bg-sky-400/[0.06] hover:ring-1 hover:ring-sky-300/20"
+            : "hover:bg-white/[0.05]",
+        )}
+      >
       <CardContent className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-3 sm:grid-cols-[minmax(148px,168px)_1fr_auto] sm:gap-4 sm:px-4 sm:py-3.5">
         <div className="flex flex-col gap-1">
           <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
@@ -67,14 +99,29 @@ function GroupFixtureCard({
         </div>
       </CardContent>
     </Card>
+    </FixtureMatchLink>
   );
 }
 
-function KnockoutFixtureCard({ fx }: { fx: S3WorldCupKnockoutFixture }) {
+function KnockoutFixtureCard({
+  fx,
+  matchHref,
+}: {
+  fx: S3WorldCupKnockoutFixture;
+  matchHref: string | null;
+}) {
   const kickoff = formatWcKickoff(fx.scheduledAt);
 
   return (
-    <Card className="gap-0 border-white/10 bg-white/[0.03] py-0">
+    <FixtureMatchLink href={matchHref}>
+      <Card
+        className={cn(
+          "gap-0 border-white/10 bg-white/[0.03] py-0 transition",
+          matchHref
+            ? "cursor-pointer hover:border-sky-300/30 hover:bg-sky-400/[0.06] hover:ring-1 hover:ring-sky-300/20"
+            : undefined,
+        )}
+      >
       <CardContent className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-3 sm:grid-cols-[minmax(148px,168px)_1fr_auto] sm:gap-4 sm:px-4 sm:py-3.5">
         <div className="flex flex-col gap-1">
           <span className="max-w-[168px] text-[10px] font-medium leading-snug tabular-nums tracking-[0.04em] text-white/50">
@@ -103,6 +150,7 @@ function KnockoutFixtureCard({ fx }: { fx: S3WorldCupKnockoutFixture }) {
         </Badge>
       </CardContent>
     </Card>
+    </FixtureMatchLink>
   );
 }
 
@@ -176,9 +224,13 @@ const koByCode = new Map(
 
 export function WorldCupFixturesSection({
   teamBySlug,
+  matchesByRobloxId,
 }: {
   teamBySlug: Map<string, Team>;
+  matchesByRobloxId: Map<string, MatchRecord>;
 }) {
+  const hrefFor = (fixtureCode: string) =>
+    fixtureCodeMatchHref(fixtureCode, matchesByRobloxId);
   const byMatchday = ([1, 2, 3] as const).map((md) => ({
     md,
     meta: MATCHDAY_META[md],
@@ -234,6 +286,7 @@ export function WorldCupFixturesSection({
                   key={fx.fixtureCode}
                   fx={fx}
                   teamBySlug={teamBySlug}
+                  matchHref={hrefFor(fx.fixtureCode)}
                 />
               ))}
             </div>
@@ -261,7 +314,13 @@ export function WorldCupFixturesSection({
                 {day.fixtureCodes.map((code) => {
                   const fx = koByCode.get(code);
                   if (!fx) return null;
-                  return <KnockoutFixtureCard key={code} fx={fx} />;
+                  return (
+                    <KnockoutFixtureCard
+                      key={code}
+                      fx={fx}
+                      matchHref={hrefFor(code)}
+                    />
+                  );
                 })}
               </div>
             </div>

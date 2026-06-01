@@ -65,25 +65,115 @@ export async function fetchTeamIdBySlug(
   return (data as { id?: string } | null)?.id ?? null;
 }
 
+export type ResolveManagerDiscordResult =
+  | { ok: true; discordId: string }
+  | {
+      ok: false;
+      reason: "missing_row" | "no_manager" | "no_discord_link" | "ambiguous_player";
+      managerDisplayName?: string;
+    };
+
+async function discordIdFromRobloxManagerName(
+  supabase: SupabaseClient,
+  robloxUsername: string,
+): Promise<{ discordId: string | null; ambiguous: boolean }> {
+  const name = robloxUsername.trim();
+  if (!name) return { discordId: null, ambiguous: false };
+
+  const { data, error } = await supabase
+    .from("players")
+    .select("discord_id")
+    .ilike("roblox_username", name)
+    .not("discord_id", "is", null);
+
+  if (error) throw error;
+
+  const ids = [
+    ...new Set(
+      (data ?? [])
+        .map((row) => (row as { discord_id?: string | null }).discord_id?.trim())
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  if (ids.length === 0) return { discordId: null, ambiguous: false };
+  if (ids.length > 1) return { discordId: null, ambiguous: true };
+  return { discordId: ids[0]!, ambiguous: false };
+}
+
+/** Discord id for DMs — uses `manager_discord_id`, then linked VF player by Roblox manager name. */
+export async function resolveManagerDiscordId(
+  supabase: SupabaseClient,
+  teamSlug: string,
+  season: number,
+): Promise<ResolveManagerDiscordResult> {
+  const { data, error } = await supabase
+    .from("team_season_managers")
+    .select("manager_discord_id, manager_display_name")
+    .eq("team_slug", teamSlug)
+    .eq("season", season)
+    .maybeSingle();
+
+  if (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "42703" || code === "PGRST204") {
+      return { ok: false, reason: "missing_row" };
+    }
+    throw error;
+  }
+
+  if (!data) return { ok: false, reason: "missing_row" };
+
+  const row = data as {
+    manager_discord_id?: string | null;
+    manager_display_name?: string | null;
+  };
+  const storedDiscord = row.manager_discord_id?.trim();
+  if (storedDiscord) return { ok: true, discordId: storedDiscord };
+
+  const displayName = row.manager_display_name?.trim();
+  if (!displayName) return { ok: false, reason: "no_manager" };
+
+  const fromPlayer = await discordIdFromRobloxManagerName(supabase, displayName);
+  if (fromPlayer.ambiguous) {
+    return {
+      ok: false,
+      reason: "ambiguous_player",
+      managerDisplayName: displayName,
+    };
+  }
+  if (!fromPlayer.discordId) {
+    return {
+      ok: false,
+      reason: "no_discord_link",
+      managerDisplayName: displayName,
+    };
+  }
+
+  const { error: backfillErr } = await supabase
+    .from("team_season_managers")
+    .update({ manager_discord_id: fromPlayer.discordId })
+    .eq("team_slug", teamSlug)
+    .eq("season", season);
+
+  if (backfillErr) {
+    console.warn(
+      `[postpone] Could not backfill manager_discord_id for ${teamSlug} S${season}:`,
+      backfillErr,
+    );
+  }
+
+  return { ok: true, discordId: fromPlayer.discordId };
+}
+
+/** @deprecated Use {@link resolveManagerDiscordId} for richer errors. */
 export async function fetchManagerDiscordId(
   supabase: SupabaseClient,
   teamSlug: string,
   season: number,
 ): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("team_season_managers")
-    .select("manager_discord_id")
-    .eq("team_slug", teamSlug)
-    .eq("season", season)
-    .maybeSingle();
-  if (error) {
-    const code = (error as { code?: string }).code;
-    if (code === "42703" || code === "PGRST204") return null;
-    throw error;
-  }
-  const id = (data as { manager_discord_id?: string | null } | null)
-    ?.manager_discord_id;
-  return id?.trim() || null;
+  const resolved = await resolveManagerDiscordId(supabase, teamSlug, season);
+  return resolved.ok ? resolved.discordId : null;
 }
 
 export async function fetchNextUpcomingMatchForTeam(

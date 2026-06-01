@@ -31,8 +31,10 @@ import { cn } from "@/lib/utils";
 
 import { getEventsForMatch, type MatchEvent } from "../../match-events-data";
 import type { MatchRecord } from "../../matches-data";
-import { ScheduledMatchView } from "./scheduled-match-view";
+import { loadMatchPageContext } from "@/lib/match-page-context";
 import { formatWcKickoff } from "@/lib/wc-fixture-kickoff";
+
+import { MatchupView } from "./matchup-view";
 
 const matchSurfaceClass =
   "border-0 bg-white/[0.035] shadow-none ring-1 ring-white/[0.08] backdrop-blur-md";
@@ -97,6 +99,9 @@ export default async function MatchDetailPage({
   const getTeam = getMatchTeamResolver(bundle.teams);
 
   if (match.status === "scheduled") {
+    const ctx = await loadMatchPageContext(id);
+    if (!ctx) notFound();
+
     return (
       <main className="relative min-h-dvh min-w-0 w-full overflow-x-clip text-white">
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 pb-16 pt-5 sm:px-6 sm:pt-8 md:px-8 md:pt-10">
@@ -108,7 +113,7 @@ export default async function MatchDetailPage({
             <ArrowLeft className="size-3.5" />
             All matches
           </Link>
-          <ScheduledMatchView match={match} getTeam={getTeam} />
+          <MatchupView ctx={ctx} />
         </div>
       </main>
     );

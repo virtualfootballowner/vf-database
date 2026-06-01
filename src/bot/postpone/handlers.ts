@@ -35,7 +35,7 @@ import {
 import {
   appendDenialReason,
   fetchActiveRequestForMatch,
-  fetchManagerDiscordId,
+  resolveManagerDiscordId,
   fetchNextUpcomingMatchForTeam,
   fetchPostponementState,
   fetchRequestById,
@@ -440,24 +440,41 @@ export async function handlePostponeCommand(
       return;
     }
 
+    const teamNames = await buildTeamNameBySlug(supabase);
     const isHome = match.home_slug === requesterSlug;
     const opponentSlug = isHome ? match.away_slug : match.home_slug;
-    const opponentDiscordId = await fetchManagerDiscordId(
+    const opponentName = teamNames.get(opponentSlug) ?? opponentSlug;
+    const opponentManager = await resolveManagerDiscordId(
       supabase,
       opponentSlug,
       match.season ?? activeSeason,
     );
-    if (!opponentDiscordId) {
-      await interaction.editReply({
-        content:
-          "Your opponent doesn't have a **manager Discord account** on file for this season. Ask staff to update manager assignments.",
-      });
+    if (!opponentManager.ok) {
+      const opponentLabel = opponentName;
+      let content: string;
+      switch (opponentManager.reason) {
+        case "no_manager":
+          content =
+            `**${opponentLabel}** has no manager listed for this season. Ask staff to run **/appoint**.`;
+          break;
+        case "no_discord_link":
+          content =
+            `**${opponentLabel}**'s manager (\`${opponentManager.managerDisplayName}\`) isn't linked to Discord. They need a synced VF profile, or staff should run **/appoint** with their Discord account.`;
+          break;
+        case "ambiguous_player":
+          content =
+            `**${opponentLabel}**'s manager name matches multiple VF players. Ask staff to run **/appoint** for the correct Discord user.`;
+          break;
+        default:
+          content =
+            `Could not resolve **${opponentLabel}**'s manager for this season. Ask staff to run **/appoint**.`;
+      }
+      await interaction.editReply({ content });
       return;
     }
+    const opponentDiscordId = opponentManager.discordId;
 
-    const teamNames = await buildTeamNameBySlug(supabase);
     const requesterName = teamNames.get(requesterSlug) ?? requesterSlug;
-    const opponentName = teamNames.get(opponentSlug) ?? opponentSlug;
     const expiresAt = new Date(Date.now() + OPPONENT_RESPONSE_MS).toISOString();
 
     const requestId = randomUUID();
