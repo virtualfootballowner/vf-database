@@ -187,6 +187,70 @@ function ensureStaff(
   return true;
 }
 
+async function notifyStaffPostponementAccepted(
+  client: Client,
+  row: PostponementRequestRow,
+  acceptedByDiscordId: string,
+): Promise<void> {
+  try {
+    const guild = await client.guilds.fetch(row.guild_id);
+    const fetched = await guild.channels.fetch(env.DISCORD_STAFF_REVIEW_CHANNEL_ID);
+    if (!fetched?.isTextBased() || !fetched.isSendable()) {
+      console.error("[postpone] staff accept notify: channel missing");
+      return;
+    }
+
+    const supabase = createBotSupabase();
+    const teamNames = await buildTeamNameBySlug(supabase);
+    const fixture = fixtureLabel(
+      teamNames,
+      row.requester_team_slug,
+      row.opponent_team_slug,
+    );
+
+    const embed = new EmbedBuilder()
+      .setColor(0x16a34a)
+      .setTitle(`✅ Fixture moved — Case #${formatCaseNumber(row.case_number)}`)
+      .setDescription(
+        "Both managers agreed on a new kickoff. **No staff action required.**",
+      )
+      .addFields(
+        { name: "Fixture", value: fixture, inline: false },
+        {
+          name: "Was",
+          value: formatFixtureWhen(row.original_scheduled_at),
+          inline: true,
+        },
+        {
+          name: "Now",
+          value: formatFixtureWhen(row.proposed_scheduled_at),
+          inline: true,
+        },
+        {
+          name: "Requested by",
+          value: `<@${row.requester_discord_id}>`,
+          inline: true,
+        },
+        {
+          name: "Accepted by",
+          value: `<@${acceptedByDiscordId}>`,
+          inline: true,
+        },
+        {
+          name: "Reason",
+          value: row.reason.length > 1000 ? `${row.reason.slice(0, 997)}…` : `"${row.reason}"`,
+          inline: false,
+        },
+      )
+      .setFooter({ text: "Manager-approved postponement · logged for staff" })
+      .setTimestamp(new Date());
+
+    await fetched.send({ embeds: [embed] });
+  } catch (e) {
+    console.error("[postpone] staff accept notify:", e);
+  }
+}
+
 function opponentActionRow(requestId: string): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
@@ -545,6 +609,12 @@ export async function handlePostponeAcceptButton(
 
     await dmUser(interaction.client, row.requester_discord_id, { content: confirm });
     await dmUser(interaction.client, row.opponent_discord_id, { content: confirm });
+
+    await notifyStaffPostponementAccepted(
+      interaction.client,
+      row,
+      interaction.user.id,
+    );
 
     await interaction.message.edit({ components: [] }).catch(() => {});
 
