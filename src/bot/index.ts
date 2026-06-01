@@ -116,6 +116,7 @@ import { scheduleDiscordBanExpiryJob } from "@/bot/discord-ban-expiry-job";
 import { scheduleContractOfferExpiryJob } from "@/bot/contract-offer-expiry-job";
 import { scheduleFixtureReminderJob } from "@/bot/fixture-reminders/job";
 import { schedulePostponementJob } from "@/bot/postpone/expiry-job";
+import { scheduleRefereeUnclaimedAlertJob } from "@/bot/referees/unclaimed-alerts/job";
 import {
   POSTPONE_BTN_ACCEPT,
   POSTPONE_BTN_DENY,
@@ -315,6 +316,7 @@ client.once(Events.ClientReady, async (readyClient) => {
   scheduleContractOfferExpiryJob(readyClient);
   schedulePostponementJob(readyClient);
   scheduleFixtureReminderJob(readyClient);
+  scheduleRefereeUnclaimedAlertJob(readyClient);
 });
 
 client.on(Events.GuildCreate, async (guild) => {

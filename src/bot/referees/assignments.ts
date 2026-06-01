@@ -46,6 +46,7 @@ import {
   type RefereeAssignmentSlot,
 } from "@/lib/referees/discord-constants";
 import { formatDualTimezoneKickoffTime } from "@/lib/wc-fixture-kickoff";
+import { discordTeamLabel } from "@/bot/discord-team-flags";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -197,6 +198,15 @@ function formatSlotValue(
   return `<@${discordId}>`;
 }
 
+function formatMatchField(
+  homeName: string,
+  awayName: string,
+  homeSlug?: string | null,
+  awaySlug?: string | null,
+): string {
+  return `${discordTeamLabel(homeName, homeSlug)} vs ${discordTeamLabel(awayName, awaySlug)}`;
+}
+
 function buildAssignmentEmbed(
   row: RefereeAssignmentRow,
   options?: {
@@ -204,9 +214,17 @@ function buildAssignmentEmbed(
     scheduledAtIso?: string | null;
     mainLabel?: string;
     linesLabel?: string;
+    homeTeamSlug?: string | null;
+    awayTeamSlug?: string | null;
   },
 ): EmbedBuilder {
   const bothFilled = assignmentBothSlotsFilled(row);
+  const matchLine = formatMatchField(
+    row.home_team_name,
+    row.away_team_name,
+    options?.homeTeamSlug,
+    options?.awayTeamSlug,
+  );
   const embed = new EmbedBuilder()
     .setColor(bothFilled ? COLOR_FULL : COLOR_OPEN)
     .setTitle(
@@ -222,7 +240,7 @@ function buildAssignmentEmbed(
       },
       {
         name: "Match",
-        value: `**${row.home_team_name}** vs **${row.away_team_name}**`,
+        value: matchLine,
         inline: false,
       },
       {
@@ -337,6 +355,8 @@ async function editAssignmentMessage(
     scheduledAtIso?: string | null;
     mainLabel?: string;
     linesLabel?: string;
+    homeTeamSlug?: string | null;
+    awayTeamSlug?: string | null;
   },
 ): Promise<void> {
   if (!row.channel_id || !row.message_id) return;
@@ -484,6 +504,8 @@ async function postAssignmentRecord(input: {
   gameWeekLabel: string | null;
   homeTeamName: string;
   awayTeamName: string;
+  homeTeamSlug?: string | null;
+  awayTeamSlug?: string | null;
   kickoffLabel: string | null;
   matchId: string | null;
   robloxMatchId: string | null;
@@ -549,11 +571,12 @@ async function postAssignmentRecord(input: {
   let msg;
   try {
     msg = await input.channel.send({
-      content: "New fixture available for referees:",
       embeds: [
         buildAssignmentEmbed(row, {
           robloxMatchId: input.robloxMatchId,
           scheduledAtIso: input.scheduledAtIso,
+          homeTeamSlug: input.homeTeamSlug,
+          awayTeamSlug: input.awayTeamSlug,
         }),
       ],
       components: buildAssignmentComponents(row, null),
@@ -676,6 +699,8 @@ export async function handleRefFixturesCommand(
       gameWeekLabel: bundle.label,
       homeTeamName: match.home_name,
       awayTeamName: match.away_name,
+      homeTeamSlug: match.home_slug,
+      awayTeamSlug: match.away_slug,
       kickoffLabel,
       matchId: match.id,
       robloxMatchId: match.roblox_match_id,
@@ -693,6 +718,14 @@ export async function handleRefFixturesCommand(
     if (i < toPost.length - 1) {
       await sleep(FIXTURE_POST_DELAY_MS);
     }
+  }
+
+  if (postedUrls.length > 0) {
+    const roleId = refereeRoleId();
+    await channel.send({
+      content: `<@&${roleId}> 👆 **${bundle.label}** fixtures are up above — go claim **Main ref** or **Linesman** on the matches you can take!`,
+      allowedMentions: { roles: [roleId] },
+    });
   }
 
   const lines = [
