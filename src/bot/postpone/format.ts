@@ -48,6 +48,29 @@ const LOG_FORMATTER = new Intl.DateTimeFormat("en-US", {
   timeZone: DEFAULT_POSTPONE_TIMEZONE,
 });
 
+/** Discord dynamic timestamp — renders in each user's local timezone (grey highlight). */
+export function discordKickoffTimestamp(
+  iso: string | null | undefined,
+  style: "F" | "f" | "t" | "T" | "d" | "D" | "R" = "F",
+): string {
+  if (!iso) return "TBD";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "TBD";
+  const unix = Math.floor(d.getTime() / 1000);
+  return `<t:${unix}:${style}>`;
+}
+
+/** Full local datetime plus relative (e.g. "in 2 days"). */
+export function discordKickoffTimestampRich(
+  iso: string | null | undefined,
+): string {
+  if (!iso) return "TBD";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "TBD";
+  const unix = Math.floor(d.getTime() / 1000);
+  return `<t:${unix}:F> · <t:${unix}:R>`;
+}
+
 export function formatFixtureWhen(
   iso: string | null | undefined,
   timeZone: string = DEFAULT_POSTPONE_TIMEZONE,

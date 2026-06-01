@@ -25,8 +25,7 @@ import { env } from "@/bot/config";
 import {
   DEFAULT_POSTPONE_TIMEZONE,
   formatCaseNumber,
-  formatFixtureWhen,
-  formatFixtureWhenWithZone,
+  discordKickoffTimestampRich,
   isValidPostponeTimezone,
   parseProposedDateTime,
   POSTPONE_TIMEZONE_CHOICES,
@@ -219,12 +218,12 @@ async function notifyStaffPostponementAccepted(
         { name: "Fixture", value: fixture, inline: false },
         {
           name: "Was",
-          value: formatFixtureWhen(row.original_scheduled_at),
+          value: discordKickoffTimestampRich(row.original_scheduled_at),
           inline: true,
         },
         {
           name: "Now",
-          value: formatFixtureWhen(row.proposed_scheduled_at),
+          value: discordKickoffTimestampRich(row.proposed_scheduled_at),
           inline: true,
         },
         {
@@ -502,8 +501,8 @@ export async function handlePostponeCommand(
         [
           `**${requesterName}** wants to move your upcoming fixture`,
           "",
-          `📅 **Original:** ${formatFixtureWhen(match.scheduled_at)} (UK)`,
-          `📅 **Proposed:** ${formatFixtureWhenWithZone(parsed.iso, timeZone)}`,
+          `📅 **Original:** ${discordKickoffTimestampRich(match.scheduled_at)}`,
+          `📅 **Proposed:** ${discordKickoffTimestampRich(parsed.iso)}`,
           `🌐 **Timezone:** ${postponeTimezoneLabel(timeZone)}`,
           `💬 **Reason:** "${reason}"`,
         ].join("\n"),
@@ -620,10 +619,8 @@ export async function handlePostponeAcceptButton(
       row.requester_team_slug,
       row.opponent_team_slug,
     );
-    const when = formatFixtureWhen(row.proposed_scheduled_at);
-
     const confirm =
-      `✅ **Fixture updated**\n\n**${fixture}** is now scheduled for **${when}**. Assigned referees have been DMed to confirm availability.`;
+      `✅ **Fixture updated**\n\n**${fixture}** is now scheduled for ${discordKickoffTimestampRich(row.proposed_scheduled_at)}. Assigned referees have been DMed to confirm availability.`;
 
     await dmUser(interaction.client, row.requester_discord_id, { content: confirm });
     await dmUser(interaction.client, row.opponent_discord_id, { content: confirm });
@@ -894,7 +891,7 @@ export async function escalatePostponement(
     .setDescription(
       [
         `**Fixture:** ${fixture}`,
-        `📅 **Original Time:** ${formatFixtureWhen(escalated.original_scheduled_at)}`,
+        `📅 **Original Time:** ${discordKickoffTimestampRich(escalated.original_scheduled_at)}`,
         `**Requested by:** <@${escalated.requester_discord_id}>`,
         `**Opponent:** <@${escalated.opponent_discord_id ?? "unknown"}>`,
         "",
@@ -992,12 +989,12 @@ export async function handlePostponeStaffButton(
     if (action === "approve") {
       newStatus = "staff_approved";
       scheduledAt = row.proposed_scheduled_at;
-      notify = `✅ Staff **approved** the postponement. Your fixture is now **${formatFixtureWhen(scheduledAt)}**.`;
+      notify = `✅ Staff **approved** the postponement. Your fixture is now ${discordKickoffTimestampRich(scheduledAt)}.`;
     } else {
       newStatus = "staff_force_original";
       scheduledAt = null;
       await lockOriginalKickoff(supabase, row.match_id);
-      notify = `❌ Staff **kept the original kickoff**: **${formatFixtureWhen(row.original_scheduled_at)}**. No further postponement requests are allowed on this fixture.`;
+      notify = `❌ Staff **kept the original kickoff**: ${discordKickoffTimestampRich(row.original_scheduled_at)}. No further postponement requests are allowed on this fixture.`;
     }
 
     const { data: won, error: upErr } = await supabase
@@ -1107,7 +1104,7 @@ export async function handlePostponeStaffTimeModal(
     parsed.iso,
   );
 
-  const notify = `🔄 Staff set a new kickoff: **${formatFixtureWhenWithZone(parsed.iso, timeZone)}**. Assigned referees have been DMed.`;
+  const notify = `🔄 Staff set a new kickoff: ${discordKickoffTimestampRich(parsed.iso)}. Assigned referees have been DMed.`;
   await dmUser(interaction.client, row.requester_discord_id, { content: notify });
   await dmUser(interaction.client, row.opponent_discord_id, { content: notify });
 
