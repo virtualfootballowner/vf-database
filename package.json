@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "ci:install": "node scripts/clean-node-modules-cache.js && npm ci",
+    "railway:install": "npm run ci:install",
+    "railway:build": "npm run ci:install && npm run build",
     "start": "next start",
     "lint": "eslint",
     "bot:dev": "tsx src/bot/index.ts",

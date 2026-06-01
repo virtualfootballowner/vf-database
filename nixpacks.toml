@@ -1,6 +1,6 @@
-# Railway / Nixpacks — clear locked Next/npm cache before install.
+# Fallback when Dockerfile is not used. Avoid plain `npm ci` on a cached node_modules tree.
 [phases.install]
-cmds = ["rm -rf node_modules/.cache node_modules", "npm ci"]
+cmds = ["npm run ci:install"]
 
 [phases.build]
 cmds = ["npm run build"]
