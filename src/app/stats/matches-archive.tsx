@@ -237,12 +237,12 @@ function ScheduledRow({
 
   return (
     <Card className="gap-0 border-sky-400/20 bg-sky-400/[0.04] py-0">
-      <CardContent className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-3 sm:grid-cols-[130px_1fr_auto] sm:gap-4 sm:px-4 sm:py-3.5">
+      <CardContent className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-3 sm:grid-cols-[minmax(148px,168px)_1fr_auto] sm:gap-4 sm:px-4 sm:py-3.5">
         <div className="flex flex-col gap-1">
           <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">
             {kickoff?.date ?? "—"}
           </span>
-          <span className="text-[10px] font-medium tabular-nums tracking-[0.08em] text-white/50">
+          <span className="max-w-[168px] text-[10px] font-medium leading-snug tabular-nums tracking-[0.04em] text-white/50">
             {kickoff?.time ?? "—"}
           </span>
           <span className="text-[10px] uppercase tracking-[0.18em] text-white/45">

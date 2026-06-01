@@ -8,12 +8,26 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Europe/London",
 });
 
-const TIME_FORMATTER = new Intl.DateTimeFormat("en-GB", {
-  hour: "2-digit",
+const EST_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: "America/New_York",
+  timeZoneName: "short",
+});
+
+const BST_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
   minute: "2-digit",
   timeZone: "Europe/London",
   timeZoneName: "short",
 });
+
+/** Display kickoff as `1:00 PM EDT / 6:00 PM BST` (US Eastern + UK). */
+export function formatDualTimezoneKickoffTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return `${EST_TIME_FORMATTER.format(d)} / ${BST_TIME_FORMATTER.format(d)}`;
+}
 
 /** Build UTC ISO string from a calendar date and clock time in BST. */
 export function bstKickoffIso(date: string, timeBst: string): string {
@@ -40,7 +54,7 @@ export function formatWcKickoff(iso: string): { date: string; time: string } {
   const d = new Date(iso);
   return {
     date: DATE_FORMATTER.format(d),
-    time: TIME_FORMATTER.format(d),
+    time: formatDualTimezoneKickoffTime(iso),
   };
 }
 
