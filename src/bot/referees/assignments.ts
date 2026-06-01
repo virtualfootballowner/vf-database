@@ -279,51 +279,44 @@ function buildAssignmentEmbed(
   return embed;
 }
 
+/** Channel messages share one button row for all viewers — slot state only; handlers enforce ownership. */
 function buildAssignmentComponents(
   row: RefereeAssignmentRow,
-  viewerDiscordId: string | null,
 ): ActionRowBuilder<ButtonBuilder>[] {
   const buttons: ButtonBuilder[] = [];
-  const ownsMain = viewerDiscordId
-    ? userOwnsSlot(row, viewerDiscordId, "main")
-    : false;
-  const ownsLines = viewerDiscordId
-    ? userOwnsSlot(row, viewerDiscordId, "linesman")
-    : false;
 
-  if (ownsMain) {
-    buttons.push(
-      new ButtonBuilder()
-        .setCustomId(`${REFEREE_SLOT_UNCLAIM_MAIN}${row.id}`)
-        .setLabel("Unclaim main ref")
-        .setStyle(ButtonStyle.Danger),
-    );
-  } else if (slotOpen(row, "main") && !ownsLines) {
+  if (slotOpen(row, "main")) {
     buttons.push(
       new ButtonBuilder()
         .setCustomId(`${REFEREE_SLOT_CLAIM_MAIN}${row.id}`)
         .setLabel("Claim main ref")
         .setStyle(ButtonStyle.Success),
     );
-  }
-
-  if (ownsLines) {
+  } else {
     buttons.push(
       new ButtonBuilder()
-        .setCustomId(`${REFEREE_SLOT_UNCLAIM_LINES}${row.id}`)
-        .setLabel("Unclaim linesman")
+        .setCustomId(`${REFEREE_SLOT_UNCLAIM_MAIN}${row.id}`)
+        .setLabel("Unclaim main ref")
         .setStyle(ButtonStyle.Danger),
     );
-  } else if (slotOpen(row, "linesman") && !ownsMain) {
+  }
+
+  if (slotOpen(row, "linesman")) {
     buttons.push(
       new ButtonBuilder()
         .setCustomId(`${REFEREE_SLOT_CLAIM_LINES}${row.id}`)
         .setLabel("Claim linesman")
         .setStyle(ButtonStyle.Success),
     );
+  } else {
+    buttons.push(
+      new ButtonBuilder()
+        .setCustomId(`${REFEREE_SLOT_UNCLAIM_LINES}${row.id}`)
+        .setLabel("Unclaim linesman")
+        .setStyle(ButtonStyle.Danger),
+    );
   }
 
-  if (buttons.length === 0) return [];
   return [new ActionRowBuilder<ButtonBuilder>().addComponents(buttons)];
 }
 
@@ -348,7 +341,6 @@ async function fetchRobloxMatchIdForAssignment(
 async function editAssignmentMessage(
   client: Client,
   row: RefereeAssignmentRow,
-  viewerDiscordId: string | null,
   options?: {
     robloxMatchId?: string | null;
     scheduledAtIso?: string | null;
@@ -365,7 +357,7 @@ async function editAssignmentMessage(
     const msg = await ch.messages.fetch(row.message_id);
     await msg.edit({
       embeds: [buildAssignmentEmbed(row, options)],
-      components: buildAssignmentComponents(row, viewerDiscordId),
+      components: buildAssignmentComponents(row),
     });
   } catch (e) {
     console.error("[referee] assignment message edit:", e);
@@ -529,7 +521,7 @@ export async function refreshRefereeAssignmentMessage(
     linesLabel?: string;
   },
 ): Promise<void> {
-  await editAssignmentMessage(client, row, null, options);
+  await editAssignmentMessage(client, row, options);
 }
 
 export async function systemReleaseAssignmentSlot(
@@ -632,7 +624,7 @@ async function postAssignmentRecord(
           awayTeamSlug: input.awayTeamSlug,
         }),
       ],
-      components: buildAssignmentComponents(row, null),
+      components: buildAssignmentComponents(row),
     });
   } catch (e) {
     console.error("[referee] assignment channel send:", e);
@@ -916,7 +908,7 @@ async function claimAssignmentSlot(
   }
 
   await interaction.deferUpdate();
-  await editAssignmentMessage(interaction.client, claimedRow, interaction.user.id, {
+  await editAssignmentMessage(interaction.client, claimedRow, {
     robloxMatchId,
     mainLabel: slot === "main" ? label : undefined,
     linesLabel: slot === "linesman" ? label : undefined,
@@ -1007,7 +999,7 @@ async function unclaimAssignmentSlot(
   const robloxMatchId = await fetchRobloxMatchIdForAssignment(openRow.match_id);
 
   await interaction.deferUpdate();
-  await editAssignmentMessage(interaction.client, openRow, interaction.user.id, {
+  await editAssignmentMessage(interaction.client, openRow, {
     robloxMatchId,
   });
 
