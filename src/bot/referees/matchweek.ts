@@ -112,22 +112,21 @@ export async function fetchNextMatchweekBundle(
   };
 }
 
-export async function fetchExistingAssignmentMatchIds(
+/** Close prior assignment posts so staff can run /ref-fixtures again for the same matchday. */
+export async function cancelPreviousAssignmentsForMatches(
   supabase: SupabaseClient,
   guildId: string,
   matchIds: string[],
-): Promise<Set<string>> {
-  if (matchIds.length === 0) return new Set();
+): Promise<number> {
+  if (matchIds.length === 0) return 0;
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("referee_assignments")
-    .select("match_id")
+    .update({ status: "cancelled", updated_at: now })
     .eq("guild_id", guildId)
     .in("match_id", matchIds)
-    .in("status", ["open", "claimed"]);
+    .in("status", ["open", "claimed"])
+    .select("id");
   if (error) throw error;
-  return new Set(
-    (data ?? [])
-      .map((r) => (r as { match_id?: string | null }).match_id)
-      .filter((id): id is string => Boolean(id)),
-  );
+  return data?.length ?? 0;
 }

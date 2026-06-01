@@ -22,10 +22,9 @@ import {
   refereeStaffRoleId,
 } from "@/bot/referees/config";
 import {
-  fetchExistingAssignmentMatchIds,
+  cancelPreviousAssignmentsForMatches,
   fetchNextMatchweekBundle,
   type RefMatchweekBundle,
-  type RefMatchweekMatch,
 } from "@/bot/referees/matchweek";
 import {
   assignmentBothSlotsFilled,
@@ -646,29 +645,22 @@ export async function handleRefFixturesCommand(
   }
 
   const matchIds = bundle.matches.map((m) => m.id);
-  let existingIds: Set<string>;
+  let replacedCount = 0;
   try {
-    existingIds = await fetchExistingAssignmentMatchIds(
+    replacedCount = await cancelPreviousAssignmentsForMatches(
       supabase,
       interaction.guild!.id,
       matchIds,
     );
   } catch (e) {
-    console.error("[referee] fetch existing assignments:", e);
+    console.error("[referee] cancel previous assignments:", e);
     await interaction.editReply({
-      content: "Could not check which fixtures were already posted.",
+      content: "Could not reset previous assignment posts for this matchday.",
     });
     return;
   }
 
-  const toPost = bundle.matches.filter((m) => !existingIds.has(m.id));
-  if (toPost.length === 0) {
-    await interaction.editReply({
-      content: `All **${bundle.label}** fixtures are already posted (${bundle.competition}).`,
-    });
-    return;
-  }
-
+  const toPost = bundle.matches;
   const postedUrls: string[] = [];
   const failures: string[] = [];
 
@@ -731,8 +723,10 @@ export async function handleRefFixturesCommand(
   const lines = [
     `Posted **${postedUrls.length}** fixture(s) for **${bundle.label}** (${bundle.competition}).`,
   ];
-  if (existingIds.size > 0) {
-    lines.push(`Skipped **${existingIds.size}** already posted.`);
+  if (replacedCount > 0) {
+    lines.push(
+      `Replaced **${replacedCount}** previous assignment post(s) for this matchday.`,
+    );
   }
   if (failures.length > 0) {
     lines.push("", "**Failures:**", ...failures.slice(0, 8));
