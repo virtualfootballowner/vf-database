@@ -46,6 +46,7 @@ import {
   type PostponementRequestRow,
   updateMatchScheduledAt,
 } from "@/bot/postpone/queries";
+import { notifyRefereesOfMatchPostponement } from "@/bot/referees/postponement/notify";
 import {
   buildTeamNameBySlug,
   createBotSupabase,
@@ -283,6 +284,18 @@ function staffActionRow(requestId: string): ActionRowBuilder<ButtonBuilder> {
       .setLabel("Set New Time")
       .setEmoji("🔄")
       .setStyle(ButtonStyle.Primary),
+  );
+}
+
+async function applyRescheduledKickoff(
+  client: Client,
+  supabase: SupabaseClient,
+  matchId: string,
+  scheduledAt: string,
+): Promise<void> {
+  await updateMatchScheduledAt(supabase, matchId, scheduledAt);
+  void notifyRefereesOfMatchPostponement(client, matchId, scheduledAt).catch(
+    (e) => console.error("[referee-postpone] notify after reschedule:", e),
   );
 }
 
@@ -594,7 +607,12 @@ export async function handlePostponeAcceptButton(
       return;
     }
 
-    await updateMatchScheduledAt(supabase, row.match_id, row.proposed_scheduled_at);
+    await applyRescheduledKickoff(
+      interaction.client,
+      supabase,
+      row.match_id,
+      row.proposed_scheduled_at,
+    );
 
     const teamNames = await buildTeamNameBySlug(supabase);
     const fixture = fixtureLabel(
@@ -605,7 +623,7 @@ export async function handlePostponeAcceptButton(
     const when = formatFixtureWhen(row.proposed_scheduled_at);
 
     const confirm =
-      `✅ **Fixture updated**\n\n**${fixture}** is now scheduled for **${when}**.`;
+      `✅ **Fixture updated**\n\n**${fixture}** is now scheduled for **${when}**. Assigned referees have been DMed to confirm availability.`;
 
     await dmUser(interaction.client, row.requester_discord_id, { content: confirm });
     await dmUser(interaction.client, row.opponent_discord_id, { content: confirm });
@@ -1006,7 +1024,12 @@ export async function handlePostponeStaffButton(
     }
 
     if (scheduledAt) {
-      await updateMatchScheduledAt(supabase, row.match_id, scheduledAt);
+      await applyRescheduledKickoff(
+        interaction.client,
+        supabase,
+        row.match_id,
+        scheduledAt,
+      );
     }
 
     await dmUser(interaction.client, row.requester_discord_id, { content: notify });
@@ -1077,9 +1100,14 @@ export async function handlePostponeStaffTimeModal(
     return;
   }
 
-  await updateMatchScheduledAt(supabase, row.match_id, parsed.iso);
+  await applyRescheduledKickoff(
+    interaction.client,
+    supabase,
+    row.match_id,
+    parsed.iso,
+  );
 
-  const notify = `🔄 Staff set a new kickoff: **${formatFixtureWhenWithZone(parsed.iso, timeZone)}**.`;
+  const notify = `🔄 Staff set a new kickoff: **${formatFixtureWhenWithZone(parsed.iso, timeZone)}**. Assigned referees have been DMed.`;
   await dmUser(interaction.client, row.requester_discord_id, { content: notify });
   await dmUser(interaction.client, row.opponent_discord_id, { content: notify });
 

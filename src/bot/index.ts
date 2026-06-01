@@ -58,6 +58,8 @@ import {
   REFEREE_SLOT_CLAIM_MAIN,
   REFEREE_SLOT_UNCLAIM_LINES,
   REFEREE_SLOT_UNCLAIM_MAIN,
+  REFEREE_POSTPONE_DROP_PREFIX,
+  REFEREE_POSTPONE_KEEP_PREFIX,
 } from "@/lib/referees/discord-constants";
 import {
   handleRefereeApproveButton,
@@ -67,6 +69,10 @@ import {
   handleRefAssignmentClaimButton,
   handleRefAssignmentSlotButton,
 } from "@/bot/referees/assignments";
+import {
+  handleRefereePostponeDropButton,
+  handleRefereePostponeKeepButton,
+} from "@/bot/referees/postponement/handlers";
 import { MEDIA_ART_JOB_CLAIM_PREFIX } from "@/lib/media-jobs/media-job-discord-constants";
 import {
   handleCreatorApproveButton,
@@ -723,6 +729,20 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         "unclaim",
         "linesman",
         customId.slice(REFEREE_SLOT_UNCLAIM_LINES.length),
+      );
+      return;
+    }
+    if (customId.startsWith(REFEREE_POSTPONE_KEEP_PREFIX)) {
+      await handleRefereePostponeKeepButton(
+        interaction,
+        customId.slice(REFEREE_POSTPONE_KEEP_PREFIX.length),
+      );
+      return;
+    }
+    if (customId.startsWith(REFEREE_POSTPONE_DROP_PREFIX)) {
+      await handleRefereePostponeDropButton(
+        interaction,
+        customId.slice(REFEREE_POSTPONE_DROP_PREFIX.length),
       );
       return;
     }

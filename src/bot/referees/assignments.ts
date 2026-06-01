@@ -132,7 +132,7 @@ function kickoffUnix(iso: string | null | undefined): number | null {
   return Math.floor(ms / 1000);
 }
 
-function buildKickoffDisplayFromIso(iso: string): string {
+export function buildAssignmentKickoffLabel(iso: string): string {
   const dual = formatDualTimezoneKickoffTime(iso);
   const ts = kickoffUnix(iso);
   if (ts == null) return dual;
@@ -144,7 +144,7 @@ function buildKickoffFieldValue(
   scheduledAtIso?: string | null,
 ): string | null {
   if (scheduledAtIso?.trim()) {
-    return buildKickoffDisplayFromIso(scheduledAtIso);
+    return buildAssignmentKickoffLabel(scheduledAtIso);
   }
   const label = kickoffLabel?.trim();
   if (!label) return null;
@@ -492,7 +492,7 @@ function slotUnclaimUpdate(
   return update;
 }
 
-async function postAssignmentRecord(input: {
+export type PostRefereeAssignmentInput = {
   client: Client;
   guildId: string;
   channel: GuildTextBasedChannel;
@@ -509,7 +509,61 @@ async function postAssignmentRecord(input: {
   matchId: string | null;
   robloxMatchId: string | null;
   scheduledAtIso?: string | null;
-}): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+};
+
+export async function postRefereeAssignment(
+  input: PostRefereeAssignmentInput,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  return postAssignmentRecord(input);
+}
+
+export async function refreshRefereeAssignmentMessage(
+  client: Client,
+  row: RefereeAssignmentRow,
+  options?: {
+    robloxMatchId?: string | null;
+    scheduledAtIso?: string | null;
+    homeTeamSlug?: string | null;
+    awayTeamSlug?: string | null;
+    mainLabel?: string;
+    linesLabel?: string;
+  },
+): Promise<void> {
+  await editAssignmentMessage(client, row, null, options);
+}
+
+export async function systemReleaseAssignmentSlot(
+  client: Client,
+  assignmentId: string,
+  slot: RefereeAssignmentSlot,
+): Promise<RefereeAssignmentRow | null> {
+  const row = await loadAssignment(assignmentId);
+  if (!row || row.status === "cancelled" || row.status === "completed") {
+    return null;
+  }
+  if (slotOpen(row, slot)) return row;
+
+  const now = new Date().toISOString();
+  const update = slotUnclaimUpdate(row, slot, now);
+  const supabase = createBotSupabase();
+  const { data: updated, error } = await supabase
+    .from("referee_assignments")
+    .update(update)
+    .eq("id", assignmentId)
+    .select("*")
+    .maybeSingle();
+  if (error || !updated) return null;
+
+  const openRow = updated as RefereeAssignmentRow;
+  const robloxMatchId = await fetchRobloxMatchIdForAssignment(openRow.match_id);
+  await refreshRefereeAssignmentMessage(client, openRow, { robloxMatchId });
+
+  return openRow;
+}
+
+async function postAssignmentRecord(
+  input: PostRefereeAssignmentInput,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const assignmentId = randomUUID();
   const supabase = createBotSupabase();
   const now = new Date().toISOString();
@@ -679,7 +733,7 @@ export async function handleRefFixturesCommand(
 
   for (let i = 0; i < toPost.length; i++) {
     const match = toPost[i]!;
-    const kickoffLabel = buildKickoffDisplayFromIso(match.scheduled_at);
+    const kickoffLabel = buildAssignmentKickoffLabel(match.scheduled_at);
     const result = await postAssignmentRecord({
       client: interaction.client,
       guildId: interaction.guild!.id,
