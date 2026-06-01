@@ -1,0 +1,10 @@
+# Render blueprint — override dashboard build command if deploys fail on npm ci (EBUSY .cache).
+services:
+  - type: web
+    runtime: node
+    name: vfl-platform
+    buildCommand: rm -rf node_modules/.cache && npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"

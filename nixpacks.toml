@@ -1,0 +1,6 @@
+# Railway / Nixpacks — clear locked Next/npm cache before install.
+[phases.install]
+cmds = ["rm -rf node_modules/.cache node_modules", "npm ci"]
+
+[phases.build]
+cmds = ["npm run build"]

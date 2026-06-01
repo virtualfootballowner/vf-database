@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "ci:install": "node scripts/clean-node-modules-cache.js && npm ci",
     "start": "next start",
     "lint": "eslint",
     "bot:dev": "tsx src/bot/index.ts",
