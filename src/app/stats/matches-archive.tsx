@@ -212,6 +212,12 @@ function PlayedRow({
   );
 }
 
+function refereeDisplay(match: MatchRecord | null | undefined): string {
+  const ref = match?.referee?.trim();
+  if (ref && ref !== "—") return ref;
+  return "TBD";
+}
+
 function ScheduledRow({
   row,
   getTeam,
@@ -234,9 +240,11 @@ function ScheduledRow({
   const kickoff = schedule?.scheduledAt
     ? formatKickoff(schedule.scheduledAt)
     : null;
+  const matchId = row.match?.id?.trim();
+  const ref = refereeDisplay(row.match);
 
-  return (
-    <Card className="gap-0 border-sky-400/20 bg-sky-400/[0.04] py-0">
+  const card = (
+    <Card className="gap-0 border-sky-400/20 bg-sky-400/[0.04] py-0 transition hover:border-sky-300/35 hover:bg-sky-400/[0.07]">
       <CardContent className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-3 sm:grid-cols-[minmax(148px,168px)_1fr_auto] sm:gap-4 sm:px-4 sm:py-3.5">
         <div className="flex flex-col gap-1">
           <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">
@@ -284,6 +292,13 @@ function ScheduledRow({
           </Badge>
           <Badge
             variant="outline"
+            className="max-w-[120px] truncate border-violet-300/30 bg-violet-400/10 px-2 py-0 text-[10px] text-violet-100"
+            title={`Referee: ${ref}`}
+          >
+            Ref · {ref}
+          </Badge>
+          <Badge
+            variant="outline"
             className="border-sky-300/30 bg-sky-400/10 px-2 py-0 text-[10px] uppercase tracking-wider text-sky-200"
           >
             {schedule?.stadium ?? "TBD"}
@@ -291,6 +306,17 @@ function ScheduledRow({
         </div>
       </CardContent>
     </Card>
+  );
+
+  if (!matchId) return card;
+
+  return (
+    <Link
+      href={`/stats/matches/${encodeURIComponent(matchId)}`}
+      className="block rounded-xl outline-none transition focus-visible:ring-2 focus-visible:ring-white/40"
+    >
+      {card}
+    </Link>
   );
 }
 

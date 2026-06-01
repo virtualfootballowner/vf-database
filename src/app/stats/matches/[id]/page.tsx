@@ -31,6 +31,8 @@ import { cn } from "@/lib/utils";
 
 import { getEventsForMatch, type MatchEvent } from "../../match-events-data";
 import type { MatchRecord } from "../../matches-data";
+import { ScheduledMatchView } from "./scheduled-match-view";
+import { formatWcKickoff } from "@/lib/wc-fixture-kickoff";
 
 const matchSurfaceClass =
   "border-0 bg-white/[0.035] shadow-none ring-1 ring-white/[0.08] backdrop-blur-md";
@@ -67,6 +69,15 @@ export async function generateMetadata({
   const { id } = await params;
   const match = await getMatchRecordByRobloxId(id);
   if (!match) return { title: "Match not found · VF" };
+  if (match.status === "scheduled") {
+    const kickoff = match.scheduledAt
+      ? formatWcKickoff(match.scheduledAt).date
+      : match.date;
+    return {
+      title: `${match.homeTeam} vs ${match.awayTeam} · Pre-match · VF`,
+      description: `${match.competition} ${match.gameWeek} · ${kickoff}`,
+    };
+  }
   return {
     title: `${match.homeTeam} ${match.homeScore}-${match.awayScore} ${match.awayTeam} · VF`,
     description: `${match.competition} ${match.gameWeek} · ${match.date}`,
@@ -83,12 +94,31 @@ export default async function MatchDetailPage({
   const match = bundle.matchesByRobloxId.get(id) ?? null;
   if (!match) notFound();
 
+  const getTeam = getMatchTeamResolver(bundle.teams);
+
+  if (match.status === "scheduled") {
+    return (
+      <main className="relative min-h-dvh min-w-0 w-full overflow-x-clip text-white">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 pb-16 pt-5 sm:px-6 sm:pt-8 md:px-8 md:pt-10">
+          <SiteNav active="stats" />
+          <Link
+            href="/stats/matches"
+            className="inline-flex w-fit items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-white/65 transition hover:text-white"
+          >
+            <ArrowLeft className="size-3.5" />
+            All matches
+          </Link>
+          <ScheduledMatchView match={match} getTeam={getTeam} />
+        </div>
+      </main>
+    );
+  }
+
   const events =
     bundle.source === "supabase"
       ? ((await loadMatchEventsForRobloxId(id)) ?? [])
       : getEventsForMatch(id);
 
-  const getTeam = getMatchTeamResolver(bundle.teams);
   const namesToResolve = [
     ...new Set(
       events
