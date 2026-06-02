@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { formatLocalKickoffTime, resolvedVisitorTimeZone } from "@/lib/wc-fixture-kickoff";
+import { formatLocalKickoffTime } from "@/lib/wc-fixture-kickoff";
 import { cn } from "@/lib/utils";
 
 type FixtureKickoffTimeProps = {
@@ -18,14 +18,8 @@ export function FixtureKickoffTime({ iso, className }: FixtureKickoffTimeProps) 
     setLocal(formatLocalKickoffTime(iso));
   }, [iso]);
 
-  const tzLabel = resolvedVisitorTimeZone().replace(/_/g, " ");
-
   return (
-    <span
-      className={cn("tabular-nums", className)}
-      suppressHydrationWarning
-      title={tzLabel}
-    >
+    <span className={cn("tabular-nums", className)} suppressHydrationWarning>
       {local ?? "—"}
     </span>
   );

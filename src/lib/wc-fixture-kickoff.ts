@@ -35,7 +35,13 @@ export function resolvedVisitorTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 }
 
-/** Visitor wall-clock time only (24h), e.g. `15:22` — no `GMT+12` style labels. */
+/** How we label the visitor zone in brackets — IANA id with spaces for clarity. */
+export function formatVisitorTimeZoneLabel(timeZone?: string): string {
+  const tz = timeZone?.trim() || resolvedVisitorTimeZone();
+  return tz.replace(/_/g, " ");
+}
+
+/** Visitor wall-clock + bracketed zone, e.g. `15:22 (Pacific/Auckland)`. */
 export function formatLocalKickoffTime(
   iso: string,
   timeZone?: string,
@@ -43,12 +49,13 @@ export function formatLocalKickoffTime(
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
   const tz = timeZone?.trim() || resolvedVisitorTimeZone();
-  return new Intl.DateTimeFormat("en-GB", {
+  const time = new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
     timeZone: tz,
   }).format(d);
+  return `${time} (${formatVisitorTimeZoneLabel(tz)})`;
 }
 
 /** Build UTC ISO string from a calendar date and clock time in BST. */
