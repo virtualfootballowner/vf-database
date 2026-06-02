@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { FixtureKickoffTime } from "@/components/fixture-kickoff-time";
 import type { Team } from "@/app/teams/teams-data";
 import { TeamCrest } from "@/app/teams/team-crest";
 import { Badge } from "@/components/ui/badge";
@@ -250,8 +251,12 @@ function ScheduledRow({
           <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">
             {kickoff?.date ?? "—"}
           </span>
-          <span className="max-w-[168px] text-[10px] font-medium leading-snug tabular-nums tracking-[0.04em] text-white/50">
-            {kickoff?.time ?? "—"}
+          <span className="max-w-[168px] text-[10px] font-medium leading-snug tracking-[0.04em] text-white/50">
+            {schedule?.scheduledAt ? (
+              <FixtureKickoffTime iso={schedule.scheduledAt} />
+            ) : (
+              "—"
+            )}
           </span>
           <span className="text-[10px] uppercase tracking-[0.18em] text-white/45">
             S{row.season} · {schedule?.gameWeekLabel ?? row.id}

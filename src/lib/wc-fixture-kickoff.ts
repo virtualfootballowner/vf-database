@@ -15,18 +15,38 @@ const EST_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
   timeZoneName: "short",
 });
 
-const BST_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
+/** True GMT (UTC) — not BST/GMT+1 wall labels. */
+const GMT_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
   hour: "numeric",
   minute: "2-digit",
-  timeZone: "Europe/London",
+  timeZone: "UTC",
   timeZoneName: "short",
 });
 
-/** Display kickoff as `1:00 PM EDT / 6:00 PM BST` (US Eastern + UK). */
+/** US Eastern + GMT (UTC). Add local via {@link formatLocalKickoffTime} on the client. */
 export function formatDualTimezoneKickoffTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return `${EST_TIME_FORMATTER.format(d)} / ${BST_TIME_FORMATTER.format(d)}`;
+  return `${EST_TIME_FORMATTER.format(d)} / ${GMT_TIME_FORMATTER.format(d)}`;
+}
+
+export function formatLocalKickoffTime(
+  iso: string,
+  timeZone?: string,
+): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const tz =
+    timeZone?.trim() ||
+    (typeof Intl !== "undefined"
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone
+      : "UTC");
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: tz,
+    timeZoneName: "short",
+  }).format(d);
 }
 
 /** Build UTC ISO string from a calendar date and clock time in BST. */

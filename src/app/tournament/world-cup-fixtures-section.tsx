@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import type { MatchRecord } from "@/app/stats/matches-data";
+import { FixtureKickoffTime } from "@/components/fixture-kickoff-time";
 import { TeamCrest } from "@/app/teams/team-crest";
 import type { Team } from "@/app/teams/teams-data";
 import { Badge } from "@/components/ui/badge";
@@ -20,13 +21,18 @@ import {
 import { formatWcKickoff } from "@/lib/wc-fixture-kickoff";
 import { cn } from "@/lib/utils";
 
-function kickoffFromMatchOrStatic(
+function kickoffIsoForFixture(
   fixtureCode: string,
   staticScheduledAt: string,
   matchesByRobloxId: Map<string, MatchRecord>,
-): ReturnType<typeof formatWcKickoff> {
-  const live = matchesByRobloxId.get(fixtureCode)?.scheduledAt?.trim();
-  return formatWcKickoff(live || staticScheduledAt);
+): string {
+  return (
+    matchesByRobloxId.get(fixtureCode)?.scheduledAt?.trim() || staticScheduledAt
+  );
+}
+
+function kickoffDateLabel(iso: string): string {
+  return formatWcKickoff(iso).date;
 }
 
 function FixtureMatchLink({
@@ -60,11 +66,12 @@ function GroupFixtureCard({
 }) {
   const home = teamBySlug.get(fx.homeSlug);
   const away = teamBySlug.get(fx.awaySlug);
-  const kickoff = kickoffFromMatchOrStatic(
+  const kickoffIso = kickoffIsoForFixture(
     fx.fixtureCode,
     fx.scheduledAt,
     matchesByRobloxId,
   );
+  const kickoffDate = kickoffDateLabel(kickoffIso);
 
   return (
     <FixtureMatchLink href={matchHref}>
@@ -79,10 +86,10 @@ function GroupFixtureCard({
       <CardContent className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-3 sm:grid-cols-[minmax(148px,168px)_1fr_auto] sm:gap-4 sm:px-4 sm:py-3.5">
         <div className="flex flex-col gap-1">
           <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
-            {kickoff.date}
+            {kickoffDate}
           </span>
-          <span className="max-w-[168px] text-[10px] font-medium leading-snug tabular-nums tracking-[0.04em] text-white/45">
-            {kickoff.time}
+          <span className="max-w-[168px] text-[10px] font-medium leading-snug tracking-[0.04em] text-white/45">
+            <FixtureKickoffTime iso={kickoffIso} />
           </span>
         </div>
 
@@ -127,7 +134,7 @@ function KnockoutFixtureCard({
   matchHref: string | null;
   matchesByRobloxId: Map<string, MatchRecord>;
 }) {
-  const kickoff = kickoffFromMatchOrStatic(
+  const kickoffIso = kickoffIsoForFixture(
     fx.fixtureCode,
     fx.scheduledAt,
     matchesByRobloxId,
@@ -145,8 +152,8 @@ function KnockoutFixtureCard({
       >
       <CardContent className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-3 sm:grid-cols-[minmax(148px,168px)_1fr_auto] sm:gap-4 sm:px-4 sm:py-3.5">
         <div className="flex flex-col gap-1">
-          <span className="max-w-[168px] text-[10px] font-medium leading-snug tabular-nums tracking-[0.04em] text-white/50">
-            {kickoff.time}
+          <span className="max-w-[168px] text-[10px] font-medium leading-snug tracking-[0.04em] text-white/50">
+            <FixtureKickoffTime iso={kickoffIso} />
           </span>
           <span className="text-[10px] uppercase tracking-[0.18em] text-white/40">
             {fx.shortCode}

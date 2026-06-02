@@ -1,6 +1,8 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { TeamCrest } from "@/app/teams/team-crest";
+import { FixtureKickoffTime } from "@/components/fixture-kickoff-time";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -76,7 +78,7 @@ function TeamSideCard({
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className={cn("flex items-center justify-between gap-3", insetRowClass)}>
       <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
@@ -111,8 +113,12 @@ export function MatchupView({ ctx }: { ctx: MatchPageContext }) {
         <div className="flex flex-wrap items-center justify-center gap-1.5 text-xs uppercase tracking-[0.18em] text-white/55">
           <span>{kickoff.date}</span>
           <span aria-hidden>·</span>
-          <span className="tabular-nums normal-case tracking-[0.04em] text-white/70">
-            {kickoff.time}
+          <span className="normal-case tracking-[0.04em] text-white/70">
+            {match.scheduledAt ? (
+              <FixtureKickoffTime iso={match.scheduledAt} />
+            ) : (
+              kickoff.time
+            )}
           </span>
         </div>
 
@@ -177,7 +183,16 @@ export function MatchupView({ ctx }: { ctx: MatchPageContext }) {
         </CardHeader>
         <CardContent>
           <div className="grid gap-2 sm:grid-cols-2">
-            <InfoRow label="Kickoff" value={kickoff.time} />
+            <InfoRow
+              label="Kickoff"
+              value={
+                match.scheduledAt ? (
+                  <FixtureKickoffTime iso={match.scheduledAt} />
+                ) : (
+                  kickoff.time
+                )
+              }
+            />
             <InfoRow label="Stadium" value={stadium} />
             <InfoRow label="Main referee" value={mainRef} />
             <InfoRow label="Linesman" value={linesman} />
