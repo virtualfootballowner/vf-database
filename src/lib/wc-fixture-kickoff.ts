@@ -30,22 +30,24 @@ export function formatDualTimezoneKickoffTime(iso: string): string {
   return `${EST_TIME_FORMATTER.format(d)} / ${GMT_TIME_FORMATTER.format(d)}`;
 }
 
+export function resolvedVisitorTimeZone(): string {
+  if (typeof Intl === "undefined") return "UTC";
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+}
+
+/** Visitor wall-clock time only (24h), e.g. `15:22` — no `GMT+12` style labels. */
 export function formatLocalKickoffTime(
   iso: string,
   timeZone?: string,
 ): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  const tz =
-    timeZone?.trim() ||
-    (typeof Intl !== "undefined"
-      ? Intl.DateTimeFormat().resolvedOptions().timeZone
-      : "UTC");
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
+  const tz = timeZone?.trim() || resolvedVisitorTimeZone();
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
     timeZone: tz,
-    timeZoneName: "short",
   }).format(d);
 }
 
@@ -74,7 +76,7 @@ export function formatWcKickoff(iso: string): { date: string; time: string } {
   const d = new Date(iso);
   return {
     date: DATE_FORMATTER.format(d),
-    time: formatDualTimezoneKickoffTime(iso),
+    time: formatLocalKickoffTime(iso),
   };
 }
 

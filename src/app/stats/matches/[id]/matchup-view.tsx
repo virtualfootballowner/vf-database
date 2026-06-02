@@ -117,7 +117,7 @@ export function MatchupView({ ctx }: { ctx: MatchPageContext }) {
             {match.scheduledAt ? (
               <FixtureKickoffTime iso={match.scheduledAt} />
             ) : (
-              kickoff.time
+              "—"
             )}
           </span>
         </div>
@@ -189,7 +189,7 @@ export function MatchupView({ ctx }: { ctx: MatchPageContext }) {
                 match.scheduledAt ? (
                   <FixtureKickoffTime iso={match.scheduledAt} />
                 ) : (
-                  kickoff.time
+                  "—"
                 )
               }
             />

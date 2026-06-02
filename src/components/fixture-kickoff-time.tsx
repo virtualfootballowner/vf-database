@@ -2,10 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import {
-  formatDualTimezoneKickoffTime,
-  formatLocalKickoffTime,
-} from "@/lib/wc-fixture-kickoff";
+import { formatLocalKickoffTime, resolvedVisitorTimeZone } from "@/lib/wc-fixture-kickoff";
 import { cn } from "@/lib/utils";
 
 type FixtureKickoffTimeProps = {
@@ -13,18 +10,23 @@ type FixtureKickoffTimeProps = {
   className?: string;
 };
 
-/** EDT / GMT / visitor local time (browser timezone). */
+/** Kickoff in the visitor's browser timezone only. */
 export function FixtureKickoffTime({ iso, className }: FixtureKickoffTimeProps) {
-  const league = formatDualTimezoneKickoffTime(iso);
   const [local, setLocal] = useState<string | null>(null);
 
   useEffect(() => {
     setLocal(formatLocalKickoffTime(iso));
   }, [iso]);
 
+  const tzLabel = resolvedVisitorTimeZone().replace(/_/g, " ");
+
   return (
-    <span className={cn("tabular-nums", className)} suppressHydrationWarning>
-      {local ? `${league} / ${local}` : league}
+    <span
+      className={cn("tabular-nums", className)}
+      suppressHydrationWarning
+      title={tzLabel}
+    >
+      {local ?? "—"}
     </span>
   );
 }
