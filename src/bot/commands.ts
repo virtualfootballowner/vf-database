@@ -409,17 +409,17 @@ export const leagueSlashCommandDefinitions = [
     )
     .addStringOption((opt) =>
       opt
-        .setName("specific_position")
-        .setDescription("Optional tactical role (CM, ST, RW, …)")
-        .setRequired(false)
-        .addChoices(...SPECIFIC_POSITION_CHOICES),
-    )
-    .addStringOption((opt) =>
-      opt
         .setName("role")
         .setDescription("Squad role (starter through reserve)")
         .setRequired(true)
         .addChoices(...CONTRACT_ROLE_CHOICES),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("specific_position")
+        .setDescription("Optional tactical role (CM, ST, RW, …)")
+        .setRequired(false)
+        .addChoices(...SPECIFIC_POSITION_CHOICES),
     )
     .toJSON(),
 
@@ -525,13 +525,6 @@ export const leagueSlashCommandDefinitions = [
         .setRequired(true)
         .setMaxLength(1000),
     )
-    .addStringOption((opt) =>
-      opt
-        .setName("position")
-        .setDescription("Optional broad role filter (Attacker, Midfielder, …)")
-        .setRequired(false)
-        .addChoices(...POSITION_GROUP_CHOICES),
-    )
     .addIntegerOption((opt) =>
       opt
         .setName("count")
@@ -539,6 +532,13 @@ export const leagueSlashCommandDefinitions = [
         .setRequired(true)
         .setMinValue(1)
         .setMaxValue(11),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("position")
+        .setDescription("Optional broad role filter (Attacker, Midfielder, …)")
+        .setRequired(false)
+        .addChoices(...POSITION_GROUP_CHOICES),
     )
     .addStringOption((opt) =>
       opt
