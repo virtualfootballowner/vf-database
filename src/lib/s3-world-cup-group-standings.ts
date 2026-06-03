@@ -52,8 +52,8 @@ export function worldCupGroupMatches(
     .sort((a, b) => {
       const aWhen = a.scheduledAt?.trim() || a.date;
       const bWhen = b.scheduledAt?.trim() || b.date;
-      if (aWhen !== bWhen) return bWhen.localeCompare(aWhen);
-      return b.id.localeCompare(a.id);
+      if (aWhen !== bWhen) return aWhen.localeCompare(bWhen);
+      return a.id.localeCompare(b.id);
     });
 }
 

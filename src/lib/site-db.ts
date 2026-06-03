@@ -17,8 +17,8 @@ import type { MatchEvent } from "@/app/stats/match-events-data";
 import type { Team } from "@/app/teams/teams-data";
 import { teams as fileTeams } from "@/app/teams/teams-data";
 import {
-  compareFixtureGroupsNewestFirst,
-  compareFixtureRowsNewestFirst,
+  compareFixtureGroupsChronological,
+  compareFixtureRowsChronological,
 } from "@/lib/fixture-sort";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import {
@@ -219,9 +219,9 @@ function buildFixtureGroupsDb(
   }
 
   for (const group of ordered) {
-    group.rows.sort(compareFixtureRowsNewestFirst);
+    group.rows.sort(compareFixtureRowsChronological);
   }
-  ordered.sort(compareFixtureGroupsNewestFirst);
+  ordered.sort(compareFixtureGroupsChronological);
 
   return {
     groups: ordered,

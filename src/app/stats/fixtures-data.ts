@@ -1,6 +1,6 @@
 import {
-  compareFixtureGroupsNewestFirst,
-  compareFixtureRowsNewestFirst,
+  compareFixtureGroupsChronological,
+  compareFixtureRowsChronological,
 } from "@/lib/fixture-sort";
 
 import { matches, type MatchRecord } from "./matches-data";
@@ -219,9 +219,9 @@ export const fixtureGroups: FixtureGroup[] = (() => {
   }
 
   for (const group of ordered) {
-    group.rows.sort(compareFixtureRowsNewestFirst);
+    group.rows.sort(compareFixtureRowsChronological);
   }
-  ordered.sort(compareFixtureGroupsNewestFirst);
+  ordered.sort(compareFixtureGroupsChronological);
 
   return ordered;
 })();

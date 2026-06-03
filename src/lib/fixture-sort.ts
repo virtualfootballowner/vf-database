@@ -1,12 +1,14 @@
 import type { FixtureRow } from "@/app/stats/fixtures-data";
 
+const UNDATED_SORT_KEY = "9999-99-99";
+
 export function fixtureRowSortDate(
   row: Pick<FixtureRow, "match" | "schedule">,
 ): string {
   return (
     row.match?.date?.trim() ||
     row.schedule?.scheduledAt?.slice(0, 10) ||
-    "0000-00-00"
+    UNDATED_SORT_KEY
   );
 }
 
@@ -20,18 +22,18 @@ export function fixtureRowSortTime(
   );
 }
 
-/** Most recent kickoff / match date first; undated fixtures sink to the bottom. */
-export function compareFixtureRowsNewestFirst(
+/** Matchday 1 / earliest kickoff first; undated fixtures sink to the bottom. */
+export function compareFixtureRowsChronological(
   a: Pick<FixtureRow, "id" | "match" | "schedule">,
   b: Pick<FixtureRow, "id" | "match" | "schedule">,
 ): number {
   const aDate = fixtureRowSortDate(a);
   const bDate = fixtureRowSortDate(b);
-  if (aDate !== bDate) return bDate.localeCompare(aDate);
+  if (aDate !== bDate) return aDate.localeCompare(bDate);
   const aTime = fixtureRowSortTime(a);
   const bTime = fixtureRowSortTime(b);
-  if (aTime !== bTime) return bTime.localeCompare(aTime);
-  return b.id.localeCompare(a.id);
+  if (aTime !== bTime) return aTime.localeCompare(bTime);
+  return a.id.localeCompare(b.id);
 }
 
 export type FixtureGroupLike = {
@@ -40,28 +42,15 @@ export type FixtureGroupLike = {
   rows: Pick<FixtureRow, "id" | "match" | "schedule">[];
 };
 
-export function fixtureGroupLatestDate(group: FixtureGroupLike): string {
-  let max = "0000-00-00";
-  for (const row of group.rows) {
-    const d = fixtureRowSortDate(row);
-    if (d.localeCompare(max) > 0) max = d;
-  }
-  return max;
-}
-
-/** Groups with the latest fixtures appear first. */
-export function compareFixtureGroupsNewestFirst(
+/** Season 1 before 3; competition key in catalog order. */
+export function compareFixtureGroupsChronological(
   a: FixtureGroupLike,
   b: FixtureGroupLike,
 ): number {
-  const byDate = fixtureGroupLatestDate(b).localeCompare(
-    fixtureGroupLatestDate(a),
-  );
-  if (byDate !== 0) return byDate;
-  if (a.season !== b.season) return b.season - a.season;
-  return b.key.localeCompare(a.key);
+  if (a.season !== b.season) return a.season - b.season;
+  return a.key.localeCompare(b.key);
 }
 
-export function compareScheduledAtNewestFirst(a: string, b: string): number {
-  return b.localeCompare(a);
+export function compareScheduledAtChronological(a: string, b: string): number {
+  return a.localeCompare(b);
 }
