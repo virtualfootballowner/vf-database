@@ -44,7 +44,7 @@ export function WorldCupGroupsSection({
           className="h-8 shrink-0 gap-2 border-white/15 bg-white/5 px-3 text-white/85"
         >
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
-          Draw complete
+          Group stages
         </Badge>
       </div>
 

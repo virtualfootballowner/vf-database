@@ -64,8 +64,10 @@ export const POSTPONE_MODAL_STAFF_TIME = "vfl:post:stf:m:";
 export const POSTPONE_STAFF_TZ_SELECT = "vfl:post:stf:tz:";
 export const POSTPONE_MODAL_DENY_REASON = "vfl:post:den:m:";
 
-export const OPPONENT_RESPONSE_MS = 48 * 60 * 60 * 1000;
+export const OPPONENT_RESPONSE_MS = 24 * 60 * 60 * 1000;
 export const STAFF_PING_MS = 24 * 60 * 60 * 1000;
+/** Denials on the same fixture (deny or 24h no response) before staff escalation. */
+export const DENIALS_BEFORE_STAFF_ESCALATION = 2;
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -553,7 +555,9 @@ export async function handlePostponeCommand(
           `💬 **Reason:** "${reason}"`,
         ].join("\n"),
       )
-      .setFooter({ text: "Buttons expire after 48 hours" })
+      .setFooter({
+        text: `Accept or deny within 24h — no response counts as a denial · ${DENIALS_BEFORE_STAFF_ESCALATION} denials → staff`,
+      })
       .setTimestamp(new Date());
 
     const opponentMsgId = await dmUser(client, opponentDiscordId, {
@@ -770,7 +774,7 @@ export async function handlePostponeDenyButton(
       components: [reasonRow],
     });
 
-    if (denialCount >= 3) {
+    if (denialCount >= DENIALS_BEFORE_STAFF_ESCALATION) {
       await escalatePostponement(interaction.client, supabase, {
         ...row,
         status: "denied",
@@ -778,7 +782,7 @@ export async function handlePostponeDenyButton(
     }
 
     console.log(
-      `[postpone] Case #${formatCaseNumber(row.case_number)} denied (${denialCount}/3)`,
+      `[postpone] Case #${formatCaseNumber(row.case_number)} denied (${denialCount}/${DENIALS_BEFORE_STAFF_ESCALATION})`,
     );
   } catch (err) {
     console.error("[postpone] deny:", err);
@@ -891,7 +895,7 @@ export async function escalatePostponement(
       updated_at: now,
     })
     .eq("id", row.id)
-    .in("status", ["pending_opponent", "denied"])
+    .in("status", ["pending_opponent", "denied", "expired"])
     .select("*")
     .maybeSingle();
 
@@ -1188,7 +1192,58 @@ export async function processExpiredPostponementRequest(
     row.opponent_dm_message_id,
   );
 
-  await escalatePostponement(client, supabase, row);
+  const ignoredAt = new Date().toISOString();
+  const { data: won, error: upErr } = await supabase
+    .from("match_postponement_requests")
+    .update({
+      status: "expired",
+      updated_at: ignoredAt,
+    })
+    .eq("id", row.id)
+    .eq("status", "pending_opponent")
+    .select("*")
+    .maybeSingle();
+
+  if (upErr) {
+    console.error("[postpone] expire update:", upErr);
+    return;
+  }
+  if (!won) return;
+
+  const expiredRow = won as PostponementRequestRow;
+  const opponentId = expiredRow.opponent_discord_id?.trim() || row.opponent_discord_id?.trim();
+
+  const { denialCount } = await recordDenial(supabase, expiredRow.match_id, {
+    denied_at: ignoredAt,
+    reason: "No response within 24 hours (ignored)",
+    denied_by_discord_id: opponentId || "system",
+  });
+
+  const teamNames = await buildTeamNameBySlug(supabase);
+  const opponentName =
+    teamNames.get(expiredRow.opponent_team_slug) ?? expiredRow.opponent_team_slug;
+
+  const requesterMsg =
+    denialCount >= DENIALS_BEFORE_STAFF_ESCALATION
+      ? `⏰ **${opponentName}** did not respond to your postponement request within **24 hours**. That counts as a denial (${denialCount}/${DENIALS_BEFORE_STAFF_ESCALATION}). **Staff have been notified** to resolve this fixture.`
+      : `⏰ **${opponentName}** did not respond within **24 hours** — treated as a **denial**. You may run **\`/postpone\`** again with a different time.`;
+
+  await dmUser(client, expiredRow.requester_discord_id, { content: requesterMsg });
+
+  if (opponentId) {
+    await dmUser(client, opponentId, {
+      content:
+        "⏰ A postponement request for your fixture **expired without a response**. That counts as a **denial** on the league record.",
+    });
+  }
+
+  if (denialCount >= DENIALS_BEFORE_STAFF_ESCALATION) {
+    await escalatePostponement(client, supabase, expiredRow);
+  }
+
+  console.log(
+    `[postpone] Case #${formatCaseNumber(expiredRow.case_number)} ignored/expired (${denialCount}/${DENIALS_BEFORE_STAFF_ESCALATION})`,
+  );
 }
 
 export async function processStaffPostponementPing(

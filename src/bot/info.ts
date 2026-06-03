@@ -116,7 +116,7 @@ export async function handleHelp(
         value: [
           "**`/contract`** — offer a roster contract (player accepts, then staff approve before roster update)",
           "**`/release`** — request to release a player from your roster (Discord member or Roblox username if they left)",
-          "**`/postpone`** — request to move your next fixture (pick timezone + proposed date/time; staff after 3 denials)",
+          "**`/postpone`** — request to move your next fixture (pick timezone + proposed date/time; no response in 24h counts as a denial; staff after 2 denials)",
           "**`/friendly`** — post a friendly request in the finder",
           "**`/scouting`** — open trials for a position you’re recruiting",
         ].join("\n"),
