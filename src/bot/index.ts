@@ -25,7 +25,7 @@ import {
 } from "@/bot/media-channel-forward";
 import { logMediaConfigAtStartup } from "@/bot/media/config";
 import { handleMediaAssignmentSlotButton } from "@/bot/media/assignments";
-import { logRefereeConfigAtStartup } from "@/bot/referees/config";
+import { logRefereeConfigAtStartup, mediaGuildId } from "@/bot/referees/config";
 import {
   CONTRACT_BTN_APPROVE,
   CONTRACT_BTN_DENY,
@@ -314,6 +314,31 @@ client.once(Events.ClientReady, async (readyClient) => {
     } catch (e) {
       console.error(
         "[commands] Failed to force-sync commands on DISCORD_GUILD_ID (wrong id or bot not in server?):",
+        e,
+      );
+    }
+
+    try {
+      const mediaId = mediaGuildId();
+      if (mediaId !== env.DISCORD_GUILD_ID) {
+        const mediaGuild = await readyClient.guilds.fetch(mediaId);
+        const synced = await mediaGuild.commands.set(
+          getSlashCommandsForGuild(mediaId),
+        );
+        console.log(
+          `[commands] Media guild \`${mediaId}\`: registered **${synced.size}** slash command(s) (includes /media-fixtures).`,
+        );
+      } else {
+        const mediaCmds = getSlashCommandsForGuild(mediaId).filter(
+          (c) => c.name === "media-fixtures" || c.name === "media-my-games",
+        );
+        console.log(
+          `[commands] Media guild same as league \`${mediaId}\`: **${mediaCmds.length}** media command(s) in guild set.`,
+        );
+      }
+    } catch (e) {
+      console.error(
+        "[commands] Failed to force-sync commands on media guild (check DISCORD_MEDIA_GUILD_ID / bot membership):",
         e,
       );
     }

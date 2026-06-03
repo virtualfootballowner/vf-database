@@ -38,8 +38,7 @@ export function isRefereeGuild(guildId: string | null | undefined): boolean {
 
 export function isMediaGuild(guildId: string | null | undefined): boolean {
   if (!guildId) return false;
-  const mediaId = mediaGuildId();
-  return mediaId != null && guildId === mediaId;
+  return guildId === mediaGuildId();
 }
 
 export function logRefereeConfigAtStartup(): void {
@@ -55,9 +54,11 @@ export function leagueGuildId(): string {
   return env.DISCORD_GUILD_ID;
 }
 
-export function mediaGuildId(): string | undefined {
-  const raw =
+/** VF Media Discord — same fallback chain as media-staff onboarding. */
+export function mediaGuildId(): string {
+  return (
     process.env.DISCORD_MEDIA_GUILD_ID?.trim() ||
-    env.DISCORD_CREATOR_VF_GUILD_ID?.trim();
-  return raw && raw.length > 0 ? raw : undefined;
+    env.DISCORD_CREATOR_VF_GUILD_ID?.trim() ||
+    env.DISCORD_GUILD_ID
+  );
 }

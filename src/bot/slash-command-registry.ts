@@ -14,13 +14,16 @@ export function getSlashCommandsForGuild(guildId: string) {
 
   const leagueId = leagueGuildId();
   const mediaId = mediaGuildId();
+  const isMedia = guildId === mediaId;
+  const isLeague = guildId === leagueId;
 
-  if (guildId === leagueId) {
-    return leagueSlashCommandDefinitions;
+  // Media guild may be the same server as the league — register media cmds first.
+  if (isMedia) {
+    return [...mediaSlashCommandDefinitions, ...leagueSlashCommandDefinitions];
   }
 
-  if (mediaId && guildId === mediaId) {
-    return [...mediaSlashCommandDefinitions, ...leagueSlashCommandDefinitions];
+  if (isLeague) {
+    return leagueSlashCommandDefinitions;
   }
 
   return [];

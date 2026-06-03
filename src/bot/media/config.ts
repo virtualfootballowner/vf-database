@@ -5,8 +5,7 @@ export { mediaGuildId };
 
 export function isMediaGuild(guildId: string | null | undefined): boolean {
   if (!guildId) return false;
-  const mediaId = mediaGuildId();
-  return mediaId != null && guildId === mediaId;
+  return guildId === mediaGuildId();
 }
 
 export function mediaAssignmentsChannelId(): string | undefined {
@@ -28,7 +27,6 @@ export function mediaStaffRoleId(): string {
 
 export function logMediaConfigAtStartup(): void {
   const guild = mediaGuildId();
-  if (!guild) return;
   console.log(
     `[media] Guild configured: ${guild}` +
       ` · streamer ${mediaStreamerRoleId()}` +
