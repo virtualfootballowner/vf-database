@@ -23,6 +23,11 @@ import {
   resolveManagerTeamSlugForSeason,
   resolveTeamForSlashCommand,
 } from "@/bot/stats-queries";
+import {
+  CONTRACT_ROLE_CHOICES,
+  formatContractPositionLabel,
+  SPECIFIC_POSITION_CHOICES,
+} from "@/lib/roster-positions";
 
 /** Max players per club per season (signed squad); managers cannot /contract beyond this. */
 export const MAX_ROSTER_PLAYERS = 18;
@@ -78,25 +83,10 @@ export const CONTRACT_BTN_DENY = "vfl:con:d:";
 export const CONTRACT_STAFF_APPROVE = "vfl:con:staff:a:";
 export const CONTRACT_STAFF_DENY = "vfl:con:staff:d:";
 
-/** Slash-command choices (name shown in picker, value stored). */
-export const CONTRACT_POSITION_CHOICES = [
-  { name: "GK", value: "GK" },
-  { name: "CB", value: "CB" },
-  { name: "WB", value: "WB" },
-  { name: "CDM", value: "CDM" },
-  { name: "CM", value: "CM" },
-  { name: "CAM", value: "CAM" },
-  { name: "ST", value: "ST" },
-  { name: "LW", value: "LW" },
-  { name: "RW", value: "RW" },
-] as const;
+/** @deprecated Use {@link SPECIFIC_POSITION_CHOICES} from `@/lib/roster-positions`. */
+export const CONTRACT_POSITION_CHOICES = SPECIFIC_POSITION_CHOICES;
 
-export const CONTRACT_ROLE_CHOICES = [
-  { name: "Starter", value: "Starter" },
-  { name: "Rotational", value: "Rotational" },
-  { name: "Bench", value: "Bench" },
-  { name: "Reserve", value: "Reserve" },
-] as const;
+export { CONTRACT_ROLE_CHOICES, SPECIFIC_POSITION_CHOICES };
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -328,7 +318,12 @@ export async function handleContractCommand(
 
   const teamRaw = interaction.options.getString("team", true);
   const signeeUser = interaction.options.getUser("player", true);
-  const positionRaw = interaction.options.getString("position", true);
+  const positionGroup = interaction.options.getString("position_group", true);
+  const specificPosition = interaction.options.getString("specific_position");
+  const rosterPosition = formatContractPositionLabel(
+    positionGroup,
+    specificPosition,
+  );
   const roleRaw = interaction.options.getString("role", true);
 
   if (signeeUser.bot) {
@@ -446,7 +441,7 @@ export async function handleContractCommand(
       signee_discord_id: signeeUser.id,
       team_slug: teamRes.teamSlug,
       season: activeSeason,
-      roster_position: positionRaw,
+      roster_position: rosterPosition,
       roster_role: roleRaw,
       signee_player_id: signeeProfile.id,
       status: "pending",
@@ -491,7 +486,7 @@ export async function handleContractCommand(
         },
         {
           name: "Position",
-          value: `**${positionRaw}**`,
+          value: `**${rosterPosition}**`,
           inline: true,
         },
         {
@@ -552,7 +547,7 @@ export async function handleContractCommand(
           [
             `You’ve been offered a roster spot on **${teamLabel}** for **Season ${activeSeason}**.`,
             "",
-            `> **Position** · **${positionRaw}**`,
+            `> **Position** · **${rosterPosition}**`,
             `> **Role** · **${roleRaw}**`,
             `> **Manager** · ${interaction.user}`,
             "",

@@ -1,4 +1,5 @@
 import { leagueSlashCommandDefinitions } from "@/bot/commands";
+import { mediaSlashCommandDefinitions } from "@/bot/media/commands";
 import { refereeSlashCommandDefinitions } from "@/bot/referees/commands";
 import {
   isRefereeGuild,
@@ -19,7 +20,7 @@ export function getSlashCommandsForGuild(guildId: string) {
   }
 
   if (mediaId && guildId === mediaId) {
-    return leagueSlashCommandDefinitions;
+    return [...mediaSlashCommandDefinitions, ...leagueSlashCommandDefinitions];
   }
 
   return [];

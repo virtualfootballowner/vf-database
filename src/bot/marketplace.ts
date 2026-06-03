@@ -18,6 +18,7 @@ import {
   type TeamRow,
 } from "@/bot/stats-queries";
 import { getRobloxHeadshotsForBot } from "@/lib/roblox";
+import { formatFreeAgentPositions } from "@/lib/roster-positions";
 
 /**
  * Channel routing for the player‑marketplace commands. Hard‑coded per the league spec;
@@ -116,7 +117,12 @@ const COLOR_SCOUTING = 0xb45309;
 export async function handleFreeAgent(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
-  const position = interaction.options.getString("position", true);
+  const positionGroup = interaction.options.getString("position_group", true);
+  const extraPositions = interaction.options.getString("extra_positions");
+  const positionLabel = formatFreeAgentPositions(
+    positionGroup,
+    extraPositions,
+  );
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const supabase = createBotSupabase();
@@ -167,7 +173,7 @@ export async function handleFreeAgent(
     `**Available now**`,
     `**${interaction.user}** is open to offers — DM to make one.`,
     "",
-    `> **Position** · **${position}**`,
+    `> **Position** · **${positionLabel}**`,
     `> **Roblox** · [${profile.roblox_username}](${robloxProfile})`,
     `> **VFL profile** · [open](${profileUrl})`,
   ].join("\n");
@@ -346,7 +352,8 @@ export async function handleScouting(
     });
     return;
   }
-  const position = interaction.options.getString("position", true);
+  const message = interaction.options.getString("message", true).trim();
+  const position = interaction.options.getString("position")?.trim() ?? null;
   const count = interaction.options.getInteger("count", true);
   const notes = interaction.options.getString("notes")?.trim().slice(0, 500) ?? null;
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -377,15 +384,20 @@ export async function handleScouting(
   const slotsLabel = count === 1 ? "slot" : "slots";
   const description = [
     `**Recruiting · ${count} ${slotsLabel} open**`,
-    `${interaction.user} is signing **${position}** for ${teamLabel} — DM to trial.`,
+    `${interaction.user} · ${teamLabel} — DM to trial.`,
     "",
-    `> **Position** · **${position}**`,
+    message,
+    "",
+    position ? `> **Role** · **${position}**` : null,
     `> **Slots** · **${count}**`,
     `> **Team** · [${teamLabel}](${teamUrl})`,
     notes ? `> **Notes** · ${notes}` : null,
   ]
     .filter(Boolean)
     .join("\n");
+
+  const embedTitle =
+    message.length > 80 ? `${message.slice(0, 77)}…` : message;
 
   const embed = new EmbedBuilder()
     .setColor(COLOR_SCOUTING)
@@ -394,7 +406,7 @@ export async function handleScouting(
       iconURL: logoUrl ?? undefined,
       url: teamUrl,
     })
-    .setTitle("Scouting · open trial")
+    .setTitle(embedTitle)
     .setURL(teamUrl)
     .setDescription(description)
     .setFooter({ text: `Season ${env.VF_ACTIVE_ROSTER_SEASON} · VFL · Scouting` })

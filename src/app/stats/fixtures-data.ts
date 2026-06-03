@@ -1,3 +1,8 @@
+import {
+  compareFixtureGroupsNewestFirst,
+  compareFixtureRowsNewestFirst,
+} from "@/lib/fixture-sort";
+
 import { matches, type MatchRecord } from "./matches-data";
 
 export type Fixture = {
@@ -214,13 +219,9 @@ export const fixtureGroups: FixtureGroup[] = (() => {
   }
 
   for (const group of ordered) {
-    group.rows.sort((a, b) => {
-      const aDate = a.match?.date ?? "9999-99-99";
-      const bDate = b.match?.date ?? "9999-99-99";
-      if (aDate !== bDate) return aDate.localeCompare(bDate);
-      return a.id.localeCompare(b.id);
-    });
+    group.rows.sort(compareFixtureRowsNewestFirst);
   }
+  ordered.sort(compareFixtureGroupsNewestFirst);
 
   return ordered;
 })();

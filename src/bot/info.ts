@@ -107,7 +107,7 @@ export async function handleHelp(
       {
         name: "👤 Players · marketplace",
         value: [
-          "**`/freeagent`** — post yourself in the free-agent channel · *6h cooldown*",
+          "**`/freeagent`** — post yourself (broad role + optional extra positions) · *6h cooldown*",
         ].join("\n"),
         inline: false,
       },
@@ -118,7 +118,7 @@ export async function handleHelp(
           "**`/release`** — request to release a player from your roster (Discord member or Roblox username if they left)",
           "**`/postpone`** — request to move your next fixture (pick timezone + proposed date/time; no response in 24h counts as a denial; staff after 2 denials)",
           "**`/friendly`** — post a friendly request in the finder",
-          "**`/scouting`** — open trials for a position you’re recruiting",
+          "**`/scouting`** — post a custom scouting message (optional role filter)",
         ].join("\n"),
         inline: false,
       },

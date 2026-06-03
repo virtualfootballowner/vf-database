@@ -72,6 +72,8 @@ type CareerEntryRow = {
   team_slug: string;
   season: number;
   games?: number | null;
+  roster_position?: string | null;
+  roster_role?: string | null;
 };
 
 type CareerEntry = CareerEntryRow & {
@@ -104,7 +106,7 @@ async function getPlayerCareer(
     const supabase = createSupabaseServerClient();
     const result = await supabase
       .from("player_team_seasons")
-      .select("team_slug, season, games")
+      .select("team_slug, season, games, roster_position, roster_role")
       .eq("player_id", playerId)
       .order("season", { ascending: true });
 
@@ -751,6 +753,8 @@ function MatchAppearanceRow({
 
 function CareerRow({ entry }: { entry: CareerEntry }) {
   const teamName = entry.team?.name ?? entry.team_slug;
+  const contractRole = entry.roster_role?.trim() || null;
+  const contractPosition = entry.roster_position?.trim() || null;
   const content = (
     <div className="flex items-center gap-4 px-4 py-3">
       <Badge
@@ -765,9 +769,16 @@ function CareerRow({ entry }: { entry: CareerEntry }) {
         ) : (
           <div className="size-10 shrink-0 rounded-md bg-white/5" />
         )}
-        <p className="truncate text-base font-semibold text-white">
-          {teamName}
-        </p>
+        <div className="min-w-0">
+          <p className="truncate text-base font-semibold text-white">
+            {teamName}
+          </p>
+          {contractRole || contractPosition ? (
+            <p className="truncate text-xs text-white/55">
+              {[contractRole, contractPosition].filter(Boolean).join(" · ")}
+            </p>
+          ) : null}
+        </div>
       </div>
       <div className="shrink-0 text-right">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">

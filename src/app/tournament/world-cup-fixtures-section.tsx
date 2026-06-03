@@ -18,6 +18,7 @@ import {
   S3_WORLD_CUP_KNOCKOUT_FIXTURES,
   type S3WorldCupKnockoutFixture,
 } from "@/lib/s3-world-cup-knockout-schedule";
+import { compareScheduledAtNewestFirst } from "@/lib/fixture-sort";
 import { formatWcKickoff } from "@/lib/wc-fixture-kickoff";
 import { cn } from "@/lib/utils";
 
@@ -259,11 +260,15 @@ export function WorldCupFixturesSection({
 }) {
   const hrefFor = (fixtureCode: string) =>
     fixtureCodeMatchHref(fixtureCode, matchesByRobloxId);
-  const byMatchday = ([1, 2, 3] as const).map((md) => ({
+  const byMatchday = ([3, 2, 1] as const).map((md) => ({
     md,
     meta: MATCHDAY_META[md],
     fixtures: S3_WORLD_CUP_GROUP_FIXTURES.filter((f) => f.matchday === md).sort(
-      (a, b) => a.scheduledAt.localeCompare(b.scheduledAt),
+      (a, b) =>
+        compareScheduledAtNewestFirst(
+          kickoffIsoForFixture(a.fixtureCode, a.scheduledAt, matchesByRobloxId),
+          kickoffIsoForFixture(b.fixtureCode, b.scheduledAt, matchesByRobloxId),
+        ),
     ),
   }));
 
@@ -323,13 +328,13 @@ export function WorldCupFixturesSection({
         ))}
       </div>
 
-      {KO_SECTIONS.map((section) => (
+      {[...KO_SECTIONS].reverse().map((section) => (
         <div key={section.key} className="flex flex-col gap-5">
           <h3 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-white">
             <span className="text-white/45">{section.symbol}</span>
             {section.title}
           </h3>
-          {section.days.map((day) => (
+          {[...section.days].reverse().map((day) => (
             <div key={day.date} className="flex flex-col gap-3">
               <div className="px-1">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
@@ -340,7 +345,7 @@ export function WorldCupFixturesSection({
                 </h4>
               </div>
               <div className="flex flex-col gap-2">
-                {day.fixtureCodes.map((code) => {
+                {[...day.fixtureCodes].reverse().map((code) => {
                   const fx = koByCode.get(code);
                   if (!fx) return null;
                   return (

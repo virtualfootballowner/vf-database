@@ -23,6 +23,8 @@ import {
   handleMediaChannelForward,
   logMediaForwardConfigAtStartup,
 } from "@/bot/media-channel-forward";
+import { logMediaConfigAtStartup } from "@/bot/media/config";
+import { handleMediaAssignmentSlotButton } from "@/bot/media/assignments";
 import { logRefereeConfigAtStartup } from "@/bot/referees/config";
 import {
   CONTRACT_BTN_APPROVE,
@@ -50,6 +52,12 @@ import {
   handleMediaStaffRejectButton,
 } from "@/bot/media-staff-onboard";
 import { handleMediaJobClaimButton } from "@/bot/media-jobs";
+import {
+  MEDIA_SLOT_CLAIM_COMMENTATOR,
+  MEDIA_SLOT_CLAIM_STREAMER,
+  MEDIA_SLOT_UNCLAIM_COMMENTATOR,
+  MEDIA_SLOT_UNCLAIM_STREAMER,
+} from "@/lib/media/discord-constants";
 import {
   REFEREE_APPROVE_PREFIX,
   REFEREE_ASSIGNMENT_CLAIM_PREFIX,
@@ -230,6 +238,7 @@ client.once(Events.ClientReady, async (readyClient) => {
   }
   logMemberOutgoingStartup();
   logRefereeConfigAtStartup();
+  logMediaConfigAtStartup();
   logMediaForwardConfigAtStartup();
 
   try {
@@ -734,6 +743,43 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
       );
       return;
     }
+    if (customId.startsWith(MEDIA_SLOT_CLAIM_STREAMER)) {
+      await handleMediaAssignmentSlotButton(
+        interaction,
+        "claim",
+        "streamer",
+        customId.slice(MEDIA_SLOT_CLAIM_STREAMER.length),
+      );
+      return;
+    }
+    if (customId.startsWith(MEDIA_SLOT_CLAIM_COMMENTATOR)) {
+      await handleMediaAssignmentSlotButton(
+        interaction,
+        "claim",
+        "commentator",
+        customId.slice(MEDIA_SLOT_CLAIM_COMMENTATOR.length),
+      );
+      return;
+    }
+    if (customId.startsWith(MEDIA_SLOT_UNCLAIM_STREAMER)) {
+      await handleMediaAssignmentSlotButton(
+        interaction,
+        "unclaim",
+        "streamer",
+        customId.slice(MEDIA_SLOT_UNCLAIM_STREAMER.length),
+      );
+      return;
+    }
+    if (customId.startsWith(MEDIA_SLOT_UNCLAIM_COMMENTATOR)) {
+      await handleMediaAssignmentSlotButton(
+        interaction,
+        "unclaim",
+        "commentator",
+        customId.slice(MEDIA_SLOT_UNCLAIM_COMMENTATOR.length),
+      );
+      return;
+    }
+
     if (customId.startsWith(REFEREE_POSTPONE_KEEP_PREFIX)) {
       await handleRefereePostponeKeepButton(
         interaction,

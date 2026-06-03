@@ -43,10 +43,13 @@ import {
 } from "@/bot/stats-queries";
 import { buildBacklogEmbed } from "@/bot/backlog";
 import {
-  CONTRACT_POSITION_CHOICES,
   CONTRACT_ROLE_CHOICES,
   handleContractCommand,
 } from "@/bot/contracts";
+import {
+  POSITION_GROUP_CHOICES,
+  SPECIFIC_POSITION_CHOICES,
+} from "@/lib/roster-positions";
 import {
   handleFreeAgent,
   handleFriendly,
@@ -94,6 +97,11 @@ import {
   handleUpdateContentCommand,
   updateContentCommand,
 } from "@/bot/creator-content-sync";
+import {
+  handleMediaFixturesCommand,
+  handleMediaMyGamesCommand,
+} from "@/bot/media/assignments";
+import { isMediaGuild } from "@/bot/media/config";
 import {
   handlePostVerifyRefCommand,
   handleRefListCommand,
@@ -394,10 +402,17 @@ export const leagueSlashCommandDefinitions = [
     )
     .addStringOption((opt) =>
       opt
-        .setName("position")
-        .setDescription("Tactical position on the sheet")
+        .setName("position_group")
+        .setDescription("Broad playing role (Attacker, Midfielder, etc.)")
         .setRequired(true)
-        .addChoices(...CONTRACT_POSITION_CHOICES),
+        .addChoices(...POSITION_GROUP_CHOICES),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("specific_position")
+        .setDescription("Optional tactical role (CM, ST, RW, …)")
+        .setRequired(false)
+        .addChoices(...SPECIFIC_POSITION_CHOICES),
     )
     .addStringOption((opt) =>
       opt
@@ -449,10 +464,17 @@ export const leagueSlashCommandDefinitions = [
     )
     .addStringOption((opt) =>
       opt
-        .setName("position")
-        .setDescription("Position you want to play")
+        .setName("position_group")
+        .setDescription("Broad role you want to play")
         .setRequired(true)
-        .addChoices(...CONTRACT_POSITION_CHOICES),
+        .addChoices(...POSITION_GROUP_CHOICES),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("extra_positions")
+        .setDescription("More roles, comma-separated (e.g. CM, CAM, RW)")
+        .setRequired(false)
+        .setMaxLength(80),
     )
     .toJSON(),
 
@@ -498,10 +520,17 @@ export const leagueSlashCommandDefinitions = [
     )
     .addStringOption((opt) =>
       opt
-        .setName("position")
-        .setDescription("Position you’re recruiting for")
+        .setName("message")
+        .setDescription("Your scouting post (what you’re looking for)")
         .setRequired(true)
-        .addChoices(...CONTRACT_POSITION_CHOICES),
+        .setMaxLength(1000),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("position")
+        .setDescription("Optional broad role filter (Attacker, Midfielder, …)")
+        .setRequired(false)
+        .addChoices(...POSITION_GROUP_CHOICES),
     )
     .addIntegerOption((opt) =>
       opt
@@ -514,7 +543,7 @@ export const leagueSlashCommandDefinitions = [
     .addStringOption((opt) =>
       opt
         .setName("notes")
-        .setDescription("Optional context (style, requirements, trial info)")
+        .setDescription("Optional extra context (requirements, trial info)")
         .setRequired(false)
         .setMaxLength(500),
     )
@@ -632,6 +661,7 @@ export async function handleSlashCommand(
     "ref-fixtures",
     "ref-my-games",
   ]);
+  const mediaOnly = new Set(["media-fixtures", "media-my-games"]);
   const name = interaction.commandName;
   if (isRefereeGuild(interaction.guildId) && !refOnly.has(name)) {
     await interaction.reply({
@@ -644,6 +674,13 @@ export async function handleSlashCommand(
     await interaction.reply({
       flags: MessageFlags.Ephemeral,
       content: "Referee commands are only available in the VF Referee server.",
+    });
+    return;
+  }
+  if (!isMediaGuild(interaction.guildId) && mediaOnly.has(name)) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Media assignment commands are only available in the VF Media server.",
     });
     return;
   }
@@ -747,6 +784,12 @@ export async function handleSlashCommand(
       return;
     case "ref-my-games":
       await handleRefMyGamesCommand(interaction);
+      return;
+    case "media-fixtures":
+      await handleMediaFixturesCommand(interaction);
+      return;
+    case "media-my-games":
+      await handleMediaMyGamesCommand(interaction);
       return;
     case "equip":
       await handleEquipCommand(interaction);

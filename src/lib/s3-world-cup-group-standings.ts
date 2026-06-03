@@ -49,9 +49,12 @@ export function worldCupGroupMatches(
         slugs.has(m.homeSlug) &&
         slugs.has(m.awaySlug),
     )
-    .sort((a, b) =>
-      a.date === b.date ? a.id.localeCompare(b.id) : a.date.localeCompare(b.date),
-    );
+    .sort((a, b) => {
+      const aWhen = a.scheduledAt?.trim() || a.date;
+      const bWhen = b.scheduledAt?.trim() || b.date;
+      if (aWhen !== bWhen) return bWhen.localeCompare(aWhen);
+      return b.id.localeCompare(a.id);
+    });
 }
 
 export function buildWorldCupGroupBundle(

@@ -16,6 +16,10 @@ import {
 import type { MatchEvent } from "@/app/stats/match-events-data";
 import type { Team } from "@/app/teams/teams-data";
 import { teams as fileTeams } from "@/app/teams/teams-data";
+import {
+  compareFixtureGroupsNewestFirst,
+  compareFixtureRowsNewestFirst,
+} from "@/lib/fixture-sort";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import {
   normalizeSeasons,
@@ -215,22 +219,9 @@ function buildFixtureGroupsDb(
   }
 
   for (const group of ordered) {
-    group.rows.sort((a, b) => {
-      const aDate =
-        a.match?.date ||
-        a.schedule?.scheduledAt.slice(0, 10) ||
-        "9999-99-99";
-      const bDate =
-        b.match?.date ||
-        b.schedule?.scheduledAt.slice(0, 10) ||
-        "9999-99-99";
-      if (aDate !== bDate) return aDate.localeCompare(bDate);
-      const aTime = a.match?.scheduledAt ?? a.schedule?.scheduledAt ?? "";
-      const bTime = b.match?.scheduledAt ?? b.schedule?.scheduledAt ?? "";
-      if (aTime !== bTime) return aTime.localeCompare(bTime);
-      return a.id.localeCompare(b.id);
-    });
+    group.rows.sort(compareFixtureRowsNewestFirst);
   }
+  ordered.sort(compareFixtureGroupsNewestFirst);
 
   return {
     groups: ordered,

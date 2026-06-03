@@ -18,6 +18,10 @@ import { getRobloxHeadshots, isVerifiedRobloxUserId } from "@/lib/roblox";
 import { fillManagerNamesFromSeed } from "@/lib/team-season-manager-fallback";
 import { getAllTeamSlugs, getTeamBySlugFromDb } from "@/lib/site-db";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import {
+  displaySquadPosition,
+  rosterRoleLabel,
+} from "@/lib/roster-positions";
 import { teamHasSeason } from "@/lib/team-seasons";
 
 import { TeamCrest } from "../team-crest";
@@ -32,6 +36,8 @@ type TeamPlayerRow = {
   roblox_username: string;
   roblox_user_id: string | null;
   position: string | null;
+  roster_position: string | null;
+  roster_role: string | null;
 };
 
 type TeamSeasonRecordRow = {
@@ -513,6 +519,11 @@ export default async function TeamDetailPage({
                 const headshot = player.roblox_user_id
                   ? headshots[player.roblox_user_id]
                   : undefined;
+                const squadRole = rosterRoleLabel(player.roster_role);
+                const squadPosition = displaySquadPosition(
+                  player.roster_position,
+                  player.position,
+                );
                 return (
                   <Link
                     key={player.id}
@@ -536,11 +547,21 @@ export default async function TeamDetailPage({
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-base font-semibold text-white">
-                            {player.roblox_username}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="truncate text-base font-semibold text-white">
+                              {player.roblox_username}
+                            </p>
+                            {squadRole ? (
+                              <Badge
+                                variant="outline"
+                                className="shrink-0 border-[#083696]/60 bg-[#083696]/25 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide text-white/90"
+                              >
+                                {squadRole}
+                              </Badge>
+                            ) : null}
+                          </div>
                           <p className="truncate text-xs text-white/55">
-                            {player.position ?? "Position unset"}
+                            {squadPosition}
                           </p>
                         </div>
                       </div>
