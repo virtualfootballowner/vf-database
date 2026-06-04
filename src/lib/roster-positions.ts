@@ -37,6 +37,24 @@ export function isPositionGroup(value: string): value is PositionGroup {
   return GROUP_SET.has(value);
 }
 
+/** Tactical code for squad buckets — handles legacy `Midfielder (CM)` labels. */
+export function squadPositionCode(pos: string | null | undefined): string {
+  const trimmed = pos?.trim() ?? "";
+  if (!trimmed) return "";
+
+  const paren = /\(([^)]+)\)\s*$/.exec(trimmed);
+  if (paren?.[1]?.trim()) return paren[1].trim().toUpperCase();
+
+  const upper = trimmed.toUpperCase();
+  const broad: Record<string, string> = {
+    GOALKEEPER: "GK",
+    DEFENDER: "DEF",
+    MIDFIELDER: "MID",
+    ATTACKER: "FWD",
+  };
+  return broad[upper] ?? upper;
+}
+
 /** e.g. `Midfielder (CM)` or `Attacker` when no specific role picked. */
 export function formatContractPositionLabel(
   group: string,

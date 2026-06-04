@@ -25,7 +25,6 @@ import {
 } from "@/bot/stats-queries";
 import {
   CONTRACT_ROLE_CHOICES,
-  formatContractPositionLabel,
   SPECIFIC_POSITION_CHOICES,
 } from "@/lib/roster-positions";
 
@@ -318,12 +317,7 @@ export async function handleContractCommand(
 
   const teamRaw = interaction.options.getString("team", true);
   const signeeUser = interaction.options.getUser("player", true);
-  const positionGroup = interaction.options.getString("position_group", true);
-  const specificPosition = interaction.options.getString("specific_position");
-  const rosterPosition = formatContractPositionLabel(
-    positionGroup,
-    specificPosition,
-  );
+  const positionRaw = interaction.options.getString("position", true);
   const roleRaw = interaction.options.getString("role", true);
 
   if (signeeUser.bot) {
@@ -441,7 +435,7 @@ export async function handleContractCommand(
       signee_discord_id: signeeUser.id,
       team_slug: teamRes.teamSlug,
       season: activeSeason,
-      roster_position: rosterPosition,
+      roster_position: positionRaw,
       roster_role: roleRaw,
       signee_player_id: signeeProfile.id,
       status: "pending",
@@ -486,7 +480,7 @@ export async function handleContractCommand(
         },
         {
           name: "Position",
-          value: `**${rosterPosition}**`,
+          value: `**${positionRaw}**`,
           inline: true,
         },
         {
@@ -547,7 +541,7 @@ export async function handleContractCommand(
           [
             `You’ve been offered a roster spot on **${teamLabel}** for **Season ${activeSeason}**.`,
             "",
-            `> **Position** · **${rosterPosition}**`,
+            `> **Position** · **${positionRaw}**`,
             `> **Role** · **${roleRaw}**`,
             `> **Manager** · ${interaction.user}`,
             "",

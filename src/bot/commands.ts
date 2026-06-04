@@ -44,12 +44,13 @@ import {
 } from "@/bot/stats-queries";
 import { buildBacklogEmbed } from "@/bot/backlog";
 import {
+  CONTRACT_POSITION_CHOICES,
   CONTRACT_ROLE_CHOICES,
   handleContractCommand,
 } from "@/bot/contracts";
 import {
   POSITION_GROUP_CHOICES,
-  SPECIFIC_POSITION_CHOICES,
+  squadPositionCode,
 } from "@/lib/roster-positions";
 import {
   handleFreeAgent,
@@ -438,10 +439,10 @@ export const leagueSlashCommandDefinitions = [
     )
     .addStringOption((opt) =>
       opt
-        .setName("position_group")
-        .setDescription("Broad playing role (Attacker, Midfielder, etc.)")
+        .setName("position")
+        .setDescription("Tactical position on the sheet")
         .setRequired(true)
-        .addChoices(...POSITION_GROUP_CHOICES),
+        .addChoices(...CONTRACT_POSITION_CHOICES),
     )
     .addStringOption((opt) =>
       opt
@@ -449,13 +450,6 @@ export const leagueSlashCommandDefinitions = [
         .setDescription("Squad role (starter through reserve)")
         .setRequired(true)
         .addChoices(...CONTRACT_ROLE_CHOICES),
-    )
-    .addStringOption((opt) =>
-      opt
-        .setName("specific_position")
-        .setDescription("Optional tactical role (CM, ST, RW, …)")
-        .setRequired(false)
-        .addChoices(...SPECIFIC_POSITION_CHOICES),
     )
     .toJSON(),
 
@@ -1132,7 +1126,7 @@ function bucketSquadByPosition(squad: SquadEntry[]): {
   }));
   const other: SquadEntry[] = [];
   for (const row of squad) {
-    const pos = (row.position ?? "").trim().toUpperCase();
+    const pos = squadPositionCode(row.position);
     const target = buckets.find((b) => pos && b.match(pos));
     if (target) target.rows.push(row);
     else other.push(row);
@@ -1155,7 +1149,7 @@ function bucketSquadByPosition(squad: SquadEntry[]): {
 function renderSquadBucketLines(rows: SquadEntry[]): string {
   return rows
     .map((row) => {
-      const pos = (row.position ?? "").trim();
+      const pos = squadPositionCode(row.position);
       const posChip = pos ? `\`${pos.padStart(3, " ")}\`` : "`   `";
       const appsLabel =
         row.games != null && row.games > 0
