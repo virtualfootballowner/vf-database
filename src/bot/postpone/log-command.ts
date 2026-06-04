@@ -19,8 +19,9 @@ import {
 } from "@/bot/postpone/queries";
 import { buildTeamNameBySlug, createBotSupabase } from "@/bot/stats-queries";
 
-const EMBED_DESC_LIMIT = 3900;
-const MAX_EMBEDS = 10;
+/** One embed per message — Discord caps total embed chars at 6000 per message. */
+const PAGE_CHAR_LIMIT = 3800;
+const MAX_PAGES = 8;
 
 function resolvedAt(entry: PostponementLogEntry): string | null {
   if (entry.staff_resolved_at) return entry.staff_resolved_at;
@@ -47,7 +48,7 @@ function formatLogEntry(
   const competition = entry.competition?.trim() || "Competition ?";
 
   const lines = [
-    `### Case #${formatCaseNumber(entry.case_number)} · ${formatPostponementStatus(entry.status)}`,
+    `### Case #${formatCaseNumber(Number(entry.case_number))} · ${formatPostponementStatus(entry.status)}`,
     `**${entry.home_name}** vs **${entry.away_name}** · ${season} · ${competition}`,
     `**${requester}** → **${opponent}**`,
     `Original ${discordKickoffTimestampRich(entry.original_scheduled_at)}`,
@@ -82,47 +83,43 @@ function formatLogEntry(
   return lines.filter((line) => line !== null).join("\n");
 }
 
-function chunkLogEmbeds(blocks: string[]): EmbedBuilder[] {
-  const embeds: EmbedBuilder[] = [];
+function paginateBlocks(blocks: string[]): string[] {
+  const pages: string[] = [];
   let chunk = "";
-  let part = 1;
-
-  const flush = () => {
-    if (!chunk.trim()) return;
-    embeds.push(
-      new EmbedBuilder()
-        .setColor(0x5865f2)
-        .setTitle(
-          embeds.length === 0
-            ? "Postponement request log"
-            : `Postponement log (continued ${part})`,
-        )
-        .setDescription(chunk.trim()),
-    );
-    part += 1;
-    chunk = "";
-  };
 
   for (const block of blocks) {
     const next = chunk ? `${chunk}\n\n---\n\n${block}` : block;
-    if (next.length > EMBED_DESC_LIMIT) {
-      flush();
-      if (block.length > EMBED_DESC_LIMIT) {
-        embeds.push(
-          new EmbedBuilder()
-            .setColor(0x5865f2)
-            .setDescription(`${block.slice(0, EMBED_DESC_LIMIT - 3)}…`),
-        );
-        continue;
+    if (next.length > PAGE_CHAR_LIMIT) {
+      if (chunk.trim()) pages.push(chunk.trim());
+      if (block.length > PAGE_CHAR_LIMIT) {
+        pages.push(`${block.slice(0, PAGE_CHAR_LIMIT - 1)}…`);
+        chunk = "";
+      } else {
+        chunk = block;
       }
-      chunk = block;
     } else {
       chunk = next;
     }
   }
-  flush();
 
-  return embeds.slice(0, MAX_EMBEDS);
+  if (chunk.trim()) pages.push(chunk.trim());
+  return pages;
+}
+
+function buildPageEmbed(description: string, page: number, total: number): EmbedBuilder {
+  const title =
+    total === 1
+      ? "Postponement request log"
+      : `Postponement request log (${page}/${total})`;
+  return new EmbedBuilder()
+    .setColor(0x5865f2)
+    .setTitle(title)
+    .setDescription(description);
+}
+
+function formatErr(err: unknown): string {
+  if (err instanceof Error && err.message.trim()) return err.message.trim();
+  return "Unknown error";
 }
 
 export async function handlePostponeLogCommand(
@@ -167,27 +164,37 @@ export async function handlePostponeLogCommand(
     }
 
     const blocks = entries.map((entry) => formatLogEntry(entry, teamNames));
-    const embeds = chunkLogEmbeds(blocks);
+    let pages = paginateBlocks(blocks);
+    const omittedPages = pages.length > MAX_PAGES;
+    if (omittedPages) pages = pages.slice(0, MAX_PAGES);
 
     const filterNote = status
       ? ` · filter: ${formatPostponementStatus(status)}`
       : "";
-    const truncated =
-      entries.length >= limit
-        ? `\n\n_Showing newest **${limit}** requests${filterNote}. Raise \`limit\` or filter by \`status\` to narrow._`
+    const footerNote =
+      entries.length >= limit || omittedPages
+        ? `\n\n_Showing newest **${entries.length}** request${entries.length === 1 ? "" : "s"}${filterNote}${omittedPages ? " · log truncated — lower \`limit\` or filter by \`status\`" : ""}._`
         : "";
 
-    const last = embeds[embeds.length - 1];
-    if (last && truncated) {
-      const prev = last.data.description ?? "";
-      last.setDescription(`${prev}${truncated}`);
-    }
+    const embeds = pages.map((page, i) => {
+      const embed = buildPageEmbed(page, i + 1, pages.length);
+      if (i === pages.length - 1 && footerNote) {
+        embed.setDescription(`${page}${footerNote}`);
+      }
+      return embed;
+    });
 
-    await interaction.editReply({ embeds });
+    await interaction.editReply({ embeds: [embeds[0]!] });
+    for (let i = 1; i < embeds.length; i++) {
+      await interaction.followUp({
+        flags: MessageFlags.Ephemeral,
+        embeds: [embeds[i]!],
+      });
+    }
   } catch (err) {
     console.error("/postpone-log failed:", err);
     await interaction.editReply({
-      content: "Could not load postponement log. Try again in a moment.",
+      content: `Could not load postponement log: ${formatErr(err)}`,
     });
   }
 }

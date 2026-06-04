@@ -617,18 +617,20 @@ export async function fetchPostponementLog(
     teamIds.add(row.away_team_id);
   }
 
-  const { data: teams, error: teamErr } = await supabase
-    .from("teams")
-    .select("id, name")
-    .in("id", [...teamIds]);
-  if (teamErr) throw teamErr;
-
-  const teamNameById = new Map(
-    (teams ?? []).map((t) => [
-      (t as { id: string }).id,
-      (t as { name: string }).name,
-    ]),
-  );
+  const teamNameById = new Map<string, string>();
+  if (teamIds.size > 0) {
+    const { data: teams, error: teamErr } = await supabase
+      .from("teams")
+      .select("id, name")
+      .in("id", [...teamIds]);
+    if (teamErr) throw teamErr;
+    for (const t of teams ?? []) {
+      teamNameById.set(
+        (t as { id: string }).id,
+        (t as { name: string }).name,
+      );
+    }
+  }
 
   const matchById = new Map<
     string,
