@@ -235,6 +235,33 @@ export function formatCaseNumber(caseNumber: number): string {
   return String(caseNumber).padStart(4, "0");
 }
 
+const POSTPONEMENT_STATUS_LABELS: Record<string, string> = {
+  pending_opponent: "⏳ Awaiting opponent",
+  accepted: "✅ Accepted",
+  denied: "❌ Denied",
+  expired: "⏰ Expired (no response)",
+  escalated: "🚨 Escalated to staff",
+  staff_approved: "✅ Staff approved",
+  staff_force_original: "🔒 Staff kept original",
+  staff_set_time: "📅 Staff set time",
+  superseded: "↩ Superseded",
+};
+
+export function formatPostponementStatus(status: string): string {
+  return POSTPONEMENT_STATUS_LABELS[status] ?? status;
+}
+
+/** Compact Discord timestamp for admin logs. */
+export function discordLogTimestamp(
+  iso: string | null | undefined,
+): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const unix = Math.floor(d.getTime() / 1000);
+  return `<t:${unix}:f> (<t:${unix}:R>)`;
+}
+
 export type DenialLogEntry = {
   denied_at: string;
   reason: string | null;

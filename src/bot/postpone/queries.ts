@@ -40,7 +40,19 @@ export type PostponementRequestRow = {
   expires_at: string;
   staff_ping_due_at: string | null;
   staff_last_ping_at: string | null;
+  staff_resolved_at: string | null;
   created_at: string;
+  updated_at: string;
+};
+
+export type PostponementLogEntry = PostponementRequestRow & {
+  home_name: string;
+  away_name: string;
+  season: number | null;
+  competition: string | null;
+  denial_count: number;
+  denial_log: DenialLogEntry[];
+  original_locked: boolean;
 };
 
 export type PostponementStateRow = {
@@ -545,4 +557,143 @@ export async function fetchEscalationsNeedingStaffPing(
     .lte("staff_ping_due_at", now);
   if (error) throw error;
   return (data ?? []).map(mapRequestRow);
+}
+
+const POSTPONEMENT_LOG_STATUSES = [
+  "pending_opponent",
+  "accepted",
+  "denied",
+  "expired",
+  "escalated",
+  "staff_approved",
+  "staff_force_original",
+  "staff_set_time",
+  "superseded",
+] as const;
+
+export type PostponementLogStatusFilter =
+  (typeof POSTPONEMENT_LOG_STATUSES)[number];
+
+export function isPostponementLogStatusFilter(
+  value: string,
+): value is PostponementLogStatusFilter {
+  return (POSTPONEMENT_LOG_STATUSES as readonly string[]).includes(value);
+}
+
+export async function fetchPostponementLog(
+  supabase: SupabaseClient,
+  input: { status?: PostponementLogStatusFilter | null; limit?: number },
+): Promise<PostponementLogEntry[]> {
+  const limit = Math.min(Math.max(input.limit ?? 25, 1), 50);
+
+  let query = supabase
+    .from("match_postponement_requests")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (input.status) {
+    query = query.eq("status", input.status);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const rows = (data ?? []).map(mapRequestRow);
+  if (rows.length === 0) return [];
+
+  const matchIds = [...new Set(rows.map((r) => r.match_id))];
+
+  const { data: matches, error: matchErr } = await supabase
+    .from("matches")
+    .select("id, season, competition, home_team_id, away_team_id")
+    .in("id", matchIds);
+  if (matchErr) throw matchErr;
+
+  const teamIds = new Set<string>();
+  for (const m of matches ?? []) {
+    const row = m as { home_team_id: string; away_team_id: string };
+    teamIds.add(row.home_team_id);
+    teamIds.add(row.away_team_id);
+  }
+
+  const { data: teams, error: teamErr } = await supabase
+    .from("teams")
+    .select("id, name")
+    .in("id", [...teamIds]);
+  if (teamErr) throw teamErr;
+
+  const teamNameById = new Map(
+    (teams ?? []).map((t) => [
+      (t as { id: string }).id,
+      (t as { name: string }).name,
+    ]),
+  );
+
+  const matchById = new Map<
+    string,
+    {
+      season: number | null;
+      competition: string | null;
+      home_name: string;
+      away_name: string;
+    }
+  >();
+
+  for (const m of matches ?? []) {
+    const row = m as {
+      id: string;
+      season: number | null;
+      competition: string | null;
+      home_team_id: string;
+      away_team_id: string;
+    };
+    const homeName = teamNameById.get(row.home_team_id) ?? row.home_team_id;
+    const awayName = teamNameById.get(row.away_team_id) ?? row.away_team_id;
+    matchById.set(row.id, {
+      season: row.season,
+      competition: row.competition,
+      home_name: homeName,
+      away_name: awayName,
+    });
+  }
+
+  const { data: states, error: stateErr } = await supabase
+    .from("match_postponement_state")
+    .select("match_id, denial_count, denial_log, original_locked")
+    .in("match_id", matchIds);
+  if (stateErr) throw stateErr;
+
+  const stateByMatch = new Map<
+    string,
+    { denial_count: number; denial_log: DenialLogEntry[]; original_locked: boolean }
+  >();
+  for (const s of states ?? []) {
+    const row = s as {
+      match_id: string;
+      denial_count: number;
+      denial_log: unknown;
+      original_locked: boolean;
+    };
+    stateByMatch.set(row.match_id, {
+      denial_count: row.denial_count,
+      denial_log: parseDenialLog(row.denial_log),
+      original_locked: row.original_locked,
+    });
+  }
+
+  return rows.map((row) => {
+    const match = matchById.get(row.match_id);
+    const state = stateByMatch.get(row.match_id);
+    return {
+      ...row,
+      home_name: match?.home_name ?? "Unknown",
+      away_name: match?.away_name ?? "Unknown",
+      season: match?.season ?? null,
+      competition: match?.competition ?? null,
+      denial_count: state?.denial_count ?? 0,
+      denial_log: state?.denial_log ?? [],
+      original_locked: state?.original_locked ?? false,
+    };
+  });
 }

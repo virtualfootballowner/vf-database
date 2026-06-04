@@ -59,6 +59,7 @@ import {
 import { handleReleaseCommand } from "@/bot/release";
 import { handleReleaseAutocomplete } from "@/bot/release-autocomplete";
 import { handlePostponeCommand } from "@/bot/postpone/handlers";
+import { handlePostponeLogCommand } from "@/bot/postpone/log-command";
 import { POSTPONE_TIMEZONE_CHOICES } from "@/bot/postpone/format";
 import {
   handleCompetitionAutocomplete,
@@ -208,6 +209,40 @@ export const leagueSlashCommandDefinitions = [
       "All pending staff approvals: whitelist, VF Create, media, releases, contracts",
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("postpone-log")
+    .setDescription(
+      "Staff log of all fixture postponement requests with timing and status",
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
+    .addStringOption((opt) =>
+      opt
+        .setName("status")
+        .setDescription("Filter by request status (default: all)")
+        .setRequired(false)
+        .addChoices(
+          { name: "All", value: "all" },
+          { name: "Awaiting opponent", value: "pending_opponent" },
+          { name: "Escalated to staff", value: "escalated" },
+          { name: "Accepted", value: "accepted" },
+          { name: "Denied", value: "denied" },
+          { name: "Expired (no response)", value: "expired" },
+          { name: "Staff approved", value: "staff_approved" },
+          { name: "Staff kept original", value: "staff_force_original" },
+          { name: "Staff set time", value: "staff_set_time" },
+          { name: "Superseded", value: "superseded" },
+        ),
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("limit")
+        .setDescription("How many recent requests to show (default 25, max 50)")
+        .setRequired(false)
+        .setMinValue(1)
+        .setMaxValue(50),
+    )
     .toJSON(),
 
   new SlashCommandBuilder()
@@ -689,6 +724,9 @@ export async function handleSlashCommand(
   switch (interaction.commandName) {
     case "backlog":
       await handleBacklog(interaction);
+      return;
+    case "postpone-log":
+      await handlePostponeLogCommand(interaction);
       return;
     case "postverify":
       await handlePostVerifyCard(interaction);
