@@ -315,6 +315,31 @@ export async function findPlayerByDiscordId(
   return (data as PlayerProfileRow | null) ?? null;
 }
 
+/** Mirror appointed manager onto `teams` for Supabase dashboards / external tools. */
+export async function syncTeamManagerCatalogColumns(
+  supabase: SupabaseClient,
+  teamSlug: string,
+  input: {
+    managerDiscordId: string;
+    robloxUserId?: string | null;
+  },
+): Promise<{ ok: boolean; error?: string }> {
+  const robloxId = input.robloxUserId?.trim() || null;
+  const { error } = await supabase
+    .from("teams")
+    .update({
+      manager_discord_id: input.managerDiscordId,
+      manager_roblox_id: robloxId,
+    })
+    .eq("slug", teamSlug);
+
+  if (error) {
+    console.error("[teams] sync manager columns:", error);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
 export type CareerRow = {
   team_slug: string;
   season: number;

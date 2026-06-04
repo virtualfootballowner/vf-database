@@ -36,6 +36,7 @@ import {
   filterTeamsForAutocomplete,
   ensureManagerOnSquadSheet,
   findPlayerByDiscordId,
+  syncTeamManagerCatalogColumns,
   findPlayersByUsername,
   formatHonorList,
   loadTeams,
@@ -1803,6 +1804,15 @@ async function handleAppoint(
 
     if (upsertErr) throw upsertErr;
 
+    const catalogSync = await syncTeamManagerCatalogColumns(
+      supabase,
+      resolved.slug,
+      {
+        managerDiscordId: managerDiscordUser.id,
+        robloxUserId: profile.roblox_user_id,
+      },
+    );
+
     const squadResult = await ensureManagerOnSquadSheet(
       supabase,
       profile.id,
@@ -1817,6 +1827,10 @@ async function handleAppoint(
       : squadResult.added
         ? "**Squad sheet** · Added to the Season roster (`player_team_seasons`)."
         : "**Squad sheet** · Already on the Season roster.";
+
+    const catalogLine = catalogSync.ok
+      ? "**Teams table** · `manager_discord_id` / `manager_roblox_id` updated."
+      : "**Teams table** · Could not sync manager columns (check logs).";
 
     const roleId = env.DISCORD_TEAM_MANAGER_ROLE_ID;
     let roleLines: string;
@@ -1862,6 +1876,7 @@ async function handleAppoint(
           roleLines,
           "",
           squadLine,
+          catalogLine,
           "",
           `> Stored in \`team_season_managers\` — site & bot will use this name.`,
         ].join("\n"),
