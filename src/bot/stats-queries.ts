@@ -712,6 +712,54 @@ export async function listTeamRosterPlayerProfilesForSeason(
   return out;
 }
 
+const PLAYER_AUTOCOMPLETE_LIMIT = 25;
+
+/** Registered VF players by Roblox username (for /results and similar). */
+export async function filterRegisteredPlayersForAutocomplete(
+  supabase: SupabaseClient,
+  query: string,
+  excludeUsernames: string[] = [],
+): Promise<{ roblox_username: string }[]> {
+  const term = query.trim();
+  const exclude = new Set(
+    excludeUsernames.map((u) => u.trim().toLowerCase()).filter(Boolean),
+  );
+
+  let q = supabase
+    .from("players")
+    .select("roblox_username")
+    .not("roblox_username", "is", null)
+    .order("roblox_username", { ascending: true })
+    .limit(100);
+
+  if (term) {
+    q = q.ilike("roblox_username", `%${term}%`);
+  }
+
+  const { data, error } = await q;
+  if (error) throw error;
+
+  const out: { roblox_username: string }[] = [];
+  for (const row of data ?? []) {
+    const name = (row as { roblox_username?: string | null }).roblox_username?.trim();
+    if (!name) continue;
+    if (exclude.has(name.toLowerCase())) continue;
+    out.push({ roblox_username: name });
+    if (out.length >= PLAYER_AUTOCOMPLETE_LIMIT) break;
+  }
+  return out;
+}
+
+export function truncateAutocompleteChoice(
+  label: string,
+  value: string,
+): { name: string; value: string } {
+  return {
+    name: label.length > 100 ? `${label.slice(0, 97)}…` : label,
+    value: value.length > 100 ? value.slice(0, 100) : value,
+  };
+}
+
 type HonorJson = { title?: string; season?: number; team?: string; meta?: string };
 
 export function formatHonorList(raw: unknown, maxLines: number): string {

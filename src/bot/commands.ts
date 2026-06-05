@@ -62,6 +62,7 @@ import { handleReleaseAutocomplete } from "@/bot/release-autocomplete";
 import { handlePostponeCommand } from "@/bot/postpone/handlers";
 import { handlePostponeLogCommand } from "@/bot/postpone/log-command";
 import { handleResultsCommand } from "@/bot/results/handler";
+import { handleResultsAutocomplete } from "@/bot/results/autocomplete";
 import { POSTPONE_TIMEZONE_CHOICES } from "@/bot/postpone/format";
 import {
   handleCompetitionAutocomplete,
@@ -268,37 +269,42 @@ export const leagueSlashCommandDefinitions = [
     .addStringOption((opt) =>
       opt
         .setName("scorers")
-        .setDescription("Comma-separated scorers (e.g. booskioo, rykiraa x2)")
+        .setDescription("Pick scorers from the list (comma-separate for multiple, x2 for braces)")
         .setRequired(false)
-        .setMaxLength(500),
+        .setMaxLength(500)
+        .setAutocomplete(true),
     )
     .addStringOption((opt) =>
       opt
         .setName("assists")
-        .setDescription("Comma-separated assists")
+        .setDescription("Pick assisters from the registered Roblox player list")
         .setRequired(false)
-        .setMaxLength(500),
+        .setMaxLength(500)
+        .setAutocomplete(true),
     )
     .addStringOption((opt) =>
       opt
         .setName("motm")
-        .setDescription("Man of the match (Roblox username)")
+        .setDescription("Man of the match — pick a registered Roblox username")
         .setRequired(false)
-        .setMaxLength(64),
+        .setMaxLength(64)
+        .setAutocomplete(true),
     )
     .addStringOption((opt) =>
       opt
         .setName("yellow_cards")
-        .setDescription("Comma-separated yellow cards")
+        .setDescription("Yellow cards — pick from registered Roblox players")
         .setRequired(false)
-        .setMaxLength(500),
+        .setMaxLength(500)
+        .setAutocomplete(true),
     )
     .addStringOption((opt) =>
       opt
         .setName("red_cards")
-        .setDescription("Comma-separated red cards")
+        .setDescription("Red cards — pick from registered Roblox players")
         .setRequired(false)
-        .setMaxLength(500),
+        .setMaxLength(500)
+        .setAutocomplete(true),
     )
     .toJSON(),
 
@@ -903,6 +909,11 @@ export async function handleAutocomplete(
   // /standings — competition autocomplete is its own thing.
   if (interaction.commandName === "standings") {
     await handleCompetitionAutocomplete(interaction);
+    return;
+  }
+
+  if (interaction.commandName === "results") {
+    await handleResultsAutocomplete(interaction);
     return;
   }
 
