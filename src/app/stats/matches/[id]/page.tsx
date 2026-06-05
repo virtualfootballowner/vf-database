@@ -36,6 +36,9 @@ import { formatWcKickoff } from "@/lib/wc-fixture-kickoff";
 
 import { MatchupView } from "./matchup-view";
 
+/** Match rows and events change after kickoff (/results, Roblox ingest) — never bake at build. */
+export const dynamic = "force-dynamic";
+
 const matchSurfaceClass =
   "border-0 bg-white/[0.035] shadow-none ring-1 ring-white/[0.08] backdrop-blur-md";
 const insetRowClass =

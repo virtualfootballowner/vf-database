@@ -3,6 +3,9 @@ import { SiteNav } from "@/components/site-nav";
 import { MatchesArchive } from "../matches-archive";
 import { StatsSectionNav } from "../stats-section-nav";
 
+/** Fixture list must reflect live Supabase status (scheduled → completed). */
+export const dynamic = "force-dynamic";
+
 export default function StatsMatchesPage() {
   return (
     <main className="relative min-h-dvh min-w-0 w-full overflow-x-clip text-white">
