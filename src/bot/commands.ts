@@ -62,6 +62,7 @@ import { handleReleaseAutocomplete } from "@/bot/release-autocomplete";
 import { handlePostponeCommand } from "@/bot/postpone/handlers";
 import { handlePostponeLogCommand } from "@/bot/postpone/log-command";
 import { handleResultsCommand } from "@/bot/results/handler";
+import { buildResultsSlashCommand } from "@/bot/results/command-def";
 import { handleResultsAutocomplete } from "@/bot/results/autocomplete";
 import { POSTPONE_TIMEZONE_CHOICES } from "@/bot/postpone/format";
 import {
@@ -248,65 +249,7 @@ export const leagueSlashCommandDefinitions = [
     )
     .toJSON(),
 
-  new SlashCommandBuilder()
-    .setName("results")
-    .setDescription(
-      "Log a fixture result (score, scorers, cards, MOTM) and post to #results",
-    )
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
-    .addStringOption((opt) =>
-      opt
-        .setName("match_id")
-        .setDescription("Fixture ID (e.g. S3-WC-G-B-02)")
-        .setRequired(true),
-    )
-    .addStringOption((opt) =>
-      opt
-        .setName("scoreline")
-        .setDescription("Final score — home first (e.g. 2-1)")
-        .setRequired(true),
-    )
-    .addStringOption((opt) =>
-      opt
-        .setName("scorers")
-        .setDescription("Pick scorers from the list (comma-separate for multiple, x2 for braces)")
-        .setRequired(false)
-        .setMaxLength(500)
-        .setAutocomplete(true),
-    )
-    .addStringOption((opt) =>
-      opt
-        .setName("assists")
-        .setDescription("Pick assisters from the registered Roblox player list")
-        .setRequired(false)
-        .setMaxLength(500)
-        .setAutocomplete(true),
-    )
-    .addStringOption((opt) =>
-      opt
-        .setName("motm")
-        .setDescription("Man of the match — pick a registered Roblox username")
-        .setRequired(false)
-        .setMaxLength(64)
-        .setAutocomplete(true),
-    )
-    .addStringOption((opt) =>
-      opt
-        .setName("yellow_cards")
-        .setDescription("Yellow cards — pick from registered Roblox players")
-        .setRequired(false)
-        .setMaxLength(500)
-        .setAutocomplete(true),
-    )
-    .addStringOption((opt) =>
-      opt
-        .setName("red_cards")
-        .setDescription("Red cards — pick from registered Roblox players")
-        .setRequired(false)
-        .setMaxLength(500)
-        .setAutocomplete(true),
-    )
-    .toJSON(),
+  buildResultsSlashCommand(),
 
   new SlashCommandBuilder()
     .setName("postverify")

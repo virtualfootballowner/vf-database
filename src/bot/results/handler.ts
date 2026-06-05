@@ -7,10 +7,13 @@ import {
 
 import { env } from "@/bot/config";
 import {
-  parsePlayerStatList,
-  parseScoreline,
-  parseSinglePlayer,
-} from "@/bot/results/parse";
+  ASSIST_SLOT_NAMES,
+  collectPlayerStatsFromSlots,
+  RED_CARD_SLOT_NAMES,
+  SCORER_SLOT_NAMES,
+  YELLOW_CARD_SLOT_NAMES,
+} from "@/bot/results/slots";
+import { parseScoreline, parseSinglePlayer } from "@/bot/results/parse";
 import {
   applyMatchResult,
   fetchMatchByRobloxId,
@@ -45,11 +48,7 @@ export async function handleResultsCommand(
 
   const matchIdRaw = interaction.options.getString("match_id", true);
   const scorelineRaw = interaction.options.getString("scoreline", true);
-  const scorersRaw = interaction.options.getString("scorers");
-  const assistsRaw = interaction.options.getString("assists");
   const motmRaw = interaction.options.getString("motm");
-  const yellowsRaw = interaction.options.getString("yellow_cards");
-  const redsRaw = interaction.options.getString("red_cards");
 
   const scoreline = parseScoreline(scorelineRaw);
   if (!scoreline) {
@@ -78,11 +77,11 @@ export async function handleResultsCommand(
       match,
       homeScore: scoreline.home,
       awayScore: scoreline.away,
-      scorers: parsePlayerStatList(scorersRaw),
-      assists: parsePlayerStatList(assistsRaw),
+      scorers: collectPlayerStatsFromSlots(interaction, SCORER_SLOT_NAMES),
+      assists: collectPlayerStatsFromSlots(interaction, ASSIST_SLOT_NAMES),
       motm: parseSinglePlayer(motmRaw),
-      yellowCards: parsePlayerStatList(yellowsRaw),
-      redCards: parsePlayerStatList(redsRaw),
+      yellowCards: collectPlayerStatsFromSlots(interaction, YELLOW_CARD_SLOT_NAMES),
+      redCards: collectPlayerStatsFromSlots(interaction, RED_CARD_SLOT_NAMES),
       submittedByDiscordId: interaction.user.id,
     });
 
