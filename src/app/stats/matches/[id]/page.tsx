@@ -280,6 +280,12 @@ export default async function MatchDetailPage({
   );
 }
 
+function playerProfileHref(displayName: string): string | null {
+  const username = extractRobloxUsername(displayName);
+  if (!username) return null;
+  return `/players/${encodeURIComponent(username)}`;
+}
+
 function MotmBanner({
   match,
   events,
@@ -303,15 +309,22 @@ function MotmBanner({
         ? match.awaySlug
         : null;
   const teamMeta = getTeam(slug, motm.team);
+  const profileHref = playerProfileHref(motm.player);
 
-  const inner = (
-    <div
-      className={cn(
-        "mx-auto flex max-w-lg items-center justify-center gap-4 rounded-xl px-5 py-4",
-        matchSurfaceClass,
-      )}
+  const crest = slug ? (
+    <Link
+      href={`/teams/${slug}`}
+      className="shrink-0 rounded-md outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-white/25"
+      aria-label={`${motm.team} squad`}
     >
       <TeamCrest team={teamMeta} size="sm" />
+    </Link>
+  ) : (
+    <TeamCrest team={teamMeta} size="sm" />
+  );
+
+  const playerBlock = (
+    <>
       <EventHeadshot
         robloxId={effectiveRobloxPlayerId(
           motm.robloxId,
@@ -331,24 +344,29 @@ function MotmBanner({
         </p>
         <p className="truncate text-xs text-white/50">{motm.team}</p>
       </div>
-    </div>
+    </>
   );
-
-  if (slug) {
-    return (
-      <Link
-        href={`/teams/${slug}`}
-        className="mx-auto block max-w-lg outline-none transition hover:opacity-[0.92] focus-visible:ring-2 focus-visible:ring-white/25"
-        aria-label={`${motm.team} squad`}
-      >
-        {inner}
-      </Link>
-    );
-  }
 
   return (
     <section aria-label="Man of the match" className="flex justify-center">
-      {inner}
+      <div
+        className={cn(
+          "mx-auto flex max-w-lg items-center justify-center gap-4 rounded-xl px-5 py-4",
+          matchSurfaceClass,
+        )}
+      >
+        {crest}
+        {profileHref ? (
+          <Link
+            href={profileHref}
+            className="flex min-w-0 flex-1 items-center gap-4 outline-none transition hover:opacity-[0.92] focus-visible:ring-2 focus-visible:ring-white/25"
+          >
+            {playerBlock}
+          </Link>
+        ) : (
+          <div className="flex min-w-0 flex-1 items-center gap-4">{playerBlock}</div>
+        )}
+      </div>
     </section>
   );
 }
@@ -592,23 +610,10 @@ function PlayerLine({
       : tone === "danger"
         ? "border-rose-400/20 bg-rose-400/[0.08] text-rose-100/90"
         : "border-white/10 bg-white/[0.04] text-white/75";
+  const profileHref = playerProfileHref(event.player);
 
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 ring-1 ring-white/[0.06]",
-        tone === "default"
-          ? "bg-white/[0.03]"
-          : tone === "warning"
-            ? "bg-amber-400/[0.04]"
-            : "bg-rose-400/[0.04]",
-      )}
-    >
-      {rowEmoji ? (
-        <span className="shrink-0 text-sm leading-none opacity-85" aria-hidden>
-          {rowEmoji}
-        </span>
-      ) : null}
+  const identity = (
+    <>
       <EventHeadshot
         robloxId={effectiveRobloxPlayerId(
           event.robloxId,
@@ -627,6 +632,35 @@ function PlayerLine({
           </span>
         ) : null}
       </p>
+    </>
+  );
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 ring-1 ring-white/[0.06]",
+        tone === "default"
+          ? "bg-white/[0.03]"
+          : tone === "warning"
+            ? "bg-amber-400/[0.04]"
+            : "bg-rose-400/[0.04]",
+      )}
+    >
+      {rowEmoji ? (
+        <span className="shrink-0 text-sm leading-none opacity-85" aria-hidden>
+          {rowEmoji}
+        </span>
+      ) : null}
+      {profileHref ? (
+        <Link
+          href={profileHref}
+          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md outline-none transition hover:bg-white/[0.04] focus-visible:ring-2 focus-visible:ring-white/25"
+        >
+          {identity}
+        </Link>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">{identity}</div>
+      )}
       {event.reason ? (
         <span className="hidden max-w-[40%] truncate text-[10px] text-white/40 sm:inline">
           {event.reason}
