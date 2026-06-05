@@ -12,7 +12,10 @@ function robloxGameUrl(): string | null {
   return `https://www.roblox.com/games/start?placeId=${encodeURIComponent(placeId)}`;
 }
 
-export function buildFanJoinAlertMessage(match: ScheduledMatchReminderRow): {
+export function buildFanJoinAlertMessage(
+  match: ScheduledMatchReminderRow,
+  minutesUntil: number = 10,
+): {
   content: string;
   embed: EmbedBuilder;
 } {
@@ -26,9 +29,11 @@ export function buildFanJoinAlertMessage(match: ScheduledMatchReminderRow): {
   const home = discordTeamLabel(match.home_name, match.home_slug);
   const away = discordTeamLabel(match.away_name, match.away_slug);
   const gameUrl = robloxGameUrl();
+  const minsLabel =
+    minutesUntil === 1 ? "1 minute" : `~${minutesUntil} minutes`;
 
   const lines = [
-    `@here ⚽ **Kickoff in 10 minutes** — hop in and support your team!`,
+    `@here ⚽ **Kickoff in ${minsLabel}** — hop in and support your team!`,
     "",
     `${home} vs ${away}`,
     `📅 ${kickoffRich}`,

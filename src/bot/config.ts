@@ -157,6 +157,18 @@ const envSchema = z.object({
     const s = String(raw).trim();
     return s.length > 0 ? s : "1512487546339459242";
   }, z.string().min(1)),
+  /** League server — 10-minute fan join alerts before kickoff. */
+  DISCORD_FAN_JOIN_LEAGUE_CHANNEL_ID: z.preprocess((raw) => {
+    if (raw == null || raw === "") return "1511078239106367569";
+    const s = String(raw).trim();
+    return s.length > 0 ? s : "1511078239106367569";
+  }, z.string().min(1)),
+  /** VF Media server — 10-minute fan join alerts before kickoff. */
+  DISCORD_FAN_JOIN_MEDIA_CHANNEL_ID: z.preprocess((raw) => {
+    if (raw == null || raw === "") return "1511079063928836266";
+    const s = String(raw).trim();
+    return s.length > 0 ? s : "1511079063928836266";
+  }, z.string().min(1)),
   /** Invite link for the main VF League Discord (bail / ticket instructions in ban DMs). */
   DISCORD_LEAGUE_INVITE_URL: optionalOutgoingChannel,
   /** Channel or doc link for opening a bail / support ticket (optional). */
@@ -211,6 +223,10 @@ export const env = envSchema.parse({
   DISCORD_PUBLIC_BAN_LOG_CHANNEL_ID:
     process.env.DISCORD_PUBLIC_BAN_LOG_CHANNEL_ID,
   DISCORD_RESULTS_CHANNEL_ID: process.env.DISCORD_RESULTS_CHANNEL_ID,
+  DISCORD_FAN_JOIN_LEAGUE_CHANNEL_ID:
+    process.env.DISCORD_FAN_JOIN_LEAGUE_CHANNEL_ID,
+  DISCORD_FAN_JOIN_MEDIA_CHANNEL_ID:
+    process.env.DISCORD_FAN_JOIN_MEDIA_CHANNEL_ID,
   DISCORD_LEAGUE_INVITE_URL: process.env.DISCORD_LEAGUE_INVITE_URL,
   DISCORD_BAIL_TICKET_CHANNEL_URL:
     process.env.DISCORD_BAIL_TICKET_CHANNEL_URL,
