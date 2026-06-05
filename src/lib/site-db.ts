@@ -310,9 +310,69 @@ export async function loadMatchEventsForRobloxId(
 
     const { data: evRows, error: evErr } = await supabase
       .from("match_events")
-      .select("event_type, team_id, details")
+      .select("event_type, team_id, player_id, details")
       .eq("match_id", mRow.id);
     if (evErr) return null;
+
+    const playerIds = [
+      ...new Set(
+        (evRows ?? [])
+          .map((ev) => ev.player_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+
+    const usernameByPlayerId = new Map<string, string>();
+    const robloxIdByPlayerId = new Map<string, string>();
+
+    if (playerIds.length > 0) {
+      const { data: playerRows, error: pErr } = await supabase
+        .from("players")
+        .select("id, roblox_username, roblox_user_id")
+        .in("id", playerIds);
+      if (pErr) return null;
+      for (const row of playerRows ?? []) {
+        const id = normStr(row.id);
+        const username = normStr(row.roblox_username);
+        const robloxUserId = normStr(row.roblox_user_id);
+        if (id && username) usernameByPlayerId.set(id, username);
+        if (id && robloxUserId) robloxIdByPlayerId.set(id, robloxUserId);
+      }
+    }
+
+    const orphanRobloxIds = new Set<string>();
+    for (const ev of evRows ?? []) {
+      const rawDetails =
+        ev.details &&
+        typeof ev.details === "object" &&
+        !Array.isArray(ev.details)
+          ? (ev.details as Record<string, unknown>)
+          : {};
+      const playerId = normStr(ev.player_id);
+      const robloxUserId = normStr(rawDetails.roblox_user_id);
+      if (
+        robloxUserId &&
+        (!playerId || !usernameByPlayerId.has(playerId))
+      ) {
+        orphanRobloxIds.add(robloxUserId);
+      }
+    }
+
+    const usernameByRobloxId = new Map<string, string>();
+    if (orphanRobloxIds.size > 0) {
+      const { data: byRobloxId, error: ridErr } = await supabase
+        .from("players")
+        .select("roblox_username, roblox_user_id")
+        .in("roblox_user_id", [...orphanRobloxIds]);
+      if (ridErr) return null;
+      for (const row of byRobloxId ?? []) {
+        const robloxUserId = normStr(row.roblox_user_id);
+        const username = normStr(row.roblox_username);
+        if (robloxUserId && username) {
+          usernameByRobloxId.set(robloxUserId, username);
+        }
+      }
+    }
 
     const out: MatchEvent[] = [];
     for (const ev of evRows ?? []) {
@@ -322,8 +382,26 @@ export async function loadMatchEventsForRobloxId(
         ev.details &&
         typeof ev.details === "object" &&
         !Array.isArray(ev.details)
-          ? (ev.details as Record<string, unknown>)
-          : {};
+          ? { ...(ev.details as Record<string, unknown>) }
+          : ({} as Record<string, unknown>);
+
+      const playerId = normStr(ev.player_id);
+      if (!normStr(details.player) && playerId) {
+        const username = usernameByPlayerId.get(playerId);
+        if (username) details.player = username;
+        if (!normStr(details.roblox_user_id)) {
+          const robloxUserId = robloxIdByPlayerId.get(playerId);
+          if (robloxUserId) details.roblox_user_id = robloxUserId;
+        }
+      }
+      if (!normStr(details.player)) {
+        const robloxUserId = normStr(details.roblox_user_id);
+        if (robloxUserId) {
+          const username = usernameByRobloxId.get(robloxUserId);
+          if (username) details.player = username;
+        }
+      }
+
       const ui = dbEventToUi(
         robloxMatchId,
         String(ev.event_type),
