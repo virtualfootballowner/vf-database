@@ -148,6 +148,15 @@ const envSchema = z.object({
     const s = String(raw).trim();
     return s.length > 0 ? s : "1504550802906419232";
   }, z.string().min(1)),
+  /**
+   * Public channel where `/results` posts the match-result embed.
+   * Defaults to the VF League results feed.
+   */
+  DISCORD_RESULTS_CHANNEL_ID: z.preprocess((raw) => {
+    if (raw == null || raw === "") return "1512487546339459242";
+    const s = String(raw).trim();
+    return s.length > 0 ? s : "1512487546339459242";
+  }, z.string().min(1)),
   /** Invite link for the main VF League Discord (bail / ticket instructions in ban DMs). */
   DISCORD_LEAGUE_INVITE_URL: optionalOutgoingChannel,
   /** Channel or doc link for opening a bail / support ticket (optional). */
@@ -201,6 +210,7 @@ export const env = envSchema.parse({
     process.env.DISCORD_CREATOR_POSTED_FEED_CHANNEL_ID,
   DISCORD_PUBLIC_BAN_LOG_CHANNEL_ID:
     process.env.DISCORD_PUBLIC_BAN_LOG_CHANNEL_ID,
+  DISCORD_RESULTS_CHANNEL_ID: process.env.DISCORD_RESULTS_CHANNEL_ID,
   DISCORD_LEAGUE_INVITE_URL: process.env.DISCORD_LEAGUE_INVITE_URL,
   DISCORD_BAIL_TICKET_CHANNEL_URL:
     process.env.DISCORD_BAIL_TICKET_CHANNEL_URL,
