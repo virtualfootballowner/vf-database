@@ -158,7 +158,7 @@ export async function handlePostponeLogCommand(
         ? ` with status **${formatPostponementStatus(status)}**`
         : "";
       await interaction.editReply({
-        content: `No postponement requests found${filterNote}.`,
+        content: `No postponement requests found for **upcoming fixtures**${filterNote}.`,
       });
       return;
     }
@@ -173,7 +173,7 @@ export async function handlePostponeLogCommand(
       : "";
     const footerNote =
       entries.length >= limit || omittedPages
-        ? `\n\n_Showing newest **${entries.length}** request${entries.length === 1 ? "" : "s"}${filterNote}${omittedPages ? " · log truncated — lower \`limit\` or filter by \`status\`" : ""}._`
+        ? `\n\n_Showing newest **${entries.length}** upcoming-fixture request${entries.length === 1 ? "" : "s"}${filterNote}${omittedPages ? " · log truncated — lower \`limit\` or filter by \`status\`" : ""}._`
         : "";
 
     const embeds = pages.map((page, i) => {

@@ -215,7 +215,7 @@ export const leagueSlashCommandDefinitions = [
   new SlashCommandBuilder()
     .setName("postpone-log")
     .setDescription(
-      "Staff log of all fixture postponement requests with timing and status",
+      "Staff log of postponement requests for upcoming fixtures (not yet played)",
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
     .addStringOption((opt) =>

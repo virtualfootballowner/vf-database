@@ -586,9 +586,21 @@ export async function fetchPostponementLog(
 ): Promise<PostponementLogEntry[]> {
   const limit = Math.min(Math.max(input.limit ?? 25, 1), 50);
 
+  const { data: upcomingMatches, error: upcomingErr } = await supabase
+    .from("matches")
+    .select("id")
+    .eq("status", "scheduled");
+  if (upcomingErr) throw upcomingErr;
+
+  const upcomingMatchIds = (upcomingMatches ?? []).map(
+    (m) => (m as { id: string }).id,
+  );
+  if (upcomingMatchIds.length === 0) return [];
+
   let query = supabase
     .from("match_postponement_requests")
     .select("*")
+    .in("match_id", upcomingMatchIds)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -607,7 +619,8 @@ export async function fetchPostponementLog(
   const { data: matches, error: matchErr } = await supabase
     .from("matches")
     .select("id, season, competition, home_team_id, away_team_id")
-    .in("id", matchIds);
+    .in("id", matchIds)
+    .eq("status", "scheduled");
   if (matchErr) throw matchErr;
 
   const teamIds = new Set<string>();

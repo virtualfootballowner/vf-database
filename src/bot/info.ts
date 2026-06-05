@@ -131,7 +131,7 @@ export async function handleHelp(
           "**`/help`** — post this command index in this channel",
           "**`/appoint`** — assign a club / nation manager for a season",
           "**`/backlog`** — all pending staff approvals (whitelist, VF Create, media, releases, contract signings)",
-          "**`/postpone-log`** — full log of fixture postponement requests with timing and denial history",
+          "**`/postpone-log`** — postponement requests for upcoming fixtures (timing and denial history)",
           "**`/creator-remove`** — delete all VF Create DB rows for a user + strip creator role",
           "**`/kick`** · **`/ban`** — moderation (VF ban blocks profile, scrimmages, and league access)",
         ].join("\n"),
