@@ -7,7 +7,6 @@ import type {
   MatchForResults,
 } from "@/bot/results/queries";
 import { discordTeamLabel } from "@/bot/discord-team-flags";
-import { absoluteSiteAssetUrl } from "@/bot/site-assets";
 
 function matchPageUrl(robloxMatchId: string): string {
   const base = env.VFL_SITE_URL.replace(/\/$/, "");
@@ -20,8 +19,6 @@ export function buildResultsEmbed(input: {
   awayScore: number;
   applied: ApplyMatchResultOutput;
   submittedByTag: string;
-  homeLogoUrl?: string | null;
-  awayLogoUrl?: string | null;
 }): EmbedBuilder {
   const { match, homeScore, awayScore, applied } = input;
   const comp = match.competition?.trim() || "Competition";
@@ -95,19 +92,6 @@ export function buildResultsEmbed(input: {
       text: `Logged by ${input.submittedByTag} · VF League results`,
     })
     .setTimestamp(new Date());
-
-  const homeLogo = input.homeLogoUrl?.trim() || null;
-  const awayLogo = input.awayLogoUrl?.trim() || null;
-  if (homeLogo && awayLogo) {
-    embed.setThumbnail(homeLogo).setImage(awayLogo);
-  } else if (homeLogo) {
-    embed.setThumbnail(homeLogo);
-  } else if (awayLogo) {
-    embed.setThumbnail(awayLogo);
-  } else {
-    const fallback = absoluteSiteAssetUrl("/golden shield.png", env.VFL_SITE_URL);
-    if (fallback) embed.setThumbnail(fallback);
-  }
 
   return embed;
 }

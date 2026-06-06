@@ -1,7 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { fetchMatchByRobloxId } from "@/bot/results/queries";
-import { fetchTeamLogoUrl } from "@/bot/site-assets";
 import { loadAppliedFromMatchEvents } from "@/lib/league/applied-from-events";
 import { renderLeagueResultsEmbed } from "@/lib/league/results-embed";
 import {
@@ -123,15 +122,6 @@ export async function postLeagueResultsDiscord(
   const applied = await loadAppliedFromMatchEvents(supabase, match);
   const siteBase = siteBaseUrl();
 
-  const [homeLogoUrl, awayLogoUrl] = await Promise.all([
-    match.home_slug
-      ? fetchTeamLogoUrl(supabase, match.home_slug, siteBase)
-      : Promise.resolve(null),
-    match.away_slug
-      ? fetchTeamLogoUrl(supabase, match.away_slug, siteBase)
-      : Promise.resolve(null),
-  ]);
-
   const embed = renderLeagueResultsEmbed({
     match,
     homeScore,
@@ -139,8 +129,6 @@ export async function postLeagueResultsDiscord(
     applied,
     submittedByTag: options?.submittedByTag ?? "Roblox auto-log",
     siteBaseUrl: siteBase,
-    homeLogoUrl,
-    awayLogoUrl,
   });
 
   const posted = await discordPostMessage(channelId, {

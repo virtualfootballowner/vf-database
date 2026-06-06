@@ -37,15 +37,11 @@ export function renderLeagueResultsEmbed(input: {
   applied: ApplyMatchResultOutput;
   submittedByTag: string;
   siteBaseUrl: string;
-  homeLogoUrl?: string | null;
-  awayLogoUrl?: string | null;
 }): DiscordEmbed {
   const { match, homeScore, awayScore, applied } = input;
   const comp = match.competition?.trim() || "Competition";
-  const homeLogo = input.homeLogoUrl?.trim() || null;
-  const awayLogo = input.awayLogoUrl?.trim() || null;
 
-  const embed: DiscordEmbed = {
+  return {
     color: 0x083696,
     title: `⚽ Match result · ${comp}`,
     description: scorelineDescription(match, homeScore, awayScore),
@@ -108,15 +104,4 @@ export function renderLeagueResultsEmbed(input: {
     },
     timestamp: new Date().toISOString(),
   };
-
-  if (homeLogo && awayLogo) {
-    embed.thumbnail = { url: homeLogo };
-    embed.image = { url: awayLogo };
-  } else if (homeLogo) {
-    embed.thumbnail = { url: homeLogo };
-  } else if (awayLogo) {
-    embed.thumbnail = { url: awayLogo };
-  }
-
-  return embed;
 }
