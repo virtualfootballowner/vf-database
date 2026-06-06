@@ -19,6 +19,7 @@ export type MatchForResults = {
   away_slug: string | null;
   home_score: number | null;
   away_score: number | null;
+  fft: string | null;
 };
 
 export type ResolvedPlayer = {
@@ -69,7 +70,7 @@ export async function fetchMatchByRobloxId(
   const { data, error } = await supabase
     .from("matches")
     .select(
-      "id, roblox_match_id, season, competition, game_week_label, stage, status, home_team_id, away_team_id, home_score, away_score",
+      "id, roblox_match_id, season, competition, game_week_label, stage, status, home_team_id, away_team_id, home_score, away_score, fft",
     )
     .ilike("roblox_match_id", code)
     .maybeSingle();
@@ -88,6 +89,7 @@ export async function fetchMatchByRobloxId(
     away_team_id: string;
     home_score: number | null;
     away_score: number | null;
+    fft: string | null;
   };
 
   const { data: teams, error: teamErr } = await supabase
@@ -122,6 +124,7 @@ export async function fetchMatchByRobloxId(
     away_slug: away.slug?.trim() || null,
     home_score: row.home_score,
     away_score: row.away_score,
+    fft: row.fft,
   };
 }
 

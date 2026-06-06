@@ -29,7 +29,7 @@ export function buildResultsEmbed(input: {
     .setTitle(`⚽ Match result · ${comp}`)
     .setDescription(
       [
-        `${discordTeamLabel(match.home_name, match.home_slug)}  **${homeScore} – ${awayScore}**  ${discordTeamLabel(match.away_name, match.away_slug)}`,
+        `${discordTeamLabel(match.home_name, match.home_slug)}  **${homeScore} – ${awayScore}**${match.fft?.trim().toLowerCase() === "yes" ? " **FFT**" : ""}  ${discordTeamLabel(match.away_name, match.away_slug)}`,
         "",
         `\`${match.roblox_match_id}\` · Season ${match.season} · ${week}`,
       ].join("\n"),

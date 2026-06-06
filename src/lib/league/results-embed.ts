@@ -23,8 +23,10 @@ function scorelineDescription(
   const home = discordTeamLabel(match.home_name, match.home_slug);
   const away = discordTeamLabel(match.away_name, match.away_slug);
   const week = match.game_week_label?.trim() || match.stage?.trim() || "—";
+  const fft =
+    match.fft?.trim().toLowerCase() === "yes" ? " **FFT**" : "";
   return [
-    `${home}  **${homeScore} – ${awayScore}**  ${away}`,
+    `${home}  **${homeScore} – ${awayScore}**${fft}  ${away}`,
     "",
     `\`${match.roblox_match_id}\` · Season ${match.season} · ${week}`,
   ].join("\n");
