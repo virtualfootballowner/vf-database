@@ -4,15 +4,11 @@ import { fetchMatchByRobloxId } from "@/bot/results/queries";
 import { absoluteSiteAssetUrl, fetchTeamLogoUrl } from "@/bot/site-assets";
 import { loadAppliedFromMatchEvents } from "@/lib/league/applied-from-events";
 import { renderLeagueResultsEmbed } from "@/lib/league/results-embed";
+import {
+  isWorldCupFixtureId,
+  worldCupResultsChannelId,
+} from "@/lib/league/world-cup-results";
 import { discordPostMessage } from "@/lib/discord-rest";
-
-const DEFAULT_RESULTS_CHANNEL_ID = "1512487546339459242";
-
-function resultsChannelId(): string {
-  return (
-    process.env.DISCORD_RESULTS_CHANNEL_ID?.trim() || DEFAULT_RESULTS_CHANNEL_ID
-  );
-}
 
 function siteBaseUrl(): string {
   return (
@@ -64,8 +60,8 @@ async function storeResultsMessageId(
 }
 
 /**
- * Post the standard VF League results embed to #results for a completed fixture.
- * Idempotent per match + channel unless `force` is set.
+ * Post the World Cup results embed to #wc-results for a completed S3-WC fixture.
+ * Non-WC fixtures are skipped. Idempotent per match + channel unless `force` is set.
  */
 export async function postLeagueResultsDiscord(
   supabase: SupabaseClient,
@@ -78,6 +74,13 @@ export async function postLeagueResultsDiscord(
 ): Promise<PostLeagueResultsOutcome> {
   const code = robloxMatchId.trim();
   if (!code) return { ok: false, reason: "Missing roblox_match_id." };
+  if (!isWorldCupFixtureId(code)) {
+    return {
+      ok: true,
+      skipped: true,
+      reason: "Only S3 World Cup fixtures (S3-WC-*) are posted to #wc-results.",
+    };
+  }
 
   const match = await fetchMatchByRobloxId(supabase, code);
   if (!match) return { ok: false, reason: `No match found for ${code}.` };
@@ -88,7 +91,7 @@ export async function postLeagueResultsDiscord(
     };
   }
 
-  const channelId = options?.channelId?.trim() || resultsChannelId();
+  const channelId = options?.channelId?.trim() || worldCupResultsChannelId();
   let trackPost = true;
   if (!options?.force) {
     const claimed = await claimResultsAlertSlot(supabase, match.id, channelId);

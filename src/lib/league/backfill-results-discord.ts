@@ -1,36 +1,40 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { postLeagueResultsDiscord } from "@/lib/league/post-results-discord";
+import {
+  isWorldCupFixtureId,
+  worldCupResultsChannelId,
+} from "@/lib/league/world-cup-results";
 
-const DEFAULT_RESULTS_CHANNEL_ID = "1512487546339459242";
+const POST_DELAY_MS = 600;
 
-function resultsChannelId(): string {
-  return (
-    process.env.DISCORD_RESULTS_CHANNEL_ID?.trim() || DEFAULT_RESULTS_CHANNEL_ID
-  );
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
- * Post #results embeds for completed fixtures that have not been announced yet.
- * Safe to run on every bot startup — idempotent via match_results_channel_alerts.
+ * Post #wc-results embeds for completed World Cup fixtures missing an alert row.
+ * WC fixtures only — never league/division history.
  */
 export async function backfillLeagueResultsDiscord(
   supabase: SupabaseClient,
 ): Promise<void> {
-  const channelId = resultsChannelId();
+  const channelId = worldCupResultsChannelId();
 
   const { data: completed, error: matchErr } = await supabase
     .from("matches")
     .select("id, roblox_match_id")
     .eq("status", "completed")
-    .not("roblox_match_id", "is", null);
+    .like("roblox_match_id", "S3-WC-%");
 
   if (matchErr) {
-    console.error("[results-backfill] match query failed:", matchErr);
+    console.error("[wc-results-backfill] match query failed:", matchErr);
     return;
   }
 
-  const rows = (completed ?? []).filter((m) => m.roblox_match_id?.trim());
+  const rows = (completed ?? []).filter(
+    (m) => m.roblox_match_id && isWorldCupFixtureId(m.roblox_match_id),
+  );
   if (rows.length === 0) return;
 
   const matchIds = rows.map((m) => m.id);
@@ -46,11 +50,11 @@ export async function backfillLeagueResultsDiscord(
       alertErr.message?.includes("match_results_channel_alerts")
     ) {
       console.warn(
-        "[results-backfill] match_results_channel_alerts missing — skipping backfill.",
+        "[wc-results-backfill] match_results_channel_alerts missing — skipping.",
       );
       return;
     }
-    console.error("[results-backfill] alerts query failed:", alertErr);
+    console.error("[wc-results-backfill] alerts query failed:", alertErr);
     return;
   }
 
@@ -59,7 +63,7 @@ export async function backfillLeagueResultsDiscord(
   if (pending.length === 0) return;
 
   console.log(
-    `[results-backfill] Posting ${pending.length} completed fixture(s) to #results…`,
+    `[wc-results-backfill] Posting ${pending.length} WC fixture(s) to #wc-results…`,
   );
 
   for (const match of pending) {
@@ -70,14 +74,15 @@ export async function backfillLeagueResultsDiscord(
         channelId,
       });
       if (out.ok && !("skipped" in out && out.skipped)) {
-        console.log(`[results-backfill] Posted ${code} → message ${out.messageId}`);
+        console.log(`[wc-results-backfill] Posted ${code} → message ${out.messageId}`);
       } else if (out.ok && "skipped" in out && out.skipped) {
-        console.log(`[results-backfill] Skipped ${code}: ${out.reason}`);
-      } else {
-        console.error(`[results-backfill] Failed ${code}: ${out.reason}`);
+        console.log(`[wc-results-backfill] Skipped ${code}: ${out.reason}`);
+      } else if (!out.ok) {
+        console.error(`[wc-results-backfill] Failed ${code}: ${out.reason}`);
       }
     } catch (err) {
-      console.error(`[results-backfill] Error for ${code}:`, err);
+      console.error(`[wc-results-backfill] Error for ${code}:`, err);
     }
+    await sleep(POST_DELAY_MS);
   }
 }

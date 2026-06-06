@@ -80,6 +80,7 @@ export async function discordEditMessage(
 export async function discordPostMessage(
   channelId: string,
   payload: DiscordMessagePayload,
+  attempt = 0,
 ): Promise<{ ok: boolean; status: number; messageId?: string; error?: string }> {
   try {
     const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
@@ -90,6 +91,19 @@ export async function discordPostMessage(
       },
       body: JSON.stringify(payload),
     });
+    if (res.status === 429 && attempt < 3) {
+      let retryMs = 500;
+      try {
+        const body = (await res.json()) as { retry_after?: number };
+        if (typeof body.retry_after === "number") {
+          retryMs = Math.ceil(body.retry_after * 1000) + 100;
+        }
+      } catch {
+        /* use default */
+      }
+      await new Promise((r) => setTimeout(r, retryMs));
+      return discordPostMessage(channelId, payload, attempt + 1);
+    }
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       console.error(

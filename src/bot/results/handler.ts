@@ -2,7 +2,6 @@ import {
   MessageFlags,
   PermissionFlagsBits,
   type ChatInputCommandInteraction,
-  type GuildTextBasedChannel,
 } from "discord.js";
 
 import { env } from "@/bot/config";
@@ -18,8 +17,8 @@ import {
   applyMatchResult,
   fetchMatchByRobloxId,
 } from "@/bot/results/queries";
-import { buildResultsEmbed } from "@/bot/results/embed";
-import { fetchTeamLogoUrl } from "@/bot/site-assets";
+import { postLeagueResultsDiscord } from "@/lib/league/post-results-discord";
+import { isWorldCupFixtureId } from "@/lib/league/world-cup-results";
 import { createBotSupabase } from "@/bot/stats-queries";
 
 function formatErr(err: unknown): string {
@@ -85,49 +84,33 @@ export async function handleResultsCommand(
       submittedByDiscordId: interaction.user.id,
     });
 
-    const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
-    const [homeLogoUrl, awayLogoUrl] = await Promise.all([
-      match.home_slug
-        ? fetchTeamLogoUrl(supabase, match.home_slug, siteBase)
-        : Promise.resolve(null),
-      match.away_slug
-        ? fetchTeamLogoUrl(supabase, match.away_slug, siteBase)
-        : Promise.resolve(null),
-    ]);
-
-    const embed = buildResultsEmbed({
-      match,
-      homeScore: scoreline.home,
-      awayScore: scoreline.away,
-      applied,
-      submittedByTag: interaction.user.tag,
-      homeLogoUrl,
-      awayLogoUrl,
-    });
-
-    const channelId = env.DISCORD_RESULTS_CHANNEL_ID;
-    const channel = (await interaction.client.channels.fetch(channelId).catch(
-      () => null,
-    )) as GuildTextBasedChannel | null;
-
-    if (!channel?.isTextBased()) {
-      await interaction.editReply({
-        content:
-          "Result saved to the database, but the results channel is missing or not text-based. Check **DISCORD_RESULTS_CHANNEL_ID**.",
-      });
-      return;
-    }
-
-    const posted = await channel.send({ embeds: [embed] });
-
     const warnBlock =
       applied.warnings.length > 0
         ? `\n\n**Notes**\n${applied.warnings.slice(0, 8).join("\n")}`
         : "";
 
+    const code = match.roblox_match_id.trim();
+    let discordNote = "";
+    if (isWorldCupFixtureId(code)) {
+      const posted = await postLeagueResultsDiscord(supabase, code, {
+        submittedByTag: interaction.user.tag,
+        channelId: env.DISCORD_RESULTS_CHANNEL_ID,
+      });
+      if (posted.ok && "messageId" in posted && posted.messageId) {
+        discordNote = ` Posted to <#${posted.channelId}>.`;
+      } else if (posted.ok && "skipped" in posted && posted.skipped) {
+        discordNote = ` Discord: ${posted.reason}`;
+      } else if (!posted.ok) {
+        discordNote = ` Discord post failed: ${posted.reason}`;
+      }
+    } else {
+      discordNote =
+        " Saved to DB only — only **S3-WC-*** fixtures are posted to #wc-results.";
+    }
+
     await interaction.editReply({
       content:
-        `✅ Logged **${match.home_name} ${scoreline.home}–${scoreline.away} ${match.away_name}** (\`${match.roblox_match_id}\`). Posted ${posted.url}.${warnBlock}`,
+        `✅ Logged **${match.home_name} ${scoreline.home}–${scoreline.away} ${match.away_name}** (\`${code}\`).${discordNote}${warnBlock}`,
     });
   } catch (err) {
     console.error("/results failed:", err);

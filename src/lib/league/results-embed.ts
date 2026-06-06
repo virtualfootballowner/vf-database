@@ -90,7 +90,7 @@ export function renderLeagueResultsEmbed(input: {
       },
     ],
     footer: {
-      text: `Logged by ${input.submittedByTag} · VF League results`,
+      text: `Logged by ${input.submittedByTag} · VF World Cup results`,
     },
     timestamp: new Date().toISOString(),
   };

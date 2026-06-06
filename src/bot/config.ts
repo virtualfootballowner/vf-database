@@ -149,13 +149,12 @@ const envSchema = z.object({
     return s.length > 0 ? s : "1504550802906419232";
   }, z.string().min(1)),
   /**
-   * Public channel where `/results` posts the match-result embed.
-   * Defaults to the VF League results feed.
+   * World Cup results channel — `/results` and auto-log post S3-WC embeds here.
    */
   DISCORD_RESULTS_CHANNEL_ID: z.preprocess((raw) => {
-    if (raw == null || raw === "") return "1512487546339459242";
+    if (raw == null || raw === "") return "1512673440241291417";
     const s = String(raw).trim();
-    return s.length > 0 ? s : "1512487546339459242";
+    return s.length > 0 ? s : "1512673440241291417";
   }, z.string().min(1)),
   /** League server — 10-minute fan join alerts before kickoff. */
   DISCORD_FAN_JOIN_LEAGUE_CHANNEL_ID: z.preprocess((raw) => {
