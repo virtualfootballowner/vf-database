@@ -19,6 +19,7 @@ import {
 
 
 import { env } from "@/bot/config";
+import { backfillLeagueResultsDiscord } from "@/lib/league/backfill-results-discord";
 import {
   handleMediaChannelForward,
   logMediaForwardConfigAtStartup,
@@ -350,6 +351,12 @@ client.once(Events.ClientReady, async (readyClient) => {
     await runBackfill();
   } catch (error) {
     console.error("Backfill failed:", error);
+  }
+
+  try {
+    await backfillLeagueResultsDiscord(createBotSupabase());
+  } catch (error) {
+    console.error("[results-backfill] Startup backfill failed:", error);
   }
 
   scheduleCreatorPostingInactivityJob(readyClient);

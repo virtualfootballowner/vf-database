@@ -12,15 +12,19 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request): Promise<Response> {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!serviceKey) {
+  const cronSecret = process.env.CRON_SECRET?.trim();
+  if (!serviceKey && !cronSecret) {
     return NextResponse.json(
-      { error: "SUPABASE_SERVICE_ROLE_KEY not configured" },
+      { error: "SUPABASE_SERVICE_ROLE_KEY or CRON_SECRET not configured" },
       { status: 500 },
     );
   }
 
   const auth = req.headers.get("authorization")?.trim();
-  if (auth !== `Bearer ${serviceKey}`) {
+  const allowed = new Set(
+    [serviceKey, cronSecret].filter((v): v is string => Boolean(v)).map((v) => `Bearer ${v}`),
+  );
+  if (!auth || !allowed.has(auth)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
