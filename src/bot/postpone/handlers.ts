@@ -64,9 +64,10 @@ export const POSTPONE_MODAL_STAFF_TIME = "vfl:post:stf:m:";
 export const POSTPONE_STAFF_TZ_SELECT = "vfl:post:stf:tz:";
 export const POSTPONE_MODAL_DENY_REASON = "vfl:post:den:m:";
 
-export const OPPONENT_RESPONSE_MS = 24 * 60 * 60 * 1000;
+export const OPPONENT_RESPONSE_HOURS = 12;
+export const OPPONENT_RESPONSE_MS = OPPONENT_RESPONSE_HOURS * 60 * 60 * 1000;
 export const STAFF_PING_MS = 24 * 60 * 60 * 1000;
-/** Denials on the same fixture (deny or 24h no response) before staff escalation. */
+/** Denials on the same fixture (deny or no response before deadline) before staff escalation. */
 export const DENIALS_BEFORE_STAFF_ESCALATION = 2;
 
 const UUID_RE =
@@ -556,7 +557,7 @@ export async function handlePostponeCommand(
         ].join("\n"),
       )
       .setFooter({
-        text: `Accept or deny within 24h — no response counts as a denial · ${DENIALS_BEFORE_STAFF_ESCALATION} denials → staff`,
+        text: `Accept or deny within ${OPPONENT_RESPONSE_HOURS}h — no response counts as a denial · ${DENIALS_BEFORE_STAFF_ESCALATION} denials → staff`,
       })
       .setTimestamp(new Date());
 
@@ -1215,7 +1216,7 @@ export async function processExpiredPostponementRequest(
 
   const { denialCount } = await recordDenial(supabase, expiredRow.match_id, {
     denied_at: ignoredAt,
-    reason: "No response within 24 hours (ignored)",
+    reason: `No response within ${OPPONENT_RESPONSE_HOURS} hours (ignored)`,
     denied_by_discord_id: opponentId || "system",
   });
 
@@ -1225,8 +1226,8 @@ export async function processExpiredPostponementRequest(
 
   const requesterMsg =
     denialCount >= DENIALS_BEFORE_STAFF_ESCALATION
-      ? `⏰ **${opponentName}** did not respond to your postponement request within **24 hours**. That counts as a denial (${denialCount}/${DENIALS_BEFORE_STAFF_ESCALATION}). **Staff have been notified** to resolve this fixture.`
-      : `⏰ **${opponentName}** did not respond within **24 hours** — treated as a **denial**. You may run **\`/postpone\`** again with a different time.`;
+      ? `⏰ **${opponentName}** did not respond to your postponement request within **${OPPONENT_RESPONSE_HOURS} hours**. That counts as a denial (${denialCount}/${DENIALS_BEFORE_STAFF_ESCALATION}). **Staff have been notified** to resolve this fixture.`
+      : `⏰ **${opponentName}** did not respond within **${OPPONENT_RESPONSE_HOURS} hours** — treated as a **denial**. You may run **\`/postpone\`** again with a different time.`;
 
   await dmUser(client, expiredRow.requester_discord_id, { content: requesterMsg });
 
