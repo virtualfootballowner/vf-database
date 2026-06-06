@@ -78,6 +78,39 @@ export function compareFixtureGroupsReverseChronological(
   return -compareFixtureGroupsChronological(a, b);
 }
 
+function fixtureRowKickoffMs(
+  row: Pick<FixtureRow, "match" | "schedule">,
+): number | null {
+  const dateStr = fixtureRowSortDate(row);
+  if (dateStr === UNDATED_SORT_KEY) return null;
+  const timeStr = fixtureRowSortTime(row);
+  const iso = timeStr || `${dateStr}T12:00:00Z`;
+  const ms = new Date(iso).getTime();
+  return Number.isNaN(ms) ? null : ms;
+}
+
+/**
+ * Closest kickoff to now first (today's results + next fixtures up top).
+ * Undated knockout placeholders sink to the bottom.
+ */
+export function compareFixtureRowsByProximityToNow(
+  a: Pick<FixtureRow, "id" | "match" | "schedule">,
+  b: Pick<FixtureRow, "id" | "match" | "schedule">,
+): number {
+  const aMs = fixtureRowKickoffMs(a);
+  const bMs = fixtureRowKickoffMs(b);
+  if (aMs == null && bMs == null) return a.id.localeCompare(b.id);
+  if (aMs == null) return 1;
+  if (bMs == null) return -1;
+
+  const now = Date.now();
+  const aDist = Math.abs(aMs - now);
+  const bDist = Math.abs(bMs - now);
+  if (aDist !== bDist) return aDist - bDist;
+  if (aMs !== bMs) return bMs - aMs;
+  return a.id.localeCompare(b.id);
+}
+
 export function compareScheduledAtChronological(a: string, b: string): number {
   return a.localeCompare(b);
 }

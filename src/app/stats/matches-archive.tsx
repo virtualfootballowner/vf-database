@@ -14,6 +14,7 @@ import type { FixtureRow } from "./fixtures-data";
 import type { MatchRecord } from "./matches-data";
 import {
   compareFixtureGroupsReverseChronological,
+  compareFixtureRowsByProximityToNow,
   compareFixtureRowsReverseChronological,
 } from "@/lib/fixture-sort";
 import { formatWcKickoff } from "@/lib/wc-fixture-kickoff";
@@ -53,7 +54,11 @@ export async function MatchesArchive() {
   const fixtureGroups = bundle.fixtureGroups
     .map((group) => ({
       ...group,
-      rows: [...group.rows].sort(compareFixtureRowsReverseChronological),
+      rows: [...group.rows].sort(
+        group.competition === "World Cup"
+          ? compareFixtureRowsByProximityToNow
+          : compareFixtureRowsReverseChronological,
+      ),
     }))
     .sort(compareFixtureGroupsReverseChronological);
   return (
