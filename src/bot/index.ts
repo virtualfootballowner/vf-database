@@ -348,16 +348,14 @@ client.once(Events.ClientReady, async (readyClient) => {
   }
 
   try {
-    await runBackfill();
-  } catch (error) {
-    console.error("Backfill failed:", error);
-  }
-
-  try {
     await backfillLeagueResultsDiscord(createBotSupabase());
   } catch (error) {
-    console.error("[results-backfill] Startup backfill failed:", error);
+    console.error("[wc-results-backfill] Startup backfill failed:", error);
   }
+
+  void runBackfill().catch((error) => {
+    console.error("Backfill failed:", error);
+  });
 
   scheduleCreatorPostingInactivityJob(readyClient);
   scheduleDiscordBanExpiryJob(readyClient);
