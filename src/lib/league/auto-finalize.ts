@@ -60,13 +60,26 @@ export async function autoFinalizeLeagueMatch(
 
   if (match.status === "completed") {
     const discord = await postLeagueResultsDiscord(supabase, robloxMatchId);
+    const discordPosted =
+      discord.ok && !("skipped" in discord && discord.skipped);
+    if (!discordPosted) {
+      const reason =
+        discord.ok && "skipped" in discord
+          ? discord.reason
+          : !discord.ok
+            ? discord.reason
+            : "unknown";
+      console.error(
+        `[league-finalize] Discord results not posted for ${robloxMatchId}: ${reason}`,
+      );
+    }
     return {
       ok: true,
       matchId: match.id,
       robloxMatchId,
       homeScore: match.home_score ?? 0,
       awayScore: match.away_score ?? 0,
-      discordPosted: discord.ok && !("skipped" in discord && discord.skipped),
+      discordPosted,
       discordMessageId:
         discord.ok && "messageId" in discord ? discord.messageId : undefined,
       discordSkipped:
@@ -125,6 +138,19 @@ export async function autoFinalizeLeagueMatch(
   await refreshTeamSeasonRecordsForSeason(supabase, await matchSeason(supabase, match.id));
 
   const discord = await postLeagueResultsDiscord(supabase, robloxMatchId);
+  const discordPosted =
+    discord.ok && !("skipped" in discord && discord.skipped);
+  if (!discordPosted) {
+    const reason =
+      discord.ok && "skipped" in discord
+        ? discord.reason
+        : !discord.ok
+          ? discord.reason
+          : "unknown";
+    console.error(
+      `[league-finalize] Discord results not posted for ${robloxMatchId}: ${reason}`,
+    );
+  }
 
   return {
     ok: true,
@@ -132,7 +158,7 @@ export async function autoFinalizeLeagueMatch(
     robloxMatchId,
     homeScore,
     awayScore,
-    discordPosted: discord.ok && !("skipped" in discord && discord.skipped),
+    discordPosted,
     discordMessageId:
       discord.ok && "messageId" in discord ? discord.messageId : undefined,
     discordSkipped:

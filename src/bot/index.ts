@@ -20,6 +20,7 @@ import {
 
 import { env } from "@/bot/config";
 import { backfillLeagueResultsDiscord } from "@/lib/league/backfill-results-discord";
+import { scheduleWcResultsBackfillJob } from "@/bot/wc-results-backfill/job";
 import {
   handleMediaChannelForward,
   logMediaForwardConfigAtStartup,
@@ -364,6 +365,7 @@ client.once(Events.ClientReady, async (readyClient) => {
   scheduleFixtureReminderJob(readyClient);
   scheduleFanJoinAlertJob(readyClient);
   scheduleRefereeUnclaimedAlertJob(readyClient);
+  scheduleWcResultsBackfillJob(readyClient);
 });
 
 client.on(Events.GuildCreate, async (guild) => {
