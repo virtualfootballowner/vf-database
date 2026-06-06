@@ -13,9 +13,11 @@ export type DiscordEmbed = {
   title?: string;
   description?: string;
   color?: number;
+  author?: { name?: string; icon_url?: string };
   thumbnail?: { url: string };
+  image?: { url: string };
   fields?: { name: string; value: string; inline?: boolean }[];
-  footer?: { text: string };
+  footer?: { text: string; icon_url?: string };
   timestamp?: string;
 };
 

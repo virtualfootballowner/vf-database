@@ -6,6 +6,7 @@ import type {
   ApplyMatchResultOutput,
   MatchForResults,
 } from "@/bot/results/queries";
+import { discordTeamLabel } from "@/bot/discord-team-flags";
 import { absoluteSiteAssetUrl } from "@/bot/site-assets";
 
 function matchPageUrl(robloxMatchId: string): string {
@@ -31,7 +32,7 @@ export function buildResultsEmbed(input: {
     .setTitle(`⚽ Match result · ${comp}`)
     .setDescription(
       [
-        `**${match.home_name}** **${homeScore} – ${awayScore}** **${match.away_name}**`,
+        `${discordTeamLabel(match.home_name, match.home_slug)}  **${homeScore} – ${awayScore}**  ${discordTeamLabel(match.away_name, match.away_slug)}`,
         "",
         `\`${match.roblox_match_id}\` · Season ${match.season} · ${week}`,
       ].join("\n"),
@@ -95,11 +96,18 @@ export function buildResultsEmbed(input: {
     })
     .setTimestamp(new Date());
 
-  const thumb =
-    input.homeLogoUrl ??
-    input.awayLogoUrl ??
-    absoluteSiteAssetUrl("/golden shield.png", env.VFL_SITE_URL);
-  if (thumb) embed.setThumbnail(thumb);
+  const homeLogo = input.homeLogoUrl?.trim() || null;
+  const awayLogo = input.awayLogoUrl?.trim() || null;
+  if (homeLogo && awayLogo) {
+    embed.setThumbnail(homeLogo).setImage(awayLogo);
+  } else if (homeLogo) {
+    embed.setThumbnail(homeLogo);
+  } else if (awayLogo) {
+    embed.setThumbnail(awayLogo);
+  } else {
+    const fallback = absoluteSiteAssetUrl("/golden shield.png", env.VFL_SITE_URL);
+    if (fallback) embed.setThumbnail(fallback);
+  }
 
   return embed;
 }

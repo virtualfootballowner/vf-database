@@ -2,6 +2,7 @@
  * League match result embed for Discord REST (no discord.js — safe on Vercel).
  */
 
+import { discordTeamLabel } from "@/bot/discord-team-flags";
 import { formatPlayerStatLines } from "@/bot/results/parse";
 import type {
   ApplyMatchResultOutput,
@@ -14,6 +15,21 @@ function matchPageUrl(siteBase: string, robloxMatchId: string): string {
   return `${base}/stats/matches/${encodeURIComponent(robloxMatchId)}`;
 }
 
+function scorelineDescription(
+  match: MatchForResults,
+  homeScore: number,
+  awayScore: number,
+): string {
+  const home = discordTeamLabel(match.home_name, match.home_slug);
+  const away = discordTeamLabel(match.away_name, match.away_slug);
+  const week = match.game_week_label?.trim() || match.stage?.trim() || "—";
+  return [
+    `${home}  **${homeScore} – ${awayScore}**  ${away}`,
+    "",
+    `\`${match.roblox_match_id}\` · Season ${match.season} · ${week}`,
+  ].join("\n");
+}
+
 export function renderLeagueResultsEmbed(input: {
   match: MatchForResults;
   homeScore: number;
@@ -21,20 +37,18 @@ export function renderLeagueResultsEmbed(input: {
   applied: ApplyMatchResultOutput;
   submittedByTag: string;
   siteBaseUrl: string;
-  thumbnailUrl?: string | null;
+  homeLogoUrl?: string | null;
+  awayLogoUrl?: string | null;
 }): DiscordEmbed {
   const { match, homeScore, awayScore, applied } = input;
   const comp = match.competition?.trim() || "Competition";
-  const week = match.game_week_label?.trim() || match.stage?.trim() || "—";
+  const homeLogo = input.homeLogoUrl?.trim() || null;
+  const awayLogo = input.awayLogoUrl?.trim() || null;
 
   const embed: DiscordEmbed = {
     color: 0x083696,
     title: `⚽ Match result · ${comp}`,
-    description: [
-      `**${match.home_name}** **${homeScore} – ${awayScore}** **${match.away_name}**`,
-      "",
-      `\`${match.roblox_match_id}\` · Season ${match.season} · ${week}`,
-    ].join("\n"),
+    description: scorelineDescription(match, homeScore, awayScore),
     fields: [
       {
         name: "⚽ Scorers",
@@ -95,8 +109,13 @@ export function renderLeagueResultsEmbed(input: {
     timestamp: new Date().toISOString(),
   };
 
-  if (input.thumbnailUrl) {
-    embed.thumbnail = { url: input.thumbnailUrl };
+  if (homeLogo && awayLogo) {
+    embed.thumbnail = { url: homeLogo };
+    embed.image = { url: awayLogo };
+  } else if (homeLogo) {
+    embed.thumbnail = { url: homeLogo };
+  } else if (awayLogo) {
+    embed.thumbnail = { url: awayLogo };
   }
 
   return embed;

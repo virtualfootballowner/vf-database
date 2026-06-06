@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { fetchMatchByRobloxId } from "@/bot/results/queries";
-import { absoluteSiteAssetUrl, fetchTeamLogoUrl } from "@/bot/site-assets";
+import { fetchTeamLogoUrl } from "@/bot/site-assets";
 import { loadAppliedFromMatchEvents } from "@/lib/league/applied-from-events";
 import { renderLeagueResultsEmbed } from "@/lib/league/results-embed";
 import {
@@ -132,11 +132,6 @@ export async function postLeagueResultsDiscord(
       : Promise.resolve(null),
   ]);
 
-  const thumb =
-    homeLogoUrl ??
-    awayLogoUrl ??
-    absoluteSiteAssetUrl("/golden shield.png", siteBase);
-
   const embed = renderLeagueResultsEmbed({
     match,
     homeScore,
@@ -144,7 +139,8 @@ export async function postLeagueResultsDiscord(
     applied,
     submittedByTag: options?.submittedByTag ?? "Roblox auto-log",
     siteBaseUrl: siteBase,
-    thumbnailUrl: thumb,
+    homeLogoUrl,
+    awayLogoUrl,
   });
 
   const posted = await discordPostMessage(channelId, {
