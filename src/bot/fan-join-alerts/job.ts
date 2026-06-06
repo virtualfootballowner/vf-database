@@ -1,6 +1,7 @@
 import type { Client, TextChannel } from "discord.js";
 
 import { env } from "@/bot/config";
+import { FAN_JOIN_TARGET_MINUTES } from "@/bot/fan-join-alerts/constants";
 import {
   claimFanJoinAlertSlot,
   releaseFanJoinAlertSlot,
@@ -13,10 +14,10 @@ import {
 import { createBotSupabase } from "@/bot/stats-queries";
 
 const TICK_MS = 5 * 60 * 1000;
-/** Target ~10 minutes before kickoff, with a wide capture window so 5-minute sweeps do not miss fixtures. */
-const TARGET_BEFORE_MS = 10 * 60 * 1000;
-const WINDOW_MS = 8 * 60 * 1000;
-const LOOKAHEAD_MS = 30 * 60 * 1000;
+/** Target ~5 minutes before kickoff; window sized for 5-minute bot sweeps. */
+const TARGET_BEFORE_MS = FAN_JOIN_TARGET_MINUTES * 60 * 1000;
+const WINDOW_MS = 3 * 60 * 1000;
+const LOOKAHEAD_MS = 20 * 60 * 1000;
 
 export function fanJoinChannelIds(): string[] {
   return [

@@ -4,6 +4,7 @@ import { env } from "@/bot/config";
 import { discordTeamLabel } from "@/bot/discord-team-flags";
 import { fixturePageUrl } from "@/bot/fixture-reminders/messages";
 import type { ScheduledMatchReminderRow } from "@/bot/fixture-reminders/queries";
+import { FAN_JOIN_TARGET_MINUTES } from "@/bot/fan-join-alerts/constants";
 import { discordKickoffTimestampRich } from "@/bot/postpone/format";
 
 function robloxGameUrl(): string | null {
@@ -14,7 +15,7 @@ function robloxGameUrl(): string | null {
 
 export function buildFanJoinAlertMessage(
   match: ScheduledMatchReminderRow,
-  minutesUntil: number = 10,
+  minutesUntil: number = FAN_JOIN_TARGET_MINUTES,
 ): {
   content: string;
   embed: EmbedBuilder;
@@ -69,7 +70,7 @@ export function buildFanJoinAlertMessage(
         inline: false,
       },
     )
-    .setFooter({ text: "VF League · 10-minute fan alert" })
+    .setFooter({ text: `VF League · ${FAN_JOIN_TARGET_MINUTES}-minute kickoff reminder` })
     .setTimestamp(new Date(match.scheduled_at));
 
   return {

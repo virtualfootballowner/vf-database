@@ -156,13 +156,13 @@ const envSchema = z.object({
     const s = String(raw).trim();
     return s.length > 0 ? s : "1512673440241291417";
   }, z.string().min(1)),
-  /** League server — 10-minute fan join alerts before kickoff. */
+  /** League server — 5-minute kickoff reminders for all scheduled fixtures. */
   DISCORD_FAN_JOIN_LEAGUE_CHANNEL_ID: z.preprocess((raw) => {
     if (raw == null || raw === "") return "1511078239106367569";
     const s = String(raw).trim();
     return s.length > 0 ? s : "1511078239106367569";
   }, z.string().min(1)),
-  /** VF Media server — 10-minute fan join alerts before kickoff. */
+  /** VF Media server — 5-minute kickoff reminders before kickoff. */
   DISCORD_FAN_JOIN_MEDIA_CHANNEL_ID: z.preprocess((raw) => {
     if (raw == null || raw === "") return "1511079063928836266";
     const s = String(raw).trim();
