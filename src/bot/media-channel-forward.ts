@@ -22,6 +22,7 @@ const DEFAULT_MEDIA_FORWARD_SOURCE_CHANNEL_IDS = [
   "1508494285987778750",
   "1507792663993385050",
   "1509842800815116288",
+  "1512561794634481694",
 ] as const;
 
 const DEFAULT_MEDIA_FORWARD_DEST_CHANNEL_ID = "1486459530370879702";
@@ -37,11 +38,12 @@ function parseChannelIdList(raw: string | undefined): Set<string> {
 }
 
 export function mediaForwardSourceChannelIds(): Set<string> {
+  const ids = new Set<string>(DEFAULT_MEDIA_FORWARD_SOURCE_CHANNEL_IDS);
   const fromEnv = parseChannelIdList(
     process.env.DISCORD_MEDIA_FORWARD_SOURCE_CHANNEL_IDS,
   );
-  if (fromEnv.size > 0) return fromEnv;
-  return new Set(DEFAULT_MEDIA_FORWARD_SOURCE_CHANNEL_IDS);
+  for (const id of fromEnv) ids.add(id);
+  return ids;
 }
 
 export function mediaForwardDestChannelId(): string {
