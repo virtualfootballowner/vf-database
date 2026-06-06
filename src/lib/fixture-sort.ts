@@ -51,6 +51,33 @@ export function compareFixtureGroupsChronological(
   return a.key.localeCompare(b.key);
 }
 
+/** Newest kickoff first; undated fixtures stay at the bottom. */
+export function compareFixtureRowsReverseChronological(
+  a: Pick<FixtureRow, "id" | "match" | "schedule">,
+  b: Pick<FixtureRow, "id" | "match" | "schedule">,
+): number {
+  const aDate = fixtureRowSortDate(a);
+  const bDate = fixtureRowSortDate(b);
+  const aUndated = aDate === UNDATED_SORT_KEY;
+  const bUndated = bDate === UNDATED_SORT_KEY;
+  if (aUndated && bUndated) return a.id.localeCompare(b.id);
+  if (aUndated) return 1;
+  if (bUndated) return -1;
+  if (aDate !== bDate) return bDate.localeCompare(aDate);
+  const aTime = fixtureRowSortTime(a);
+  const bTime = fixtureRowSortTime(b);
+  if (aTime !== bTime) return bTime.localeCompare(aTime);
+  return a.id.localeCompare(b.id);
+}
+
+/** Newest season / competition block first. */
+export function compareFixtureGroupsReverseChronological(
+  a: FixtureGroupLike,
+  b: FixtureGroupLike,
+): number {
+  return -compareFixtureGroupsChronological(a, b);
+}
+
 export function compareScheduledAtChronological(a: string, b: string): number {
   return a.localeCompare(b);
 }

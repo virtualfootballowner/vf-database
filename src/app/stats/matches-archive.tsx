@@ -12,6 +12,10 @@ import {
 
 import type { FixtureRow } from "./fixtures-data";
 import type { MatchRecord } from "./matches-data";
+import {
+  compareFixtureGroupsReverseChronological,
+  compareFixtureRowsReverseChronological,
+} from "@/lib/fixture-sort";
 import { formatWcKickoff } from "@/lib/wc-fixture-kickoff";
 
 type GetTeam = (slug: string | null, name: string) => Team;
@@ -46,6 +50,12 @@ function isPlayedFixture(row: FixtureRow): boolean {
 export async function MatchesArchive() {
   const bundle = await getSiteStatsBundle();
   const getTeam = getMatchTeamResolver(bundle.teams);
+  const fixtureGroups = bundle.fixtureGroups
+    .map((group) => ({
+      ...group,
+      rows: [...group.rows].sort(compareFixtureRowsReverseChronological),
+    }))
+    .sort(compareFixtureGroupsReverseChronological);
   return (
     <>
       <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -93,7 +103,7 @@ export async function MatchesArchive() {
       </section>
 
       <section className="flex flex-col gap-8">
-        {bundle.fixtureGroups.map((group) => {
+        {fixtureGroups.map((group) => {
           const playedInGroup = group.rows.filter(isPlayedFixture).length;
           const scheduledInGroup = group.rows.filter(isScheduledFixture).length;
           return (
