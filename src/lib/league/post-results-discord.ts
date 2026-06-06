@@ -1,9 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { buildResultsEmbed } from "@/bot/results/embed";
 import { fetchMatchByRobloxId } from "@/bot/results/queries";
-import { fetchTeamLogoUrl } from "@/bot/site-assets";
+import { absoluteSiteAssetUrl, fetchTeamLogoUrl } from "@/bot/site-assets";
 import { loadAppliedFromMatchEvents } from "@/lib/league/applied-from-events";
+import { renderLeagueResultsEmbed } from "@/lib/league/results-embed";
 import { discordPostMessage } from "@/lib/discord-rest";
 
 const DEFAULT_RESULTS_CHANNEL_ID = "1512487546339459242";
@@ -129,18 +129,23 @@ export async function postLeagueResultsDiscord(
       : Promise.resolve(null),
   ]);
 
-  const embed = buildResultsEmbed({
+  const thumb =
+    homeLogoUrl ??
+    awayLogoUrl ??
+    absoluteSiteAssetUrl("/golden shield.png", siteBase);
+
+  const embed = renderLeagueResultsEmbed({
     match,
     homeScore,
     awayScore,
     applied,
     submittedByTag: options?.submittedByTag ?? "Roblox auto-log",
-    homeLogoUrl,
-    awayLogoUrl,
+    siteBaseUrl: siteBase,
+    thumbnailUrl: thumb,
   });
 
   const posted = await discordPostMessage(channelId, {
-    embeds: [embed.toJSON()],
+    embeds: [embed],
   });
 
   if (!posted.ok || !posted.messageId) {

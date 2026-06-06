@@ -13,6 +13,7 @@ export type DiscordEmbed = {
   title?: string;
   description?: string;
   color?: number;
+  thumbnail?: { url: string };
   fields?: { name: string; value: string; inline?: boolean }[];
   footer?: { text: string };
   timestamp?: string;
