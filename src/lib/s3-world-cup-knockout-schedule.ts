@@ -6,6 +6,7 @@ import {
   S3_WORLD_CUP_R16_CALENDAR,
   S3_WORLD_CUP_SF_CALENDAR,
   S3_WORLD_CUP_STADIUM_TBD,
+  S3_WORLD_CUP_STAGGERED_SLOTS_BST,
   type WcKnockoutCalendarDay,
 } from "@/lib/s3-world-cup-calendar";
 import { bstKickoffIso } from "@/lib/wc-fixture-kickoff";
@@ -35,11 +36,13 @@ function buildFromCalendar(
     day.fixtureCodes.forEach((code, idx) => {
       const def = matchByCode.get(code);
       if (!def) return;
-      const slot =
+      const slots =
         day.fixtureCodes.length === 1
-          ? "20:00"
-          : S3_WORLD_CUP_KO_DAY_SLOTS_BST[idx] ??
-            S3_WORLD_CUP_KO_DAY_SLOTS_BST[1]!;
+          ? (["20:00"] as const)
+          : day.fixtureCodes.length > 2
+            ? S3_WORLD_CUP_STAGGERED_SLOTS_BST
+            : S3_WORLD_CUP_KO_DAY_SLOTS_BST;
+      const slot = slots[idx] ?? slots[slots.length - 1]!;
 
       out.push({
         fixtureCode: def.fixtureCode,

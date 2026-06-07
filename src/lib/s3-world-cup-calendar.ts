@@ -79,11 +79,15 @@ export type WcKnockoutCalendarDay = {
   fixtureCodes: readonly string[];
 };
 
+/** All eight R16 ties on one weekend (Fri–Sun) after MD3. */
 export const S3_WORLD_CUP_R16_CALENDAR: readonly WcKnockoutCalendarDay[] = [
-  { date: "2026-06-26", dayLabel: "R16 Day 1", fixtureCodes: ["S3-WC-R16-01", "S3-WC-R16-02"] },
-  { date: "2026-06-27", dayLabel: "R16 Day 2", fixtureCodes: ["S3-WC-R16-03", "S3-WC-R16-04"] },
-  { date: "2026-06-28", dayLabel: "R16 Day 3", fixtureCodes: ["S3-WC-R16-05", "S3-WC-R16-06"] },
-  { date: "2026-07-03", dayLabel: "R16 Day 4", fixtureCodes: ["S3-WC-R16-07", "S3-WC-R16-08"] },
+  { date: "2026-06-26", dayLabel: "R16 · Friday", fixtureCodes: ["S3-WC-R16-01", "S3-WC-R16-02"] },
+  { date: "2026-06-27", dayLabel: "R16 · Saturday", fixtureCodes: ["S3-WC-R16-03", "S3-WC-R16-04"] },
+  {
+    date: "2026-06-28",
+    dayLabel: "R16 · Sunday",
+    fixtureCodes: ["S3-WC-R16-05", "S3-WC-R16-06", "S3-WC-R16-07", "S3-WC-R16-08"],
+  },
 ];
 
 export const S3_WORLD_CUP_QF_CALENDAR: readonly WcKnockoutCalendarDay[] = [
