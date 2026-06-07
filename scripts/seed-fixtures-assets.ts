@@ -150,7 +150,7 @@ async function patchTournamentStructures(): Promise<void> {
         format: "groups_knockout",
         status: "upcoming",
         start_date: "2026-06-05",
-        end_date: "2026-07-02",
+        end_date: "2026-07-24",
         season: 3,
         competition: "World Cup",
         structure_kind: "s3_world_cup_24",
@@ -168,7 +168,7 @@ async function patchTournamentStructures(): Promise<void> {
         structure_kind: "s3_world_cup_24",
         structure_config: S3_WORLD_CUP_STRUCTURE as unknown as Record<string, unknown>,
         start_date: "2026-06-05",
-        end_date: "2026-07-02",
+        end_date: "2026-07-24",
       })
       .eq("id", s3Existing.data.id);
     if (upd.error) throw upd.error;

@@ -24,18 +24,18 @@ export const S3_WORLD_CUP_GROUP_MATCHDAY_DATES: Record<
 > = {
   AB: {
     1: "2026-06-05",
-    2: "2026-06-10",
-    3: "2026-06-15",
+    2: "2026-06-12",
+    3: "2026-06-19",
   },
   CD: {
     1: "2026-06-06",
-    2: "2026-06-11",
-    3: "2026-06-16",
+    2: "2026-06-13",
+    3: "2026-06-20",
   },
   EF: {
     1: "2026-06-07",
-    2: "2026-06-12",
-    3: "2026-06-17",
+    2: "2026-06-14",
+    3: "2026-06-21",
   },
 };
 
@@ -80,24 +80,24 @@ export type WcKnockoutCalendarDay = {
 };
 
 export const S3_WORLD_CUP_R16_CALENDAR: readonly WcKnockoutCalendarDay[] = [
-  { date: "2026-06-20", dayLabel: "R16 Day 1", fixtureCodes: ["S3-WC-R16-01", "S3-WC-R16-02"] },
-  { date: "2026-06-21", dayLabel: "R16 Day 2", fixtureCodes: ["S3-WC-R16-03", "S3-WC-R16-04"] },
-  { date: "2026-06-22", dayLabel: "R16 Day 3", fixtureCodes: ["S3-WC-R16-05", "S3-WC-R16-06"] },
-  { date: "2026-06-23", dayLabel: "R16 Day 4", fixtureCodes: ["S3-WC-R16-07", "S3-WC-R16-08"] },
+  { date: "2026-06-26", dayLabel: "R16 Day 1", fixtureCodes: ["S3-WC-R16-01", "S3-WC-R16-02"] },
+  { date: "2026-06-27", dayLabel: "R16 Day 2", fixtureCodes: ["S3-WC-R16-03", "S3-WC-R16-04"] },
+  { date: "2026-06-28", dayLabel: "R16 Day 3", fixtureCodes: ["S3-WC-R16-05", "S3-WC-R16-06"] },
+  { date: "2026-07-03", dayLabel: "R16 Day 4", fixtureCodes: ["S3-WC-R16-07", "S3-WC-R16-08"] },
 ];
 
 export const S3_WORLD_CUP_QF_CALENDAR: readonly WcKnockoutCalendarDay[] = [
-  { date: "2026-06-25", dayLabel: "QF Day 1", fixtureCodes: ["S3-WC-QF-01", "S3-WC-QF-02"] },
-  { date: "2026-06-26", dayLabel: "QF Day 2", fixtureCodes: ["S3-WC-QF-03", "S3-WC-QF-04"] },
+  { date: "2026-07-10", dayLabel: "QF Day 1", fixtureCodes: ["S3-WC-QF-01", "S3-WC-QF-02"] },
+  { date: "2026-07-11", dayLabel: "QF Day 2", fixtureCodes: ["S3-WC-QF-03", "S3-WC-QF-04"] },
 ];
 
 export const S3_WORLD_CUP_SF_CALENDAR: readonly WcKnockoutCalendarDay[] = [
-  { date: "2026-06-29", dayLabel: "Semi-final 1", fixtureCodes: ["S3-WC-SF-01"] },
-  { date: "2026-06-30", dayLabel: "Semi-final 2", fixtureCodes: ["S3-WC-SF-02"] },
+  { date: "2026-07-17", dayLabel: "Semi-final 1", fixtureCodes: ["S3-WC-SF-01"] },
+  { date: "2026-07-18", dayLabel: "Semi-final 2", fixtureCodes: ["S3-WC-SF-02"] },
 ];
 
 export const S3_WORLD_CUP_FINAL_CALENDAR: readonly WcKnockoutCalendarDay[] = [
-  { date: "2026-07-02", dayLabel: "Grand Final", fixtureCodes: ["S3-WC-F-01"] },
+  { date: "2026-07-24", dayLabel: "Grand Final", fixtureCodes: ["S3-WC-F-01"] },
 ];
 
 export const S3_WORLD_CUP_KNOCKOUT_CALENDAR = {
@@ -118,10 +118,10 @@ export const S3_WORLD_CUP_GROUP_CALENDAR_DAYS: readonly {
   { date: "2026-06-05", matchday: 1, groupsLabel: "A/B", groups: ["A", "B"], simultaneous: false },
   { date: "2026-06-06", matchday: 1, groupsLabel: "C/D", groups: ["C", "D"], simultaneous: false },
   { date: "2026-06-07", matchday: 1, groupsLabel: "E/F", groups: ["E", "F"], simultaneous: false },
-  { date: "2026-06-10", matchday: 2, groupsLabel: "A/B", groups: ["A", "B"], simultaneous: false },
-  { date: "2026-06-11", matchday: 2, groupsLabel: "C/D", groups: ["C", "D"], simultaneous: false },
-  { date: "2026-06-12", matchday: 2, groupsLabel: "E/F", groups: ["E", "F"], simultaneous: false },
-  { date: "2026-06-15", matchday: 3, groupsLabel: "A/B", groups: ["A", "B"], simultaneous: true },
-  { date: "2026-06-16", matchday: 3, groupsLabel: "C/D", groups: ["C", "D"], simultaneous: true },
-  { date: "2026-06-17", matchday: 3, groupsLabel: "E/F", groups: ["E", "F"], simultaneous: true },
+  { date: "2026-06-12", matchday: 2, groupsLabel: "A/B", groups: ["A", "B"], simultaneous: false },
+  { date: "2026-06-13", matchday: 2, groupsLabel: "C/D", groups: ["C", "D"], simultaneous: false },
+  { date: "2026-06-14", matchday: 2, groupsLabel: "E/F", groups: ["E", "F"], simultaneous: false },
+  { date: "2026-06-19", matchday: 3, groupsLabel: "A/B", groups: ["A", "B"], simultaneous: true },
+  { date: "2026-06-20", matchday: 3, groupsLabel: "C/D", groups: ["C", "D"], simultaneous: true },
+  { date: "2026-06-21", matchday: 3, groupsLabel: "E/F", groups: ["E", "F"], simultaneous: true },
 ];
