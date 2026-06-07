@@ -39,6 +39,7 @@ export function compareFixtureRowsChronological(
 export type FixtureGroupLike = {
   key: string;
   season: number;
+  competition?: string;
   rows: Pick<FixtureRow, "id" | "match" | "schedule">[];
 };
 
@@ -76,6 +77,21 @@ export function compareFixtureGroupsReverseChronological(
   b: FixtureGroupLike,
 ): number {
   return -compareFixtureGroupsChronological(a, b);
+}
+
+/**
+ * Matches archive: current season first (S3 → S2 → S1), World Cup before other
+ * competitions in the same season.
+ */
+export function compareFixtureGroupsForMatchesArchive(
+  a: FixtureGroupLike,
+  b: FixtureGroupLike,
+): number {
+  if (a.season !== b.season) return b.season - a.season;
+  const aIsWc = a.competition === "World Cup" ? 0 : 1;
+  const bIsWc = b.competition === "World Cup" ? 0 : 1;
+  if (aIsWc !== bIsWc) return aIsWc - bIsWc;
+  return a.key.localeCompare(b.key);
 }
 
 function fixtureRowKickoffMs(

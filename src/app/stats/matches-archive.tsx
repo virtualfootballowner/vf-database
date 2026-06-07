@@ -13,8 +13,8 @@ import {
 import type { FixtureRow } from "./fixtures-data";
 import type { MatchRecord } from "./matches-data";
 import {
-  compareFixtureGroupsReverseChronological,
-  compareFixtureRowsByProximityToNow,
+  compareFixtureGroupsForMatchesArchive,
+  compareFixtureRowsChronological,
   compareFixtureRowsReverseChronological,
 } from "@/lib/fixture-sort";
 import { formatWcKickoff } from "@/lib/wc-fixture-kickoff";
@@ -56,11 +56,11 @@ export async function MatchesArchive() {
       ...group,
       rows: [...group.rows].sort(
         group.competition === "World Cup"
-          ? compareFixtureRowsByProximityToNow
+          ? compareFixtureRowsChronological
           : compareFixtureRowsReverseChronological,
       ),
     }))
-    .sort(compareFixtureGroupsReverseChronological);
+    .sort(compareFixtureGroupsForMatchesArchive);
   return (
     <>
       <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
