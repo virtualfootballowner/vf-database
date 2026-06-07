@@ -36,6 +36,70 @@ function kickoffDateLabel(iso: string): string {
   return formatWcKickoff(iso).date;
 }
 
+function matchForFixture(
+  fixtureCode: string,
+  matchesByRobloxId: Map<string, MatchRecord>,
+): MatchRecord | undefined {
+  return matchesByRobloxId.get(fixtureCode);
+}
+
+function isPlayedFixture(match: MatchRecord | undefined): boolean {
+  if (!match) return false;
+  return match.status !== "scheduled";
+}
+
+function FixtureCenter({
+  match,
+}: {
+  match: MatchRecord | undefined;
+}) {
+  if (!isPlayedFixture(match)) {
+    return <span className="text-sm font-semibold text-white/35">vs</span>;
+  }
+
+  const homeWon = match!.homeScore > match!.awayScore;
+  const awayWon = match!.awayScore > match!.homeScore;
+
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <div className="flex items-center gap-1.5 text-base font-bold tabular-nums text-white sm:text-lg">
+        <span className={homeWon ? "" : "text-white/65"}>{match!.homeScore}</span>
+        <span className="text-white/35">–</span>
+        <span className={awayWon ? "" : "text-white/65"}>{match!.awayScore}</span>
+      </div>
+    </div>
+  );
+}
+
+function FixtureStatusBadges({ match }: { match: MatchRecord | undefined }) {
+  if (!isPlayedFixture(match)) return null;
+
+  const isFFT = match!.fft !== "No";
+
+  return (
+    <>
+      <Badge
+        variant="outline"
+        className="border-emerald-300/30 bg-emerald-400/10 px-2 py-0 text-[10px] font-semibold uppercase tracking-wider text-emerald-200"
+      >
+        Played
+      </Badge>
+      {isFFT ? (
+        <Badge
+          variant="outline"
+          className="border-amber-300/30 bg-amber-400/10 px-2 py-0 text-[10px] text-amber-200"
+        >
+          {match!.fft === "Mercy"
+            ? "Mercy"
+            : match!.fft === "Partial"
+              ? "Partial FFT"
+              : "FFT"}
+        </Badge>
+      ) : null}
+    </>
+  );
+}
+
 function FixtureMatchLink({
   href,
   children,
@@ -73,14 +137,21 @@ function GroupFixtureCard({
     matchesByRobloxId,
   );
   const kickoffDate = kickoffDateLabel(kickoffIso);
+  const match = matchForFixture(fx.fixtureCode, matchesByRobloxId);
+  const played = isPlayedFixture(match);
 
   return (
     <FixtureMatchLink href={matchHref}>
       <Card
         className={cn(
-          "gap-0 border-white/10 bg-white/[0.03] py-0 transition",
+          "gap-0 py-0 transition",
+          played
+            ? "border-emerald-300/20 bg-emerald-400/[0.04]"
+            : "border-white/10 bg-white/[0.03]",
           matchHref
-            ? "cursor-pointer hover:border-sky-300/30 hover:bg-sky-400/[0.06] hover:ring-1 hover:ring-sky-300/20"
+            ? played
+              ? "cursor-pointer hover:border-emerald-300/35 hover:bg-emerald-400/[0.07] hover:ring-1 hover:ring-emerald-300/20"
+              : "cursor-pointer hover:border-sky-300/30 hover:bg-sky-400/[0.06] hover:ring-1 hover:ring-sky-300/20"
             : "hover:bg-white/[0.05]",
         )}
       >
@@ -102,7 +173,7 @@ function GroupFixtureCard({
               {fx.homeTeamName}
             </span>
           )}
-          <span className="text-sm font-semibold text-white/35">vs</span>
+          <FixtureCenter match={match} />
           {away ? (
             <TeamFixtureLine team={away} name={fx.awayTeamName} align="start" />
           ) : (
@@ -113,6 +184,7 @@ function GroupFixtureCard({
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1">
+          <FixtureStatusBadges match={match} />
           <Badge
             variant="outline"
             className="border-white/15 px-2 py-0 text-[10px] text-white/65"
@@ -140,14 +212,21 @@ function KnockoutFixtureCard({
     fx.scheduledAt,
     matchesByRobloxId,
   );
+  const match = matchForFixture(fx.fixtureCode, matchesByRobloxId);
+  const played = isPlayedFixture(match);
 
   return (
     <FixtureMatchLink href={matchHref}>
       <Card
         className={cn(
-          "gap-0 border-white/10 bg-white/[0.03] py-0 transition",
+          "gap-0 py-0 transition",
+          played
+            ? "border-emerald-300/20 bg-emerald-400/[0.04]"
+            : "border-white/10 bg-white/[0.03]",
           matchHref
-            ? "cursor-pointer hover:border-sky-300/30 hover:bg-sky-400/[0.06] hover:ring-1 hover:ring-sky-300/20"
+            ? played
+              ? "cursor-pointer hover:border-emerald-300/35 hover:bg-emerald-400/[0.07] hover:ring-1 hover:ring-emerald-300/20"
+              : "cursor-pointer hover:border-sky-300/30 hover:bg-sky-400/[0.06] hover:ring-1 hover:ring-sky-300/20"
             : undefined,
         )}
       >
@@ -165,18 +244,21 @@ function KnockoutFixtureCard({
           <span className="justify-self-end text-right text-sm font-semibold text-white/75">
             {fx.homeLabel}
           </span>
-          <span className="text-sm font-semibold text-white/35">vs</span>
+          <FixtureCenter match={match} />
           <span className="justify-self-start text-left text-sm font-semibold text-white/75">
             {fx.awayLabel}
           </span>
         </div>
 
-        <Badge
-          variant="outline"
-          className="h-6 shrink-0 border-white/15 px-2 text-[10px] text-white/65"
-        >
-          {fx.stadium}
-        </Badge>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <FixtureStatusBadges match={match} />
+          <Badge
+            variant="outline"
+            className="h-6 border-white/15 px-2 text-[10px] text-white/65"
+          >
+            {fx.stadium}
+          </Badge>
+        </div>
       </CardContent>
     </Card>
     </FixtureMatchLink>
@@ -223,10 +305,10 @@ const MATCHDAY_META: Record<
   { title: string; dates: string; note?: string }
 > = {
   1: { title: "Matchday 1", dates: "5–7 June" },
-  2: { title: "Matchday 2", dates: "10–12 June" },
+  2: { title: "Matchday 2", dates: "12–14 June" },
   3: {
     title: "Matchday 3",
-    dates: "15–17 June",
+    dates: "19–21 June",
     note: "Final group matches kick off simultaneously",
   },
 };
@@ -260,6 +342,12 @@ export function WorldCupFixturesSection({
 }) {
   const hrefFor = (fixtureCode: string) =>
     fixtureCodeMatchHref(fixtureCode, matchesByRobloxId);
+  const playedCount = [...matchesByRobloxId.values()].filter(
+    (m) =>
+      m.season === 3 &&
+      m.competition === "World Cup" &&
+      isPlayedFixture(m),
+  ).length;
   const byMatchday = ([1, 2, 3] as const).map((md) => ({
     md,
     meta: MATCHDAY_META[md],
@@ -286,14 +374,25 @@ export function WorldCupFixturesSection({
             Three matchdays · kickoffs 6–10 pm BST · stadium TBD.
           </p>
         </div>
-        <Badge
-          variant="outline"
-          className="h-8 shrink-0 gap-2 border-white/15 bg-white/5 px-3 text-white/85"
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.9)]" />
-          {S3_WORLD_CUP_GROUP_FIXTURES.length + S3_WORLD_CUP_KNOCKOUT_FIXTURES.length}{" "}
-          fixtures
-        </Badge>
+        <div className="flex flex-wrap gap-1.5">
+          <Badge
+            variant="outline"
+            className="h-8 shrink-0 gap-2 border-white/15 bg-white/5 px-3 text-white/85"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.9)]" />
+            {S3_WORLD_CUP_GROUP_FIXTURES.length + S3_WORLD_CUP_KNOCKOUT_FIXTURES.length}{" "}
+            fixtures
+          </Badge>
+          {playedCount > 0 ? (
+            <Badge
+              variant="outline"
+              className="h-8 shrink-0 gap-2 border-emerald-300/30 bg-emerald-400/10 px-3 text-emerald-200"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
+              {playedCount} played
+            </Badge>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex flex-col gap-8">
