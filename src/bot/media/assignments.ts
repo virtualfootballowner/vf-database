@@ -325,19 +325,33 @@ function buildAssignmentComponents(
 async function fetchRobloxMatchIdForAssignment(
   matchId: string | null | undefined,
 ): Promise<string | null> {
+  const schedule = await fetchMatchScheduleForAssignment(matchId);
+  return schedule.robloxMatchId;
+}
+
+async function fetchMatchScheduleForAssignment(
+  matchId: string | null | undefined,
+): Promise<{ robloxMatchId: string | null; scheduledAt: string | null }> {
   const id = matchId?.trim();
-  if (!id) return null;
+  if (!id) return { robloxMatchId: null, scheduledAt: null };
   const supabase = createBotSupabase();
   const { data, error } = await supabase
     .from("matches")
-    .select("roblox_match_id")
+    .select("roblox_match_id, scheduled_at")
     .eq("id", id)
     .maybeSingle();
   if (error) {
-    console.error("[media] fetch roblox_match_id:", error);
-    return null;
+    console.error("[media] fetch match schedule:", error);
+    return { robloxMatchId: null, scheduledAt: null };
   }
-  return (data as { roblox_match_id?: string | null } | null)?.roblox_match_id ?? null;
+  const row = data as {
+    roblox_match_id?: string | null;
+    scheduled_at?: string | null;
+  } | null;
+  return {
+    robloxMatchId: row?.roblox_match_id?.trim() || null,
+    scheduledAt: row?.scheduled_at?.trim() || null,
+  };
 }
 
 async function editAssignmentMessage(
@@ -353,12 +367,23 @@ async function editAssignmentMessage(
   },
 ): Promise<void> {
   if (!row.channel_id || !row.message_id) return;
+  const live = await fetchMatchScheduleForAssignment(row.match_id);
+  const scheduledAtIso =
+    options?.scheduledAtIso?.trim() || live.scheduledAt || null;
+  const robloxMatchId =
+    options?.robloxMatchId?.trim() || live.robloxMatchId || null;
   try {
     const ch = await client.channels.fetch(row.channel_id);
     if (!ch?.isTextBased()) return;
     const msg = await ch.messages.fetch(row.message_id);
     await msg.edit({
-      embeds: [buildAssignmentEmbed(row, options)],
+      embeds: [
+        buildAssignmentEmbed(row, {
+          ...options,
+          robloxMatchId,
+          scheduledAtIso,
+        }),
+      ],
       components: buildAssignmentComponents(row),
     });
   } catch (e) {

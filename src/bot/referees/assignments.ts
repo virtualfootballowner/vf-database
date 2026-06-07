@@ -323,19 +323,33 @@ function buildAssignmentComponents(
 async function fetchRobloxMatchIdForAssignment(
   matchId: string | null | undefined,
 ): Promise<string | null> {
+  const schedule = await fetchMatchScheduleForAssignment(matchId);
+  return schedule.robloxMatchId;
+}
+
+async function fetchMatchScheduleForAssignment(
+  matchId: string | null | undefined,
+): Promise<{ robloxMatchId: string | null; scheduledAt: string | null }> {
   const id = matchId?.trim();
-  if (!id) return null;
+  if (!id) return { robloxMatchId: null, scheduledAt: null };
   const supabase = createBotSupabase();
   const { data, error } = await supabase
     .from("matches")
-    .select("roblox_match_id")
+    .select("roblox_match_id, scheduled_at")
     .eq("id", id)
     .maybeSingle();
   if (error) {
-    console.error("[referee] fetch roblox_match_id:", error);
-    return null;
+    console.error("[referee] fetch match schedule:", error);
+    return { robloxMatchId: null, scheduledAt: null };
   }
-  return (data as { roblox_match_id?: string | null } | null)?.roblox_match_id ?? null;
+  const row = data as {
+    roblox_match_id?: string | null;
+    scheduled_at?: string | null;
+  } | null;
+  return {
+    robloxMatchId: row?.roblox_match_id?.trim() || null,
+    scheduledAt: row?.scheduled_at?.trim() || null,
+  };
 }
 
 async function editAssignmentMessage(
@@ -351,12 +365,23 @@ async function editAssignmentMessage(
   },
 ): Promise<void> {
   if (!row.channel_id || !row.message_id) return;
+  const live = await fetchMatchScheduleForAssignment(row.match_id);
+  const scheduledAtIso =
+    options?.scheduledAtIso?.trim() || live.scheduledAt || null;
+  const robloxMatchId =
+    options?.robloxMatchId?.trim() || live.robloxMatchId || null;
   try {
     const ch = await client.channels.fetch(row.channel_id);
     if (!ch?.isTextBased()) return;
     const msg = await ch.messages.fetch(row.message_id);
     await msg.edit({
-      embeds: [buildAssignmentEmbed(row, options)],
+      embeds: [
+        buildAssignmentEmbed(row, {
+          ...options,
+          robloxMatchId,
+          scheduledAtIso,
+        }),
+      ],
       components: buildAssignmentComponents(row),
     });
   } catch (e) {
@@ -1054,14 +1079,40 @@ export async function handleRefMyGamesCommand(
     return;
   }
 
+  const matchIds = [
+    ...new Set(
+      rows.map((r) => r.match_id?.trim()).filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const kickoffByMatchId = new Map<string, string>();
+  if (matchIds.length > 0) {
+    const { data: matchRows, error: matchErr } = await supabase
+      .from("matches")
+      .select("id, scheduled_at")
+      .in("id", matchIds);
+    if (matchErr) {
+      console.error("[referee] my games kickoffs:", matchErr);
+    } else {
+      for (const m of matchRows ?? []) {
+        const id = (m as { id?: string }).id?.trim();
+        const at = (m as { scheduled_at?: string | null }).scheduled_at?.trim();
+        if (id && at) kickoffByMatchId.set(id, buildAssignmentKickoffLabel(at));
+      }
+    }
+  }
+
   const lines = rows.map((r) => {
     const roles: string[] = [];
     if (userOwnsSlot(r, userId, "main")) roles.push("Main ref");
     if (userOwnsSlot(r, userId, "linesman")) roles.push("Linesman");
     const roleText = roles.length > 0 ? roles.join(" · ") : "Referee";
     const gw = r.game_week_label ? ` (${r.game_week_label})` : "";
-    const kick = r.kickoff_label ? ` · ${r.kickoff_label.split("\n")[0]}` : "";
-    return `• S${r.season} **${r.competition}**${gw}: **${r.home_team_name}** vs **${r.away_team_name}** · ${roleText}${kick}`;
+    const kick =
+      (r.match_id ? kickoffByMatchId.get(r.match_id) : null) ??
+      r.kickoff_label ??
+      "";
+    const kickShort = kick ? ` · ${kick.split("\n")[0]}` : "";
+    return `• S${r.season} **${r.competition}**${gw}: **${r.home_team_name}** vs **${r.away_team_name}** · ${roleText}${kickShort}`;
   });
 
   await interaction.editReply({

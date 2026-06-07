@@ -9,6 +9,7 @@ import { config } from "dotenv";
 import path from "node:path";
 
 import { buildS3WorldCupFixtureRows } from "../src/lib/s3-world-cup-fixtures";
+import { buildAssignmentKickoffLabel } from "../src/bot/referees/assignments";
 
 config({ path: path.resolve(process.cwd(), ".env.local"), override: true });
 
@@ -48,6 +49,15 @@ async function main(): Promise<void> {
         .eq("id", match.id);
       if (error) throw error;
       matchUpdates += 1;
+
+      const kickoffLabel = buildAssignmentKickoffLabel(scheduledAt);
+      for (const table of ["referee_assignments", "media_assignments"] as const) {
+        await supabase
+          .from(table)
+          .update({ kickoff_label: kickoffLabel, updated_at: new Date().toISOString() })
+          .eq("match_id", match.id)
+          .in("status", ["open", "claimed"]);
+      }
 
       await supabase
         .from("match_fan_join_channel_alerts")
