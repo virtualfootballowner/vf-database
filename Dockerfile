@@ -1,5 +1,6 @@
 # Railway / Docker — clean npm ci (no cached node_modules/.cache from Nixpacks layers).
-FROM node:20-alpine
+# ECR Public mirrors Docker Hub library images — avoids Docker Hub 504/rate-limit on Railway builders.
+FROM public.ecr.aws/docker/library/node:20-alpine
 
 WORKDIR /app
 
