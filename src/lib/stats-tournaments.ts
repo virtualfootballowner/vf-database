@@ -239,3 +239,83 @@ export function competitionKeysWithResults(
   );
   return out;
 }
+
+export type CompetitionKey = { season: number; competition: string };
+
+function competitionKey(season: number, competition: string): string {
+  return `${season}|${competition.trim()}`;
+}
+
+function matchInstantMs(m: MatchRecord): number | null {
+  if (m.scheduledAt) {
+    const t = Date.parse(m.scheduledAt);
+    if (Number.isFinite(t)) return t;
+  }
+  if (m.date?.trim()) {
+    const t = Date.parse(`${m.date.trim()}T12:00:00Z`);
+    if (Number.isFinite(t)) return t;
+  }
+  return null;
+}
+
+function isUpcomingMatch(m: MatchRecord, now: number): boolean {
+  if (m.status === "scheduled") return true;
+  if (m.status === "completed" || m.status === "cancelled") return false;
+  const t = matchInstantMs(m);
+  return t != null && t >= now;
+}
+
+/**
+ * Active / nearest competition first — e.g. S3 World Cup before archived S1/S2 tables.
+ * Competitions with upcoming fixtures rank above finished-only slates.
+ */
+export function sortCompetitionsByCloseness(
+  keys: CompetitionKey[],
+  allMatches: MatchRecord[],
+  nowMs: number = Date.now(),
+): CompetitionKey[] {
+  const byKey = new Map<string, MatchRecord[]>();
+  for (const m of allMatches) {
+    const comp = m.competition?.trim();
+    if (!comp || comp === "—") continue;
+    const key = competitionKey(m.season, comp);
+    const list = byKey.get(key) ?? [];
+    list.push(m);
+    byKey.set(key, list);
+  }
+
+  const ARCHIVE_OFFSET = 1_000_000_000_000;
+
+  function score({ season, competition }: CompetitionKey): number {
+    const matches = byKey.get(competitionKey(season, competition)) ?? [];
+    if (matches.length === 0) return ARCHIVE_OFFSET * 2;
+
+    let nearestUpcoming = Number.POSITIVE_INFINITY;
+    let nearestPast = Number.POSITIVE_INFINITY;
+
+    for (const m of matches) {
+      const t = matchInstantMs(m);
+      if (t == null) continue;
+
+      if (isUpcomingMatch(m, nowMs)) {
+        const delta = Math.max(0, t - nowMs);
+        if (delta < nearestUpcoming) nearestUpcoming = delta;
+      } else {
+        const delta = Math.abs(t - nowMs);
+        if (delta < nearestPast) nearestPast = delta;
+      }
+    }
+
+    if (nearestUpcoming !== Number.POSITIVE_INFINITY) return nearestUpcoming;
+    if (nearestPast !== Number.POSITIVE_INFINITY) return ARCHIVE_OFFSET + nearestPast;
+    return ARCHIVE_OFFSET * 2;
+  }
+
+  return [...keys].sort((a, b) => {
+    const sa = score(a);
+    const sb = score(b);
+    if (sa !== sb) return sa - sb;
+    if (a.season !== b.season) return b.season - a.season;
+    return a.competition.localeCompare(b.competition);
+  });
+}

@@ -21,6 +21,7 @@ import {
   type LeaderEntry,
 } from "@/lib/stats-leaders";
 import { getSiteStatsBundle } from "@/lib/site-db";
+import { sortCompetitionsByCloseness } from "@/lib/stats-tournaments";
 import { competitionLogo } from "@/lib/trophy-assets";
 import { cn } from "@/lib/utils";
 
@@ -46,8 +47,17 @@ export default async function StatsPage() {
     getTournamentLeaderboards(),
   ]);
 
-  const visibleTournaments = tournamentBoards.tournaments.filter(
-    (t) => t.goals.length > 0 || t.assists.length > 0,
+  const visibleTournaments = sortCompetitionsByCloseness(
+    tournamentBoards.tournaments
+      .filter((t) => t.goals.length > 0 || t.assists.length > 0)
+      .map((t) => ({ season: t.season, competition: t.competition })),
+    bundle.allMatches,
+  ).map(
+    (key) =>
+      tournamentBoards.tournaments.find(
+        (t) =>
+          t.season === key.season && t.competition === key.competition,
+      )!,
   );
 
   const combined = [

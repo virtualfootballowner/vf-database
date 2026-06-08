@@ -6,7 +6,7 @@ import { cache } from "react";
 import type { MatchRecord } from "@/app/stats/matches-data";
 import { readAllMatchEventRecords } from "@/lib/match-event-records";
 import { getSiteStatsBundle } from "@/lib/site-db";
-import { competitionKeysWithResults } from "@/lib/stats-tournaments";
+import { competitionKeysWithResults, sortCompetitionsByCloseness } from "@/lib/stats-tournaments";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export type LeaderEntry = {
@@ -397,7 +397,10 @@ function loadTournamentFromEventFiles(
 async function resolveTournamentLeaderboards(): Promise<TournamentLeaderboardsBundle> {
   noStore();
   const bundle = await getSiteStatsBundle();
-  const keys = competitionKeysWithResults(bundle.allMatches);
+  const keys = sortCompetitionsByCloseness(
+    competitionKeysWithResults(bundle.allMatches),
+    bundle.allMatches,
+  );
   const db = await loadTournamentFromSupabase(keys, bundle.matchesByRobloxId);
   if (db) return db;
   return loadTournamentFromEventFiles(keys, bundle.matchesByRobloxId);
