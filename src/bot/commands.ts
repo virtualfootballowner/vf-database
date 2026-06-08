@@ -42,6 +42,7 @@ import {
   loadTeams,
   resolveTeamForSlashCommand,
 } from "@/bot/stats-queries";
+import { handleDisbandCommand } from "@/bot/disband";
 import { buildBacklogEmbed } from "@/bot/backlog";
 import {
   CONTRACT_POSITION_CHOICES,
@@ -61,9 +62,6 @@ import { handleReleaseCommand } from "@/bot/release";
 import { handleReleaseAutocomplete } from "@/bot/release-autocomplete";
 import { handlePostponeCommand } from "@/bot/postpone/handlers";
 import { handlePostponeLogCommand } from "@/bot/postpone/log-command";
-import { handleResultsCommand } from "@/bot/results/handler";
-import { buildResultsSlashCommand } from "@/bot/results/command-def";
-import { handleResultsAutocomplete } from "@/bot/results/autocomplete";
 import { POSTPONE_TIMEZONE_CHOICES } from "@/bot/postpone/format";
 import {
   handleCompetitionAutocomplete,
@@ -249,8 +247,6 @@ export const leagueSlashCommandDefinitions = [
     )
     .toJSON(),
 
-  buildResultsSlashCommand(),
-
   new SlashCommandBuilder()
     .setName("postverify")
     .setDescription(
@@ -425,6 +421,28 @@ export const leagueSlashCommandDefinitions = [
     .toJSON(),
 
   new SlashCommandBuilder()
+    .setName("disband")
+    .setDescription(
+      "Clear a club/nation roster and manager for a season (Manage Server or owner).",
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("team")
+        .setDescription("Club or nation — pick from suggestions or type name/slug")
+        .setRequired(true)
+        .setAutocomplete(true),
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("season")
+        .setDescription("Season (1–3)")
+        .setRequired(true)
+        .setMinValue(1)
+        .setMaxValue(3),
+    )
+    .toJSON(),
+
+  new SlashCommandBuilder()
     .setName("contract")
     .setDescription(
       "Offer a roster contract for the active season (club manager role only)",
@@ -586,39 +604,81 @@ export const leagueSlashCommandDefinitions = [
 
   new SlashCommandBuilder()
     .setName("postpone")
-    .setDescription(
-      "Request to move your next scheduled fixture (opponent accepts or denies via DM)",
-    )
-    .addStringOption((opt) =>
-      opt
-        .setName("date")
-        .setDescription("Proposed date (YYYY-MM-DD)")
-        .setRequired(true),
-    )
-    .addStringOption((opt) =>
-      opt
-        .setName("time")
-        .setDescription("Proposed kickoff (e.g. 17:00 or 5:00 PM)")
-        .setRequired(true),
-    )
-    .addStringOption((opt) =>
-      opt
-        .setName("timezone")
-        .setDescription("Timezone for the date and time above")
-        .setRequired(true)
-        .addChoices(
-          ...POSTPONE_TIMEZONE_CHOICES.map((c) => ({
-            name: c.name,
-            value: c.value,
-          })),
+    .setDescription("Move a fixture kickoff")
+    .addSubcommand((sub) =>
+      sub
+        .setName("request")
+        .setDescription(
+          "Request to move your next scheduled fixture (opponent accepts or denies via DM)",
+        )
+        .addStringOption((opt) =>
+          opt
+            .setName("date")
+            .setDescription("Proposed date (YYYY-MM-DD)")
+            .setRequired(true),
+        )
+        .addStringOption((opt) =>
+          opt
+            .setName("time")
+            .setDescription("Proposed kickoff (e.g. 17:00 or 5:00 PM)")
+            .setRequired(true),
+        )
+        .addStringOption((opt) =>
+          opt
+            .setName("timezone")
+            .setDescription("Timezone for the date and time above")
+            .setRequired(true)
+            .addChoices(
+              ...POSTPONE_TIMEZONE_CHOICES.map((c) => ({
+                name: c.name,
+                value: c.value,
+              })),
+            ),
+        )
+        .addStringOption((opt) =>
+          opt
+            .setName("reason")
+            .setDescription("Why you need to move the fixture")
+            .setRequired(true)
+            .setMaxLength(500),
         ),
     )
-    .addStringOption((opt) =>
-      opt
-        .setName("reason")
-        .setDescription("Why you need to move the fixture")
-        .setRequired(true)
-        .setMaxLength(500),
+    .addSubcommand((sub) =>
+      sub
+        .setName("force")
+        .setDescription(
+          "Staff: immediately reschedule a fixture by match ID (e.g. S3-WC-G-F-02)",
+        )
+        .addStringOption((opt) =>
+          opt
+            .setName("match")
+            .setDescription("Fixture match ID (e.g. S3-WC-G-F-02)")
+            .setRequired(true),
+        )
+        .addStringOption((opt) =>
+          opt
+            .setName("date")
+            .setDescription("New kickoff date (YYYY-MM-DD)")
+            .setRequired(true),
+        )
+        .addStringOption((opt) =>
+          opt
+            .setName("time")
+            .setDescription("New kickoff time (e.g. 17:00 or 5:00 PM)")
+            .setRequired(true),
+        )
+        .addStringOption((opt) =>
+          opt
+            .setName("timezone")
+            .setDescription("Timezone for the date and time above")
+            .setRequired(true)
+            .addChoices(
+              ...POSTPONE_TIMEZONE_CHOICES.map((c) => ({
+                name: c.name,
+                value: c.value,
+              })),
+            ),
+        ),
     )
     .toJSON(),
 
@@ -727,9 +787,6 @@ export async function handleSlashCommand(
     case "postpone-log":
       await handlePostponeLogCommand(interaction);
       return;
-    case "results":
-      await handleResultsCommand(interaction);
-      return;
     case "postverify":
       await handlePostVerifyCard(interaction);
       return;
@@ -780,6 +837,9 @@ export async function handleSlashCommand(
       return;
     case "appoint":
       await handleAppoint(interaction);
+      return;
+    case "disband":
+      await handleDisbandCommand(interaction);
       return;
     case "contract":
       await handleContractCommand(interaction);
@@ -855,14 +915,11 @@ export async function handleAutocomplete(
     return;
   }
 
-  if (interaction.commandName === "results") {
-    await handleResultsAutocomplete(interaction);
-    return;
-  }
 
   const teamAutocompleteCommands = new Set([
     "team",
     "appoint",
+    "disband",
     "contract",
     "release",
     "friendly",

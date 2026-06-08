@@ -148,14 +148,6 @@ const envSchema = z.object({
     const s = String(raw).trim();
     return s.length > 0 ? s : "1504550802906419232";
   }, z.string().min(1)),
-  /**
-   * World Cup results channel — `/results` and auto-log post S3-WC embeds here.
-   */
-  DISCORD_RESULTS_CHANNEL_ID: z.preprocess((raw) => {
-    if (raw == null || raw === "") return "1512673440241291417";
-    const s = String(raw).trim();
-    return s.length > 0 ? s : "1512673440241291417";
-  }, z.string().min(1)),
   /** League server — 5-minute kickoff reminders for all scheduled fixtures. */
   DISCORD_FAN_JOIN_LEAGUE_CHANNEL_ID: z.preprocess((raw) => {
     if (raw == null || raw === "") return "1511078239106367569";
@@ -221,7 +213,6 @@ export const env = envSchema.parse({
     process.env.DISCORD_CREATOR_POSTED_FEED_CHANNEL_ID,
   DISCORD_PUBLIC_BAN_LOG_CHANNEL_ID:
     process.env.DISCORD_PUBLIC_BAN_LOG_CHANNEL_ID,
-  DISCORD_RESULTS_CHANNEL_ID: process.env.DISCORD_RESULTS_CHANNEL_ID,
   DISCORD_FAN_JOIN_LEAGUE_CHANNEL_ID:
     process.env.DISCORD_FAN_JOIN_LEAGUE_CHANNEL_ID,
   DISCORD_FAN_JOIN_MEDIA_CHANNEL_ID:

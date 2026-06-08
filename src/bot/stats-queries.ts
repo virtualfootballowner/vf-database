@@ -340,6 +340,44 @@ export async function syncTeamManagerCatalogColumns(
   return { ok: true };
 }
 
+/** Clear `teams` manager columns when disbanding (only if still pointing at this manager). */
+export async function clearTeamManagerCatalogColumns(
+  supabase: SupabaseClient,
+  teamSlug: string,
+  managerDiscordId?: string | null,
+): Promise<{ ok: boolean; cleared: boolean; error?: string }> {
+  if (managerDiscordId?.trim()) {
+    const { data, error: readErr } = await supabase
+      .from("teams")
+      .select("manager_discord_id")
+      .eq("slug", teamSlug)
+      .maybeSingle();
+    if (readErr) {
+      console.error("[teams] clear manager columns read:", readErr);
+      return { ok: false, cleared: false, error: readErr.message };
+    }
+    const current = (data as { manager_discord_id?: string | null } | null)
+      ?.manager_discord_id?.trim();
+    if (current && current !== managerDiscordId.trim()) {
+      return { ok: true, cleared: false };
+    }
+  }
+
+  const { error } = await supabase
+    .from("teams")
+    .update({
+      manager_discord_id: null,
+      manager_roblox_id: null,
+    })
+    .eq("slug", teamSlug);
+
+  if (error) {
+    console.error("[teams] clear manager columns:", error);
+    return { ok: false, cleared: false, error: error.message };
+  }
+  return { ok: true, cleared: true };
+}
+
 export type CareerRow = {
   team_slug: string;
   season: number;
@@ -714,7 +752,7 @@ export async function listTeamRosterPlayerProfilesForSeason(
 
 const PLAYER_AUTOCOMPLETE_LIMIT = 25;
 
-/** Registered VF players by Roblox username (for /results and similar). */
+/** Registered VF players by Roblox username (player lookup). */
 export async function filterRegisteredPlayersForAutocomplete(
   supabase: SupabaseClient,
   query: string,

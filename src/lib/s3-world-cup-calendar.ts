@@ -79,29 +79,34 @@ export type WcKnockoutCalendarDay = {
   fixtureCodes: readonly string[];
 };
 
-/** All eight R16 ties on one weekend (Fri–Sun) after MD3. */
+/** All eight R16 ties on one weekend (Fri 2 · Sat 3 · Sun 3) after MD3. */
 export const S3_WORLD_CUP_R16_CALENDAR: readonly WcKnockoutCalendarDay[] = [
   { date: "2026-06-26", dayLabel: "R16 · Friday", fixtureCodes: ["S3-WC-R16-01", "S3-WC-R16-02"] },
-  { date: "2026-06-27", dayLabel: "R16 · Saturday", fixtureCodes: ["S3-WC-R16-03", "S3-WC-R16-04"] },
+  {
+    date: "2026-06-27",
+    dayLabel: "R16 · Saturday",
+    fixtureCodes: ["S3-WC-R16-03", "S3-WC-R16-04", "S3-WC-R16-05"],
+  },
   {
     date: "2026-06-28",
     dayLabel: "R16 · Sunday",
-    fixtureCodes: ["S3-WC-R16-05", "S3-WC-R16-06", "S3-WC-R16-07", "S3-WC-R16-08"],
+    fixtureCodes: ["S3-WC-R16-06", "S3-WC-R16-07", "S3-WC-R16-08"],
   },
 ];
 
+/** QF the following Fri–Sat (~5 days after R16). */
 export const S3_WORLD_CUP_QF_CALENDAR: readonly WcKnockoutCalendarDay[] = [
-  { date: "2026-07-10", dayLabel: "QF Day 1", fixtureCodes: ["S3-WC-QF-01", "S3-WC-QF-02"] },
-  { date: "2026-07-11", dayLabel: "QF Day 2", fixtureCodes: ["S3-WC-QF-03", "S3-WC-QF-04"] },
+  { date: "2026-07-03", dayLabel: "QF · Friday", fixtureCodes: ["S3-WC-QF-01", "S3-WC-QF-02"] },
+  { date: "2026-07-04", dayLabel: "QF · Saturday", fixtureCodes: ["S3-WC-QF-03", "S3-WC-QF-04"] },
 ];
 
 export const S3_WORLD_CUP_SF_CALENDAR: readonly WcKnockoutCalendarDay[] = [
-  { date: "2026-07-17", dayLabel: "Semi-final 1", fixtureCodes: ["S3-WC-SF-01"] },
-  { date: "2026-07-18", dayLabel: "Semi-final 2", fixtureCodes: ["S3-WC-SF-02"] },
+  { date: "2026-07-10", dayLabel: "Semi-final 1", fixtureCodes: ["S3-WC-SF-01"] },
+  { date: "2026-07-11", dayLabel: "Semi-final 2", fixtureCodes: ["S3-WC-SF-02"] },
 ];
 
 export const S3_WORLD_CUP_FINAL_CALENDAR: readonly WcKnockoutCalendarDay[] = [
-  { date: "2026-07-24", dayLabel: "Grand Final", fixtureCodes: ["S3-WC-F-01"] },
+  { date: "2026-07-17", dayLabel: "Grand Final", fixtureCodes: ["S3-WC-F-01"] },
 ];
 
 export const S3_WORLD_CUP_KNOCKOUT_CALENDAR = {

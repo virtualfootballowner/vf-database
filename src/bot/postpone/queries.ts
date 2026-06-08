@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { buildAssignmentKickoffLabel } from "@/bot/referees/assignments";
 import {
   parseDenialLog,
   type DenialLogEntry,
@@ -448,6 +449,98 @@ export async function appendDenialReason(
   if (error) throw error;
 }
 
+export type MatchByCodeRow = {
+  id: string;
+  roblox_match_id: string;
+  status: string;
+  scheduled_at: string | null;
+  home_slug: string;
+  home_name: string;
+  away_slug: string;
+  away_name: string;
+};
+
+export async function fetchMatchByRobloxCode(
+  supabase: SupabaseClient,
+  codeRaw: string,
+): Promise<MatchByCodeRow | null> {
+  const code = codeRaw.trim();
+  if (!code) return null;
+
+  const { data: match, error } = await supabase
+    .from("matches")
+    .select("id, roblox_match_id, status, scheduled_at, home_team_id, away_team_id")
+    .ilike("roblox_match_id", code)
+    .maybeSingle();
+  if (error) throw error;
+  if (!match) return null;
+
+  const row = match as {
+    id: string;
+    roblox_match_id: string;
+    status: string;
+    scheduled_at: string | null;
+    home_team_id: string;
+    away_team_id: string;
+  };
+
+  const { data: teams, error: teamErr } = await supabase
+    .from("teams")
+    .select("id, slug, name")
+    .in("id", [row.home_team_id, row.away_team_id]);
+  if (teamErr) throw teamErr;
+
+  const byId = new Map(
+    (teams ?? []).map((t) => [t.id as string, t as { id: string; slug: string; name: string }]),
+  );
+  const home = byId.get(row.home_team_id);
+  const away = byId.get(row.away_team_id);
+  if (!home || !away) return null;
+
+  return {
+    id: row.id,
+    roblox_match_id: row.roblox_match_id,
+    status: row.status,
+    scheduled_at: row.scheduled_at,
+    home_slug: home.slug,
+    home_name: home.name,
+    away_slug: away.slug,
+    away_name: away.name,
+  };
+}
+
+async function syncAssignmentKickoffLabels(
+  supabase: SupabaseClient,
+  matchId: string,
+  scheduledAt: string,
+): Promise<void> {
+  const kickoffLabel = buildAssignmentKickoffLabel(scheduledAt);
+  const now = new Date().toISOString();
+  for (const table of ["referee_assignments", "media_assignments"] as const) {
+    const { error } = await supabase
+      .from(table)
+      .update({ kickoff_label: kickoffLabel, updated_at: now })
+      .eq("match_id", matchId)
+      .in("status", ["open", "claimed"]);
+    if (error) {
+      console.warn(`[postpone] ${table} kickoff sync failed:`, error);
+    }
+  }
+}
+
+async function clearFanJoinAlerts(
+  supabase: SupabaseClient,
+  matchId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("match_fan_join_channel_alerts")
+    .delete()
+    .eq("match_id", matchId);
+  if (error) {
+    console.warn("[postpone] fan join alert clear failed:", error);
+  }
+}
+
 export async function updateMatchScheduledAt(
   supabase: SupabaseClient,
   matchId: string,
@@ -460,6 +553,8 @@ export async function updateMatchScheduledAt(
   if (error) throw error;
 
   await syncFixtureCatalogKickoff(supabase, matchId, scheduledAt);
+  await syncAssignmentKickoffLabels(supabase, matchId, scheduledAt);
+  await clearFanJoinAlerts(supabase, matchId);
 }
 
 /** Keep `fixtures.metadata` in sync so the website schedule reflects postponements. */

@@ -4,7 +4,7 @@ import type {
   ApplyMatchResultOutput,
   MatchForResults,
   ResolvedPlayer,
-} from "@/bot/results/queries";
+} from "@/lib/league/match-results-data";
 
 function normCount(details: unknown): number {
   if (

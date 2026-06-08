@@ -3,11 +3,11 @@
  */
 
 import { discordTeamLabel } from "@/bot/discord-team-flags";
-import { formatPlayerStatLines } from "@/bot/results/parse";
-import type {
-  ApplyMatchResultOutput,
-  MatchForResults,
-} from "@/bot/results/queries";
+import {
+  formatPlayerStatLines,
+  type ApplyMatchResultOutput,
+  type MatchForResults,
+} from "@/lib/league/match-results-data";
 import type { DiscordEmbed } from "@/lib/discord-rest";
 
 function matchPageUrl(siteBase: string, robloxMatchId: string): string {

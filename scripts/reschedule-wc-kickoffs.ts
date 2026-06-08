@@ -98,13 +98,13 @@ async function main(): Promise<void> {
 
   const { error: tErr } = await supabase
     .from("tournaments")
-    .update({ end_date: "2026-07-24" })
+    .update({ end_date: "2026-07-17" })
     .eq("season", 3)
     .eq("competition", "World Cup");
   if (tErr) throw tErr;
 
   console.log(
-    `Rescheduled ${matchUpdates} matches, ${fixtureUpdates} fixtures; tournament end_date → 2026-07-24.`,
+    `Rescheduled ${matchUpdates} matches, ${fixtureUpdates} fixtures; tournament end_date → 2026-07-17.`,
   );
 }
 

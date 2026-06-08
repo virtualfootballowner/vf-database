@@ -36,6 +36,7 @@ import {
   appendDenialReason,
   fetchActiveRequestForMatch,
   fetchBlockingPostponementForFixture,
+  fetchMatchByRobloxCode,
   resolveManagerDiscordId,
   fetchNextUpcomingMatchForTeam,
   fetchPostponementState,
@@ -347,6 +348,100 @@ function fixtureLabel(
 export async function handlePostponeCommand(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
+  const sub = interaction.options.getSubcommand();
+  if (sub === "force") {
+    await handlePostponeForceCommand(interaction);
+    return;
+  }
+  await handlePostponeRequestCommand(interaction);
+}
+
+async function handlePostponeForceCommand(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  if (!interaction.guild) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: "Use this command inside the server.",
+    });
+    return;
+  }
+
+  if (
+    !interaction.memberPermissions?.has(PermissionFlagsBits.ManageRoles)
+  ) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content:
+        "You need **Manage Roles** (staff) to force-reschedule a fixture.",
+    });
+    return;
+  }
+
+  const matchCode = interaction.options.getString("match", true).trim();
+  const dateRaw = interaction.options.getString("date", true);
+  const timeRaw = interaction.options.getString("time", true);
+  const timeZone =
+    interaction.options.getString("timezone", true) ?? DEFAULT_POSTPONE_TIMEZONE;
+
+  const parsed = parseProposedDateTime(dateRaw, timeRaw, timeZone);
+  if (!parsed.ok) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: parsed.message,
+    });
+    return;
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const supabase = createBotSupabase();
+
+  try {
+    const match = await fetchMatchByRobloxCode(supabase, matchCode);
+    if (!match) {
+      await interaction.editReply({
+        content: `No match found for **${matchCode}**. Use the fixture ID (e.g. \`S3-WC-G-F-02\`).`,
+      });
+      return;
+    }
+
+    if (match.status !== "scheduled") {
+      await interaction.editReply({
+        content: `**${match.roblox_match_id}** is **${match.status}** — only **scheduled** fixtures can be force-rescheduled.`,
+      });
+      return;
+    }
+
+    const previous = match.scheduled_at;
+    await applyRescheduledKickoff(
+      interaction.client,
+      supabase,
+      match.id,
+      parsed.iso,
+    );
+
+    const lines = [
+      `✅ Force-rescheduled **${match.roblox_match_id}**`,
+      `**${match.home_name}** vs **${match.away_name}**`,
+    ];
+    if (previous) {
+      lines.push(`Was: ${discordKickoffTimestampRich(previous)}`);
+    }
+    lines.push(`Now: ${discordKickoffTimestampRich(parsed.iso)}`);
+
+    await interaction.editReply({ content: lines.join("\n") });
+  } catch (e) {
+    console.error("[postpone force]", e);
+    await interaction.editReply({
+      content: "Something went wrong while rescheduling. Try again or check logs.",
+    });
+  }
+}
+
+async function handlePostponeRequestCommand(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
   if (!interaction.guild || !interaction.member) {
     await interaction.reply({
       flags: MessageFlags.Ephemeral,
@@ -466,7 +561,7 @@ export async function handlePostponeCommand(
         }
         case "escalated":
           content =
-            "This fixture has an **open postponement escalation** with staff. Wait for staff to resolve it before using **/postpone** again.";
+            "This fixture has an **open postponement escalation** with staff. Wait for staff to resolve it before using **/postpone request** again.";
           break;
       }
       await interaction.editReply({ content });
@@ -753,7 +848,7 @@ export async function handlePostponeDenyButton(
     const opponentName = teamNames.get(row.opponent_team_slug) ?? row.opponent_team_slug;
 
     await dmUser(interaction.client, row.requester_discord_id, {
-      content: `❌ **${opponentName}** denied your postponement request. You may run **\`/postpone\`** again with a different time.`,
+      content: `❌ **${opponentName}** denied your postponement request. You may run **\`/postpone request\`** again with a different time.`,
     });
 
     await interaction.message.edit({ components: [] }).catch(() => {});
@@ -1227,7 +1322,7 @@ export async function processExpiredPostponementRequest(
   const requesterMsg =
     denialCount >= DENIALS_BEFORE_STAFF_ESCALATION
       ? `⏰ **${opponentName}** did not respond to your postponement request within **${OPPONENT_RESPONSE_HOURS} hours**. That counts as a denial (${denialCount}/${DENIALS_BEFORE_STAFF_ESCALATION}). **Staff have been notified** to resolve this fixture.`
-      : `⏰ **${opponentName}** did not respond within **${OPPONENT_RESPONSE_HOURS} hours** — treated as a **denial**. You may run **\`/postpone\`** again with a different time.`;
+      : `⏰ **${opponentName}** did not respond within **${OPPONENT_RESPONSE_HOURS} hours** — treated as a **denial**. You may run **\`/postpone request\`** again with a different time.`;
 
   await dmUser(client, expiredRow.requester_discord_id, { content: requesterMsg });
 

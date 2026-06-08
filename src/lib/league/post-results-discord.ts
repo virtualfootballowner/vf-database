@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { fetchMatchByRobloxId } from "@/bot/results/queries";
+import { fetchMatchByRobloxId } from "@/lib/league/match-results-data";
 import { loadAppliedFromMatchEvents } from "@/lib/league/applied-from-events";
 import { renderLeagueResultsEmbed } from "@/lib/league/results-embed";
 import {
