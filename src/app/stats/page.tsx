@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 import { SiteNav } from "@/components/site-nav";
 import { Badge } from "@/components/ui/badge";
@@ -14,8 +15,13 @@ import {
   isVerifiedRobloxUserId,
   resolveRobloxUserIdsByUsernames,
 } from "@/lib/roblox";
-import { getLeaderboards, type LeaderEntry } from "@/lib/stats-leaders";
+import {
+  getLeaderboards,
+  getTournamentLeaderboards,
+  type LeaderEntry,
+} from "@/lib/stats-leaders";
 import { getSiteStatsBundle } from "@/lib/site-db";
+import { competitionLogo } from "@/lib/trophy-assets";
 import { cn } from "@/lib/utils";
 
 import { StatsSectionNav } from "./stats-section-nav";
@@ -34,12 +40,21 @@ function headshotUserId(
 }
 
 export default async function StatsPage() {
-  const [boards, bundle] = await Promise.all([
+  const [boards, bundle, tournamentBoards] = await Promise.all([
     getLeaderboards(),
     getSiteStatsBundle(),
+    getTournamentLeaderboards(),
   ]);
 
-  const combined = [...boards.goals, ...boards.assists];
+  const visibleTournaments = tournamentBoards.tournaments.filter(
+    (t) => t.goals.length > 0 || t.assists.length > 0,
+  );
+
+  const combined = [
+    ...boards.goals,
+    ...boards.assists,
+    ...visibleTournaments.flatMap((t) => [...t.goals, ...t.assists]),
+  ];
   const needLookup = combined
     .filter((r) => !isVerifiedRobloxUserId(r.roblox_user_id))
     .map((r) => r.roblox_username);
@@ -67,8 +82,9 @@ export default async function StatsPage() {
               Stats
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">
-              All-time leaders from every recorded match. Open a player for
-              full history;               switch to{" "}
+              All-time leaders from every recorded match, then top scorers and
+              assisters within each competition as you scroll. Open a player for
+              full history; switch to{" "}
               <Link
                 href="/stats/matches"
                 className="font-semibold text-white underline decoration-white/35 underline-offset-4 hover:decoration-white/70"
@@ -111,6 +127,32 @@ export default async function StatsPage() {
             resolvedUserIds={resolved}
           />
         </section>
+
+        {visibleTournaments.length > 0 ? (
+          <section className="flex flex-col gap-8">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-white/55">
+                By competition
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+                Tournament leaders
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm text-white/60">
+                Goals and assists counted only within each season and
+                competition — not mixed with other tables or knockouts.
+              </p>
+            </div>
+
+            {visibleTournaments.map((tournament) => (
+              <TournamentLeadersBlock
+                key={`${tournament.season}-${tournament.competition}`}
+                tournament={tournament}
+                headshots={headshots}
+                resolvedUserIds={resolved}
+              />
+            ))}
+          </section>
+        ) : null}
 
         <section className="grid gap-4 sm:grid-cols-2">
           <Link href="/stats/matches" className="block">
@@ -159,6 +201,102 @@ export default async function StatsPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+function abbrevCompetition(competition: string): string {
+  switch (competition) {
+    case "EuroLeague":
+      return "EuroLeague";
+    case "EuroBlox Playoffs":
+      return "EuroBlox";
+    case "British Premier":
+      return "British Premier";
+    case "Serie Italia":
+      return "Serie Italia";
+    case "World Cup":
+      return "World Cup";
+    default:
+      return competition.length > 20
+        ? `${competition.slice(0, 18)}…`
+        : competition;
+  }
+}
+
+function TournamentLeadersBlock({
+  tournament,
+  headshots,
+  resolvedUserIds,
+}: {
+  tournament: {
+    season: number;
+    competition: string;
+    goals: LeaderEntry[];
+    assists: LeaderEntry[];
+  };
+  headshots: Map<string, string>;
+  resolvedUserIds: Map<string, string>;
+}) {
+  const compLogo = competitionLogo(tournament.competition);
+  const tournamentsHref =
+    tournament.season === 3 && tournament.competition === "World Cup"
+      ? "/stats/tournaments/world-cup"
+      : "/stats/tournaments";
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          {compLogo ? (
+            <span
+              aria-hidden
+              className="relative inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/[0.04] ring-1 ring-white/10"
+            >
+              <Image
+                src={compLogo}
+                alt=""
+                fill
+                sizes="36px"
+                className="object-contain p-1"
+              />
+            </span>
+          ) : null}
+          <div className="min-w-0">
+            <h3 className="truncate text-lg font-semibold tracking-tight text-white sm:text-xl">
+              {tournament.competition}
+            </h3>
+            <p className="text-xs text-white/50">
+              Season {tournament.season} · {abbrevCompetition(tournament.competition)}
+            </p>
+          </div>
+        </div>
+        <Link
+          href={tournamentsHref}
+          className="text-xs font-semibold uppercase tracking-[0.18em] text-white/55 transition hover:text-white"
+        >
+          Tables & bracket →
+        </Link>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <LeaderCard
+          title="Top goal scorers"
+          subtitle={`S${tournament.season} · top 10 in ${abbrevCompetition(tournament.competition)}`}
+          rows={tournament.goals}
+          valueLabel="Goals"
+          headshots={headshots}
+          resolvedUserIds={resolvedUserIds}
+        />
+        <LeaderCard
+          title="Top assisters"
+          subtitle={`S${tournament.season} · top 10 in ${abbrevCompetition(tournament.competition)}`}
+          rows={tournament.assists}
+          valueLabel="Assists"
+          headshots={headshots}
+          resolvedUserIds={resolvedUserIds}
+        />
+      </div>
+    </div>
   );
 }
 
