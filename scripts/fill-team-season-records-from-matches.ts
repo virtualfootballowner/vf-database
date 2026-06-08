@@ -45,8 +45,9 @@ async function fillSeason(season: number): Promise<void> {
 
   const { data: rows, error: mErr } = await supabase
     .from("matches")
-    .select("home_team_id, away_team_id, home_score, away_score")
-    .eq("season", season);
+    .select("home_team_id, away_team_id, home_score, away_score, status")
+    .eq("season", season)
+    .eq("status", "completed");
   if (mErr) throw mErr;
 
   const bySlug = new Map<string, Tallies>();

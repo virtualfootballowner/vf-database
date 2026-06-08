@@ -117,6 +117,12 @@ function GroupBracketColumn({
                     </span>
                     <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/45">
                       Group {letter}
+                      {bundle.matches.some((m) => m.played) ? (
+                        <span className="ml-1.5 normal-case tracking-normal text-white/35">
+                          · {bundle.matches.filter((m) => m.played).length}/
+                          {bundle.matches.length} played
+                        </span>
+                      ) : null}
                     </span>
                   </div>
                   <span className="text-[8px] font-semibold uppercase tracking-[0.12em] text-white/30">

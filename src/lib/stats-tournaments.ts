@@ -54,12 +54,19 @@ export function filterKnockoutMatches(
   );
 }
 
+/** Group-stage matches with a recorded result (not upcoming 0–0 placeholders). */
+export function isCompletedGroupMatch(m: MatchRecord): boolean {
+  return m.status === "completed";
+}
+
 export function computeGroupStandings(
   matches: MatchRecord[],
   season: number,
   competition: string,
 ): StandingRow[] {
-  const relevant = filterGroupMatches(matches, season, competition);
+  const relevant = filterGroupMatches(matches, season, competition).filter(
+    isCompletedGroupMatch,
+  );
   if (relevant.length === 0) return [];
 
   type Acc = {

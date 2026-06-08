@@ -80,7 +80,11 @@ function mapDbRowToMatchRecord(
     statusRaw === "live" ||
     statusRaw === "cancelled"
       ? (statusRaw as MatchRecord["status"])
-      : "completed";
+      : row.home_score != null &&
+          row.away_score != null &&
+          (row.home_score > 0 || row.away_score > 0)
+        ? "completed"
+        : "scheduled";
 
   return {
     id: row.roblox_match_id ?? "",

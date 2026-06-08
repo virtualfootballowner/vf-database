@@ -6,6 +6,7 @@ import {
 } from "@/lib/s3-world-cup-groups";
 import {
   filterGroupMatches,
+  isCompletedGroupMatch,
   type StandingRow,
 } from "@/lib/stats-tournaments";
 
@@ -27,10 +28,6 @@ export type WorldCupGroupBundle = {
   standings: StandingRow[];
   matches: WorldCupGroupMatchSummary[];
 };
-
-function isPlayedMatch(m: MatchRecord): boolean {
-  return m.status !== "scheduled";
-}
 
 function slugSetForGroup(letter: S3WorldCupGroupLetter): Set<string> {
   return new Set(S3_WORLD_CUP_GROUPS[letter]);
@@ -64,7 +61,7 @@ export function buildWorldCupGroupBundle(
 ): WorldCupGroupBundle {
   const slugs = S3_WORLD_CUP_GROUPS[letter];
   const groupMatches = worldCupGroupMatches(allMatches, letter);
-  const playedMatches = groupMatches.filter(isPlayedMatch);
+  const playedMatches = groupMatches.filter(isCompletedGroupMatch);
 
   type Acc = {
     team: string;
@@ -156,7 +153,7 @@ export function buildWorldCupGroupBundle(
     awaySlug: m.awaySlug,
     homeScore: m.homeScore,
     awayScore: m.awayScore,
-    played: isPlayedMatch(m),
+    played: isCompletedGroupMatch(m),
   }));
 
   return { letter, standings, matches };

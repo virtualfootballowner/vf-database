@@ -3,6 +3,8 @@ import { SiteNav } from "@/components/site-nav";
 import { TournamentsArchive } from "../tournaments-archive";
 import { StatsSectionNav } from "../stats-section-nav";
 
+export const dynamic = "force-dynamic";
+
 export default function StatsTournamentsPage() {
   return (
     <main className="relative min-h-dvh min-w-0 w-full overflow-x-clip text-white">
