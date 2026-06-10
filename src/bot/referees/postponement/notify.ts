@@ -1,6 +1,4 @@
-import { randomUUID } from "crypto";
-
-import { EmbedBuilder, type Client, type GuildTextBasedChannel } from "discord.js";
+import type { Client, GuildTextBasedChannel } from "discord.js";
 
 import {
   buildAssignmentKickoffLabel,
@@ -14,59 +12,86 @@ import {
   refereeRoleId,
 } from "@/bot/referees/config";
 import {
-  buildPostponementRefereeActionRow,
-  buildPostponementRefereeDmEmbed,
-} from "@/bot/referees/postponement/messages";
-import {
   cancelAssignment,
-  claimedSlotsForAssignment,
   fetchLatestAssignmentForMatch,
   fetchMatchForRefereeRepost,
   fetchPostponementResponsesForBatch,
-  insertPostponementResponse,
+  type MatchForRefereeRepost,
   type PostponementResponseRow,
 } from "@/bot/referees/postponement/queries";
 import type { RefereeAssignmentRow } from "@/bot/referees/queries";
 import { createBotSupabase } from "@/bot/stats-queries";
 import { discordTeamLabel } from "@/bot/discord-team-flags";
 
-async function dmReferee(
-  client: Client,
-  discordId: string,
-  payload: {
-    embeds: EmbedBuilder[];
-    components: ReturnType<typeof buildPostponementRefereeActionRow>[];
-  },
-): Promise<string | null> {
-  try {
-    const user = await client.users.fetch(discordId);
-    const msg = await user.send(payload);
-    return msg.id;
-  } catch (e) {
-    console.error(`[referee-postpone] DM failed for ${discordId}:`, e);
-    return null;
-  }
-}
-
 async function resolveAssignmentsChannel(
   client: Client,
 ): Promise<GuildTextBasedChannel | null> {
   const channelId = refereeAssignmentsChannelId();
-  if (!channelId) return null;
   try {
     const ch = await client.channels.fetch(channelId);
     if (!ch?.isTextBased() || !ch.isSendable()) return null;
     return ch as GuildTextBasedChannel;
-  } catch {
+  } catch (e) {
+    console.error("[referee-postpone] assignments channel fetch:", e);
     return null;
   }
+}
+
+/** Fresh open claim embed — same shape as `/ref-fixtures` posts per match. */
+async function postPostponedRefFixture(
+  client: Client,
+  match: MatchForRefereeRepost,
+  newScheduledAt: string,
+  postedBy: { discordId: string; tag: string },
+): Promise<boolean> {
+  const channel = await resolveAssignmentsChannel(client);
+  if (!channel) {
+    console.error(
+      "[referee-postpone] assignments channel missing — set DISCORD_REFEREE_ASSIGNMENTS_CHANNEL_ID",
+    );
+    return false;
+  }
+
+  const kickoffLabel = buildAssignmentKickoffLabel(newScheduledAt);
+  const result = await postRefereeAssignment({
+    client,
+    guildId: refereeGuildId(),
+    channel,
+    postedByDiscordId: postedBy.discordId,
+    postedByDiscordTag: postedBy.tag,
+    season: match.season ?? 0,
+    competition: match.competition?.trim() || "—",
+    gameWeekLabel: match.game_week_label,
+    homeTeamName: match.home_name,
+    awayTeamName: match.away_name,
+    homeTeamSlug: match.home_slug,
+    awayTeamSlug: match.away_slug,
+    kickoffLabel,
+    matchId: match.id,
+    robloxMatchId: match.roblox_match_id,
+    scheduledAtIso: newScheduledAt,
+  });
+
+  if (!result.ok) {
+    console.error("[referee-postpone] repost failed:", result.error);
+    return false;
+  }
+
+  const matchLine = `${discordTeamLabel(match.home_name, match.home_slug)} vs ${discordTeamLabel(match.away_name, match.away_slug)}`;
+  const roleId = refereeRoleId();
+  await channel.send({
+    content: `<@&${roleId}> 📅 **POSTPONED** — ${matchLine} has a **new kickoff** (${kickoffLabel}). Claim **Main ref** or **Linesman** on the fixture above!`,
+    allowedMentions: { roles: [roleId] },
+  });
+
+  return true;
 }
 
 async function refreshAssignmentKickoffOnly(
   client: Client,
   assignment: RefereeAssignmentRow,
   newScheduledAt: string,
-  match: Awaited<ReturnType<typeof fetchMatchForRefereeRepost>>,
+  match: MatchForRefereeRepost | null,
 ): Promise<void> {
   const supabase = createBotSupabase();
   const kickoffLabel = buildAssignmentKickoffLabel(newScheduledAt);
@@ -97,50 +122,24 @@ async function repostFixtureForReferees(
   newScheduledAt: string,
 ): Promise<void> {
   const supabase = createBotSupabase();
-  const channel = await resolveAssignmentsChannel(client);
   const match = await fetchMatchForRefereeRepost(supabase, assignment.match_id!);
-  if (!channel || !match) {
-    console.error("[referee-postpone] repost: channel or match missing");
+  if (!match) {
+    console.error("[referee-postpone] repost: match missing");
     return;
   }
 
   await cancelAssignment(supabase, assignment.id);
 
-  const kickoffLabel = buildAssignmentKickoffLabel(newScheduledAt);
-  const result = await postRefereeAssignment({
-    client,
-    guildId: refereeGuildId(),
-    channel,
-    postedByDiscordId: assignment.posted_by_discord_id,
-    postedByDiscordTag: assignment.posted_by_discord_tag ?? "VF Bot",
-    season: match.season ?? assignment.season,
-    competition: match.competition?.trim() || assignment.competition,
-    gameWeekLabel: match.game_week_label ?? assignment.game_week_label,
-    homeTeamName: match.home_name,
-    awayTeamName: match.away_name,
-    homeTeamSlug: match.home_slug,
-    awayTeamSlug: match.away_slug,
-    kickoffLabel,
-    matchId: match.id,
-    robloxMatchId: match.roblox_match_id,
-    scheduledAtIso: newScheduledAt,
+  const ok = await postPostponedRefFixture(client, match, newScheduledAt, {
+    discordId: assignment.posted_by_discord_id,
+    tag: assignment.posted_by_discord_tag ?? "VF Bot",
   });
 
-  if (!result.ok) {
-    console.error("[referee-postpone] repost failed:", result.error);
-    return;
+  if (ok) {
+    console.log(
+      `[referee-postpone] reposted assignment for match ${match.id.slice(0, 8)}…`,
+    );
   }
-
-  const matchLine = `${discordTeamLabel(match.home_name, match.home_slug)} vs ${discordTeamLabel(match.away_name, match.away_slug)}`;
-  const roleId = refereeRoleId();
-  await channel.send({
-    content: `<@&${roleId}> 👆 **POSTPONED** — ${matchLine} needs officials at the **new kickoff**. Claim **Main ref** or **Linesman** above!`,
-    allowedMentions: { roles: [roleId] },
-  });
-
-  console.log(
-    `[referee-postpone] reposted assignment for match ${match.id.slice(0, 8)}…`,
-  );
 }
 
 export async function evaluatePostponementBatch(
@@ -181,66 +180,42 @@ export async function evaluatePostponementBatch(
   );
 }
 
+/**
+ * When a fixture is rescheduled, cancel the old ref claim post and publish a
+ * fresh open embed in the assignments channel so officials can reclaim slots.
+ */
 export async function notifyRefereesOfMatchPostponement(
   client: Client,
   matchId: string,
   newScheduledAt: string,
 ): Promise<void> {
   const supabase = createBotSupabase();
-  const assignment = await fetchLatestAssignmentForMatch(supabase, matchId);
-  if (!assignment?.match_id) return;
-
   const match = await fetchMatchForRefereeRepost(supabase, matchId);
-  const slots = claimedSlotsForAssignment(assignment);
-
-  if (slots.length === 0) {
-    await refreshAssignmentKickoffOnly(
-      client,
-      assignment,
-      newScheduledAt,
-      match,
-    );
+  if (!match) {
+    console.error("[referee-postpone] match missing for", matchId);
     return;
   }
 
-  await supabase
-    .from("referee_postponement_responses")
-    .delete()
-    .eq("assignment_id", assignment.id)
-    .eq("status", "pending");
+  const assignment = await fetchLatestAssignmentForMatch(supabase, matchId);
+  const postedBy = {
+    discordId: assignment?.posted_by_discord_id ?? "0",
+    tag: assignment?.posted_by_discord_tag ?? "VF Bot · postponement",
+  };
 
-  for (const { slot, discordId } of slots) {
-    const responseId = randomUUID();
-    const row = await insertPostponementResponse(supabase, {
-      id: responseId,
-      assignmentId: assignment.id,
-      matchId,
-      discordId,
-      slot,
-      newScheduledAt,
-    });
-    if (!row) continue;
-
-    const embed = buildPostponementRefereeDmEmbed(assignment, slot, newScheduledAt, {
-      homeSlug: match?.home_slug,
-      awaySlug: match?.away_slug,
-    });
-    const dmMessageId = await dmReferee(client, discordId, {
-      embeds: [embed],
-      components: [buildPostponementRefereeActionRow(responseId)],
-    });
-
-    if (dmMessageId) {
-      await supabase
-        .from("referee_postponement_responses")
-        .update({ dm_message_id: dmMessageId, updated_at: new Date().toISOString() })
-        .eq("id", responseId);
-    }
+  if (assignment) {
+    await supabase
+      .from("referee_postponement_responses")
+      .delete()
+      .eq("assignment_id", assignment.id);
+    await cancelAssignment(supabase, assignment.id);
   }
 
-  console.log(
-    `[referee-postpone] notified ${slots.length} ref(s) for match ${matchId.slice(0, 8)}…`,
-  );
+  const ok = await postPostponedRefFixture(client, match, newScheduledAt, postedBy);
+  if (ok) {
+    console.log(
+      `[referee-postpone] posted fresh ref fixture for match ${matchId.slice(0, 8)}… → ${refereeAssignmentsChannelId()}`,
+    );
+  }
 }
 
 export async function applyPostponementRefereeResponse(
@@ -248,8 +223,6 @@ export async function applyPostponementRefereeResponse(
   response: PostponementResponseRow,
   action: "confirmed" | "declined",
 ): Promise<void> {
-  const supabase = createBotSupabase();
-
   if (action === "declined") {
     await systemReleaseAssignmentSlot(
       client,

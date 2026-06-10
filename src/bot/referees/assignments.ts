@@ -686,12 +686,11 @@ export async function handleRefFixturesCommand(
     return;
   }
 
-  const channelId = refereeAssignmentsChannelId() ?? interaction.channelId;
+  const channelId = refereeAssignmentsChannelId();
   const channel = await resolveSendableChannel(interaction.client, channelId);
   if (!channel) {
     await interaction.editReply({
-      content:
-        "Could not reach the assignments channel. Set `DISCORD_REFEREE_ASSIGNMENTS_CHANNEL_ID` or run this in a channel the bot can post to.",
+      content: `Could not reach the assignments channel (<#${channelId}>). Check bot **Send Messages** / **Embed Links** there.`,
     });
     return;
   }

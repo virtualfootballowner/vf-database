@@ -3,6 +3,8 @@ import { env } from "@/bot/config";
 const DEFAULT_REFEREE_GUILD_ID = "1506682501605883995";
 const DEFAULT_REFEREE_ROLE_ID = "1507087134497181798";
 const DEFAULT_REFEREE_APPROVAL_CHANNEL_ID = "1508189919732830278";
+/** Ref fixture claim posts (`/ref-fixtures` + auto-repost on postponement). */
+const DEFAULT_REFEREE_ASSIGNMENTS_CHANNEL_ID = "1507090926651179028";
 
 export function refereeGuildId(): string {
   return (
@@ -21,9 +23,11 @@ export function refereeApprovalChannelId(): string {
   );
 }
 
-export function refereeAssignmentsChannelId(): string | undefined {
+export function refereeAssignmentsChannelId(): string {
   const raw = process.env.DISCORD_REFEREE_ASSIGNMENTS_CHANNEL_ID?.trim();
-  return raw && raw.length > 0 ? raw : undefined;
+  return raw && raw.length > 0
+    ? raw
+    : DEFAULT_REFEREE_ASSIGNMENTS_CHANNEL_ID;
 }
 
 export function refereeStaffRoleId(): string | undefined {
@@ -43,10 +47,7 @@ export function isMediaGuild(guildId: string | null | undefined): boolean {
 
 export function logRefereeConfigAtStartup(): void {
   console.log(
-    `[referee] Guild configured: ${refereeGuildId()} · role ${refereeRoleId()} · approval ${refereeApprovalChannelId()}` +
-      (refereeAssignmentsChannelId()
-        ? ` · assignments ${refereeAssignmentsChannelId()}`
-        : ""),
+    `[referee] Guild configured: ${refereeGuildId()} · role ${refereeRoleId()} · approval ${refereeApprovalChannelId()} · assignments ${refereeAssignmentsChannelId()}`,
   );
 }
 

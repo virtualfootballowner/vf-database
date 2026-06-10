@@ -9,7 +9,7 @@ The same VF bot (`DISCORD_BOT_TOKEN`) serves the league guild, VF Media, and the
 | `DISCORD_REFEREE_GUILD_ID` | `1506682501605883995` | Referee Discord server |
 | `DISCORD_REFEREE_ROLE_ID` | `1507087134497181798` | Granted on Approve |
 | `DISCORD_REFEREE_APPROVAL_CHANNEL_ID` | `1508189919732830278` | Application review cards |
-| `DISCORD_REFEREE_ASSIGNMENTS_CHANNEL_ID` | *(unset)* | Fixture posts; falls back to channel where `/ref-post` runs |
+| `DISCORD_REFEREE_ASSIGNMENTS_CHANNEL_ID` | `1507090926651179028` | `/ref-fixtures` posts + auto-repost when a match is postponed |
 | `DISCORD_REFEREE_STAFF_ROLE_ID` | *(unset)* | Optional head-ref role; staff may also use Manage Roles |
 
 Set these on **Railway** (bot service) if you need non-default ids. After deploy, bot startup logs:
