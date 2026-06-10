@@ -4,6 +4,7 @@
 export const TROPHY_IMAGE = {
   euroleague: "/euroleague_2.png",
   eurobloxCup: "/euroblox.png",
+  worldCup: "/worldcup.png",
   ballonDor: "/balon dor.png",
   goldenBoot: "/Golden boot.png",
   goldenGlove: "/golden glove.png",
@@ -55,6 +56,7 @@ export function honorImageForTitle(title: string): string | null {
 export function competitionLogo(competition: string): string | null {
   const t = competition.trim().toLowerCase();
   if (!t) return null;
+  if (t.includes("world cup")) return TROPHY_IMAGE.worldCup;
   if (t.includes("euroblox")) return TROPHY_IMAGE.eurobloxCup;
   if (t.includes("euroleague")) return TROPHY_IMAGE.euroleague;
   return null;

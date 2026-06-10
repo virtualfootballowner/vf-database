@@ -23,6 +23,7 @@ import {
   type TeamRow,
 } from "@/bot/stats-queries";
 import { discordTeamFlag, discordTeamLabel } from "@/bot/discord-team-flags";
+import { fetchTournamentLeaders } from "@/lib/tournament-leaderboards";
 
 /** Verified-only gate for read commands. Mirrors `requireVerifiedRole` in commands.ts. */
 async function requireVerifiedRole(
@@ -98,7 +99,7 @@ export async function handleHelp(
         value: [
           "**`/player`** — career profile, goals, assists, trophies",
           "**`/team`** — season record, manager, full squad by position",
-          "**`/stats`** — all-time top scorers and assisters",
+          "**`/stats`** — all-time top scorers and assisters (optional `competition` + `season` for one tournament)",
           "**`/fixtures`** — next matchweek slate, or last 5 + next 5 for a club/nation",
           "**`/standings`** — league table for a competition + season",
         ].join("\n"),
@@ -250,16 +251,82 @@ export async function handleStats(
   if (!(await requireVerifiedRole(interaction))) return;
   await interaction.deferReply();
 
+  const competition = interaction.options.getString("competition")?.trim() || null;
+  const season = interaction.options.getInteger("season");
+
+  if ((competition && season == null) || (!competition && season != null)) {
+    await interaction.editReply({
+      content:
+        "Use **both** `competition` and `season` for a tournament table (e.g. World Cup + **3**), or leave both blank for all-time leaders.",
+    });
+    return;
+  }
+
   try {
     const supabase = createBotSupabase();
+    const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
+    const hostLabel = env.VFL_SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
+
+    if (competition && season != null) {
+      const catalog = await loadCompetitionCatalog(supabase);
+      const known = catalog.find((c) => c.competition === competition);
+      if (
+        known &&
+        known.seasons.length > 0 &&
+        !known.seasons.includes(season)
+      ) {
+        const allowed = known.seasons.map((s) => `**S${s}**`).join(", ");
+        await interaction.editReply({
+          content: `**${competition}** is on file for ${allowed}. Pick one of those seasons.`,
+        });
+        return;
+      }
+
+      const { goals, assists, totalGoals, totalAssists } =
+        await fetchTournamentLeaders(supabase, season, competition, 10);
+
+      const statsUrl = `${siteBase}/stats`;
+      const embed = new EmbedBuilder()
+        .setColor(0x083696)
+        .setAuthor({
+          name: `VF League · S${season} ${competition}`,
+          url: statsUrl,
+        })
+        .setTitle(`${competition} · Season ${season}`)
+        .setURL(statsUrl)
+        .setDescription(
+          [
+            `Goals and assists counted only in **${competition}** (Season **${season}**).`,
+            `> **${totalGoals}** goals · **${totalAssists}** assists in this competition`,
+            `[Full stats on ${hostLabel}](${statsUrl})`,
+          ].join("\n"),
+        )
+        .addFields(
+          {
+            name: "⚽ Top scorers",
+            value: renderLeaderboard(goals, "⚽", "goals").slice(0, 1024),
+            inline: true,
+          },
+          {
+            name: "🅰️ Top assisters",
+            value: renderLeaderboard(assists, "🅰️", "assists").slice(0, 1024),
+            inline: true,
+          },
+        )
+        .setFooter({
+          text: "VF League Database · Tournament leaders from match events",
+        })
+        .setTimestamp(new Date());
+
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
     const [scorers, assisters, totals] = await Promise.all([
       fetchTopByMetric(supabase, "goals_total", 10),
       fetchTopByMetric(supabase, "assists_total", 10),
       fetchTotals(supabase),
     ]);
-
-    const siteBase = env.VFL_SITE_URL.replace(/\/$/, "");
-    const hostLabel = env.VFL_SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
     const embed = new EmbedBuilder()
       .setColor(0x083696)
@@ -274,6 +341,7 @@ export async function handleStats(
           `Aggregated across **every** competition and season on file.`,
           `> **${totals.goals}** total goals · **${totals.assists}** total assists`,
           `[Browse all players on ${hostLabel}](${siteBase}/players)`,
+          `Filter one tournament: \`/stats competition:… season:…\``,
         ].join("\n"),
       )
       .addFields(
@@ -297,7 +365,7 @@ export async function handleStats(
   } catch (err) {
     console.error("/stats failed:", err);
     await interaction.editReply({
-      content: `Could not load all-time stats: ${formatErr(err)}`,
+      content: `Could not load stats: ${formatErr(err)}`,
     });
   }
 }

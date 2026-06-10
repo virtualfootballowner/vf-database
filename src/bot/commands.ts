@@ -693,7 +693,24 @@ export const leagueSlashCommandDefinitions = [
   new SlashCommandBuilder()
     .setName("stats")
     .setDescription(
-      "All-time top scorers and assisters across every competition",
+      "Top scorers and assisters — all-time or for one competition + season",
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName("competition")
+        .setDescription(
+          "Optional — filter to one tournament (e.g. World Cup); requires season",
+        )
+        .setRequired(false)
+        .setAutocomplete(true),
+    )
+    .addIntegerOption((opt) =>
+      opt
+        .setName("season")
+        .setDescription("Season when filtering by competition (e.g. 3)")
+        .setRequired(false)
+        .setMinValue(1)
+        .setMaxValue(20),
     )
     .toJSON(),
 
@@ -909,8 +926,11 @@ export async function handleSlashCommand(
 export async function handleAutocomplete(
   interaction: AutocompleteInteraction,
 ): Promise<void> {
-  // /standings — competition autocomplete is its own thing.
-  if (interaction.commandName === "standings") {
+  // /standings and /stats — competition autocomplete.
+  if (
+    interaction.commandName === "standings" ||
+    interaction.commandName === "stats"
+  ) {
     await handleCompetitionAutocomplete(interaction);
     return;
   }
