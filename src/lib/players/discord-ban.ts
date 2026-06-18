@@ -63,6 +63,19 @@ export function banUntilFromDurationChoice(
   return new Date(from.getTime() + ms);
 }
 
+const STAFF_BAN_REASON_RE = /^Banned by .+?:\s*([\s\S]*)$/;
+
+/** User-facing ban reason for embeds (strips `/ban` audit prefix when present). */
+export function formatBanReasonForDisplay(
+  raw: string | null | undefined,
+): string {
+  const t = raw?.trim();
+  if (!t) return "*No reason provided*";
+  const m = t.match(STAFF_BAN_REASON_RE);
+  const inner = m?.[1]?.trim();
+  return inner || t;
+}
+
 export function discordBanSlashDurationLabel(choice: string): string {
   const labels: Record<string, string> = {
     "1w": "1 week",

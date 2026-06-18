@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchMatchByRobloxId } from "@/lib/league/match-results-data";
 import { loadAppliedFromMatchEvents } from "@/lib/league/applied-from-events";
 import { renderLeagueResultsEmbed } from "@/lib/league/results-embed";
+import { refreshTeamSeasonRecordsForMatchBestEffort } from "@/lib/league/team-season-records";
 import {
   isWorldCupFixtureId,
   worldCupResultsChannelId,
@@ -89,6 +90,12 @@ export async function postLeagueResultsDiscord(
       reason: `Match ${code} is ${match.status}; only completed fixtures are posted.`,
     };
   }
+
+  await refreshTeamSeasonRecordsForMatchBestEffort(
+    supabase,
+    match.id,
+    "[wc-results]",
+  );
 
   const channelId = options?.channelId?.trim() || worldCupResultsChannelId();
   let trackPost = true;

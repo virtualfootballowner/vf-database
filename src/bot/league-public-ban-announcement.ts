@@ -2,11 +2,13 @@ import type { Client, GuildBan } from "discord.js";
 import { EmbedBuilder } from "discord.js";
 
 import { env } from "@/bot/config";
+import { fetchRecentBanAuditReason } from "@/bot/ban-audit";
 import { formatBailAmountForDisplay } from "@/lib/players/format-ban-bail";
 import { createBotSupabase } from "@/bot/stats-queries";
 import { getRobloxHeadshotsForBot } from "@/lib/roblox";
 import {
   describeBanForUi,
+  formatBanReasonForDisplay,
   isDiscordBanActive,
 } from "@/lib/players/discord-ban";
 
@@ -105,8 +107,15 @@ async function postLeaguePublicBanAnnouncement(
         ? `${siteBase}/players/${encodeURIComponent(robloxName)}`
         : null;
 
-    const reasonText =
-      player?.discord_ban_reason?.trim() || auditReason || "*No reason provided*";
+    const guild = await client.guilds.fetch(env.DISCORD_GUILD_ID).catch(() => null);
+    let auditFallback: string | null = null;
+    if (!player?.discord_ban_reason?.trim() && !auditReason && guild) {
+      auditFallback = await fetchRecentBanAuditReason(guild, discordUserId);
+    }
+
+    const reasonText = formatBanReasonForDisplay(
+      player?.discord_ban_reason?.trim() || auditReason || auditFallback,
+    );
 
     const bailNum = Number(player?.discord_ban_bail_amount);
     const bailField =
@@ -132,7 +141,8 @@ async function postLeaguePublicBanAnnouncement(
           : []),
         {
           name: "Reason",
-          value: reasonText.length > 900 ? `${reasonText.slice(0, 897)}…` : reasonText,
+          value:
+            reasonText.length > 900 ? `${reasonText.slice(0, 897)}…` : reasonText,
           inline: false,
         },
       )

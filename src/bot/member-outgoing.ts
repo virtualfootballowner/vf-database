@@ -8,6 +8,7 @@ import {
 
 import { env } from "@/bot/config";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { formatBanReasonForDisplay } from "@/lib/players/discord-ban";
 
 export type MemberOutgoingReason = "banned" | "kicked" | "left_voluntarily";
 
@@ -88,6 +89,7 @@ export async function postMemberOutgoing(
   guild: Guild,
   user: User,
   reason: MemberOutgoingReason,
+  banReason?: string | null,
 ): Promise<void> {
   const channelId = env.DISCORD_MEMBER_OUTGOING_CHANNEL_ID;
   if (!channelId?.trim()) return;
@@ -105,6 +107,11 @@ export async function postMemberOutgoing(
           .join("\n")
       : "**Roblox:** not linked in VF database (`players.discord_id`)";
 
+  const banReasonLine =
+    reason === "banned"
+      ? `**Reason provided:** ${formatBanReasonForDisplay(banReason)}`
+      : null;
+
   const embed = new EmbedBuilder()
     .setColor(
       reason === "banned"
@@ -119,9 +126,12 @@ export async function postMemberOutgoing(
         `**Member:** ${userDisplayForEmbed(user)}`,
         `**Discord user ID:** \`${user.id}\``,
         `**Reason:** ${reasonLabel(reason)}`,
+        banReasonLine,
         "",
         robloxLine,
-      ].join("\n"),
+      ]
+        .filter((line) => line !== null)
+        .join("\n"),
     )
     .setThumbnail(user.displayAvatarURL({ size: 128 }))
     .setFooter({ text: "VFL outgoing log" })

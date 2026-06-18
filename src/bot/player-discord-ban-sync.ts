@@ -6,18 +6,20 @@ export async function setPlayerDiscordBanFromGuild(
   discordUserId: string,
   opts: {
     at: Date;
-    reason: string | null;
+    /** Omit to leave `discord_ban_reason` unchanged (avoids gateway races wiping `/ban`). */
+    reason?: string | null;
     /** Omit to leave `discord_banned_until` unchanged (gateway sync). */
     until?: Date | null;
     /** When provided (including `null`), updates `discord_ban_bail_amount`. When omitted, column unchanged. */
     bailAmount?: number | null;
   },
 ): Promise<void> {
-  const reason = opts.reason?.trim() || null;
   const patch: Record<string, unknown> = {
     discord_banned_at: opts.at.toISOString(),
-    discord_ban_reason: reason,
   };
+  if (Object.prototype.hasOwnProperty.call(opts, "reason")) {
+    patch.discord_ban_reason = opts.reason?.trim() || null;
+  }
   if (opts.until !== undefined) {
     patch.discord_banned_until = opts.until
       ? opts.until.toISOString()

@@ -153,6 +153,8 @@ import {
   handlePostponeStaffTimezoneSelect,
 } from "@/bot/postpone/handlers";
 import { scheduleLeaguePublicBanAnnouncement } from "@/bot/league-public-ban-announcement";
+import { fetchRecentBanAuditReason } from "@/bot/ban-audit";
+import { backfillLeagueResultsDiscord } from "@/lib/league/backfill-results-discord";
 import {
   createBotSupabase,
   logSeason3NationManagers,
@@ -350,6 +352,10 @@ client.once(Events.ClientReady, async (readyClient) => {
     console.error("Backfill failed:", error);
   });
 
+  void backfillLeagueResultsDiscord(createBotSupabase()).catch((error) => {
+    console.error("[wc-results-backfill] failed:", error);
+  });
+
   scheduleCreatorPostingInactivityJob(readyClient);
   scheduleDiscordBanExpiryJob(readyClient);
   scheduleContractOfferExpiryJob(readyClient);
@@ -426,13 +432,16 @@ client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
 client.on(Events.GuildBanAdd, async (ban) => {
   try {
     if (ban.guild.id !== env.DISCORD_GUILD_ID) return;
-    await postMemberOutgoing(ban.guild, ban.user, "banned");
+    const auditReason = ban.reason?.trim() ?? "";
+    const banReasonForLog =
+      auditReason ||
+      (await fetchRecentBanAuditReason(ban.guild, ban.user.id));
+    await postMemberOutgoing(ban.guild, ban.user, "banned", banReasonForLog);
     try {
-      const auditReason = ban.reason?.trim() ?? "";
       const fromSlashCommand = /^Banned by .+:/.test(auditReason);
       await setPlayerDiscordBanFromGuild(createBotSupabase(), ban.user.id, {
         at: new Date(),
-        reason: ban.reason ?? null,
+        ...(auditReason ? { reason: auditReason } : {}),
         ...(fromSlashCommand ? {} : { bailAmount: null }),
       });
     } catch (syncErr) {

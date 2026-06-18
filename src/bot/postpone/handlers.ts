@@ -1038,6 +1038,8 @@ export async function escalatePostponement(
       [
         `**Fixture:** ${fixture}`,
         `📅 **Original Time:** ${discordKickoffTimestampRich(escalated.original_scheduled_at)}`,
+        `📅 **Proposed:** ${discordKickoffTimestampRich(escalated.proposed_scheduled_at)}`,
+        `💬 **Reason:** "${escalated.reason.length > 500 ? `${escalated.reason.slice(0, 497)}…` : escalated.reason}"`,
         `**Requested by:** <@${escalated.requester_discord_id}>`,
         `**Opponent:** <@${escalated.opponent_discord_id ?? "unknown"}>`,
         "",
