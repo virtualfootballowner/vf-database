@@ -224,7 +224,7 @@ const DEFAULT_CREATOR_CHECKLIST_CHANNEL_URL =
 
 /** VF Private Testing Hub — override via DISCORD_CREATOR_PRIVATE_TESTING_INVITE_URL. */
 const DEFAULT_CREATOR_PRIVATE_TESTING_INVITE_URL =
-  "https://discord.gg/F6UCX2xAHV";
+  "https://discord.gg/eaGN7qekV3";
 
 function creatorApprovalDmContent(): string {
   const checklistUrl =

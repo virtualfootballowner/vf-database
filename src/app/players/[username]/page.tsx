@@ -402,8 +402,8 @@ export default async function PlayerDetailPage({
               Match appearances
             </h2>
             <p className="mt-1 max-w-2xl text-sm text-white/55">
-              Games where this player appears on the match sheet (goals,
-              assists, cards, MOTM, etc.).
+              Games where this player was on the match sheet — from lineup
+              records or match events (goals, assists, cards, MOTM).
             </p>
           </div>
 
@@ -411,16 +411,16 @@ export default async function PlayerDetailPage({
             <Card className="py-8">
               <CardContent className="flex flex-col items-center gap-2 text-center">
                 <p className="text-sm font-semibold text-white">
-                  No match events found for this player.
+                  No recorded match appearances for this player.
                 </p>
                 <p className="max-w-md text-xs text-white/55">
-                  After stats are imported into{" "}
+                  After they appear in a live-recorded lineup (
+                  <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">
+                    match_appearances
+                  </code>
+                  ) or have stats in{" "}
                   <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">
                     match_events
-                  </code>{" "}
-                  with a linked{" "}
-                  <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">
-                    player_id
                   </code>
                   , or when they appear in the archive CSV under this Roblox
                   account or username, games will list here.

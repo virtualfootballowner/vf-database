@@ -97,6 +97,14 @@ function summaryLine(a: PlayerMatchAppearance): string | null {
 
 export { summaryLine };
 
+function isMissingRelation(error: { code?: string; message?: string }): boolean {
+  return (
+    error.code === "PGRST205" ||
+    (error.message?.includes("match_appearances") ?? false) ||
+    (error.message?.includes("Could not find the table") ?? false)
+  );
+}
+
 function sortAppearances(rows: PlayerMatchAppearance[]) {
   rows.sort((a, b) => {
     if (a.date !== b.date) return b.date.localeCompare(a.date);
@@ -110,14 +118,41 @@ async function loadFromSupabase(
 ): Promise<PlayerMatchAppearance[] | null> {
   try {
     const supabase = createSupabaseServerClient();
-    const { data: events, error: evErr } = await supabase
-      .from("match_events")
-      .select("match_id, event_type, details")
-      .eq("player_id", playerId);
 
-    if (evErr || !events?.length) return null;
+    const [appsRes, evsRes] = await Promise.all([
+      supabase
+        .from("match_appearances")
+        .select("match_id")
+        .eq("player_id", playerId),
+      supabase
+        .from("match_events")
+        .select("match_id, event_type, details")
+        .eq("player_id", playerId),
+    ]);
 
-    const matchIds = [...new Set(events.map((e) => e.match_id))];
+    const events = evsRes.error ? [] : (evsRes.data ?? []);
+    const appearanceMatchIds =
+      appsRes.error && !isMissingRelation(appsRes.error)
+        ? []
+        : (appsRes.data ?? []).map((r) => r.match_id);
+
+    if (
+      evsRes.error &&
+      !isMissingRelation(evsRes.error) &&
+      appearanceMatchIds.length === 0
+    ) {
+      return null;
+    }
+
+    const matchIds = [
+      ...new Set([
+        ...appearanceMatchIds,
+        ...events.map((e) => e.match_id),
+      ]),
+    ];
+
+    if (matchIds.length === 0) return null;
+
     const { data: matchRows, error: mErr } = await supabase
       .from("matches")
       .select(
