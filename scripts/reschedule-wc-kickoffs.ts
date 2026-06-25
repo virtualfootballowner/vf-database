@@ -81,15 +81,22 @@ async function main(): Promise<void> {
         !Array.isArray(fixture.metadata)
           ? (fixture.metadata as Record<string, unknown>)
           : {};
+      const fixturePatch: Record<string, unknown> = {
+        metadata: {
+          ...prev,
+          scheduled_at: scheduledAt,
+          calendar_date: calendarDate,
+        },
+      };
+      if (row.home_team_name.trim()) {
+        fixturePatch.home_team_name = row.home_team_name;
+      }
+      if (row.away_team_name.trim()) {
+        fixturePatch.away_team_name = row.away_team_name;
+      }
       const { error: fErr } = await supabase
         .from("fixtures")
-        .update({
-          metadata: {
-            ...prev,
-            scheduled_at: scheduledAt,
-            calendar_date: calendarDate,
-          },
-        })
+        .update(fixturePatch)
         .eq("id", fixture.id);
       if (fErr) throw fErr;
       fixtureUpdates += 1;

@@ -28,6 +28,12 @@ export default async function TournamentPage() {
   const teamBySlug = new Map<string, Team>(
     teams.filter((t) => t.slug).map((t) => [t.slug, t]),
   );
+  const wcFixtureGroup = bundle.fixtureGroups.find(
+    (g) => g.season === TOURNAMENT_SEASON && g.competition === "World Cup",
+  );
+  const fixtureByCode = new Map(
+    (wcFixtureGroup?.rows ?? []).map((row) => [row.id, row]),
+  );
 
   return (
     <main className="relative min-h-dvh min-w-0 w-full overflow-x-clip text-white">
@@ -68,6 +74,7 @@ export default async function TournamentPage() {
         <WorldCupFixturesSection
           teamBySlug={teamBySlug}
           matchesByRobloxId={bundle.matchesByRobloxId}
+          fixtureByCode={fixtureByCode}
         />
       </div>
     </main>

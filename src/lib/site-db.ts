@@ -199,8 +199,8 @@ function buildFixtureGroupsDb(
       season: f.season,
       competition: f.competition,
       stage: f.stage,
-      teamA: f.home_team_name?.trim() || homeSlot || "",
-      teamB: f.away_team_name?.trim() || awaySlot || "",
+      teamA: m?.homeTeam?.trim() || f.home_team_name?.trim() || homeSlot || "",
+      teamB: m?.awayTeam?.trim() || f.away_team_name?.trim() || awaySlot || "",
       match: m,
       schedule: liveSchedule,
     };

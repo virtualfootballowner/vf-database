@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import type { MatchRecord } from "@/app/stats/matches-data";
+import type { FixtureRow } from "@/app/stats/fixtures-data";
 import { FixtureKickoffTime } from "@/components/fixture-kickoff-time";
 import { TeamCrest } from "@/app/teams/team-crest";
 import type { Team } from "@/app/teams/teams-data";
@@ -20,6 +21,7 @@ import {
 } from "@/lib/s3-world-cup-knockout-schedule";
 import { compareScheduledAtChronological } from "@/lib/fixture-sort";
 import { formatWcKickoff } from "@/lib/wc-fixture-kickoff";
+import { resolveWcFixtureDisplay } from "@/lib/wc-fixture-display";
 import { cn } from "@/lib/utils";
 
 function kickoffIsoForFixture(
@@ -121,23 +123,30 @@ function FixtureMatchLink({
 function GroupFixtureCard({
   fx,
   teamBySlug,
+  fixtureRow,
   matchHref,
   matchesByRobloxId,
 }: {
   fx: S3WorldCupGroupFixture;
   teamBySlug: Map<string, Team>;
+  fixtureRow?: FixtureRow;
   matchHref: string | null;
   matchesByRobloxId: Map<string, MatchRecord>;
 }) {
-  const home = teamBySlug.get(fx.homeSlug);
-  const away = teamBySlug.get(fx.awaySlug);
-  const kickoffIso = kickoffIsoForFixture(
-    fx.fixtureCode,
-    fx.scheduledAt,
+  const resolved = resolveWcFixtureDisplay({
+    fixtureCode: fx.fixtureCode,
+    staticHomeLabel: fx.homeTeamName,
+    staticAwayLabel: fx.awayTeamName,
+    staticHomeSlug: fx.homeSlug,
+    staticAwaySlug: fx.awaySlug,
+    staticScheduledAt: fx.scheduledAt,
+    fixtureRow,
     matchesByRobloxId,
-  );
-  const kickoffDate = kickoffDateLabel(kickoffIso);
-  const match = matchForFixture(fx.fixtureCode, matchesByRobloxId);
+  });
+  const home = resolved.homeSlug ? teamBySlug.get(resolved.homeSlug) : undefined;
+  const away = resolved.awaySlug ? teamBySlug.get(resolved.awaySlug) : undefined;
+  const kickoffDate = kickoffDateLabel(resolved.kickoffIso);
+  const match = resolved.match;
   const played = isPlayedFixture(match);
 
   return (
@@ -161,24 +170,24 @@ function GroupFixtureCard({
             {kickoffDate}
           </span>
           <span className="max-w-[168px] text-[10px] font-medium leading-snug tracking-[0.04em] text-white/45">
-            <FixtureKickoffTime iso={kickoffIso} />
+            <FixtureKickoffTime iso={resolved.kickoffIso} />
           </span>
         </div>
 
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-4">
           {home ? (
-            <TeamFixtureLine team={home} name={fx.homeTeamName} align="end" />
+            <TeamFixtureLine team={home} name={resolved.homeName} align="end" />
           ) : (
             <span className="justify-self-end text-sm font-semibold text-white">
-              {fx.homeTeamName}
+              {resolved.homeName}
             </span>
           )}
           <FixtureCenter match={match} />
           {away ? (
-            <TeamFixtureLine team={away} name={fx.awayTeamName} align="start" />
+            <TeamFixtureLine team={away} name={resolved.awayName} align="start" />
           ) : (
             <span className="justify-self-start text-sm font-semibold text-white">
-              {fx.awayTeamName}
+              {resolved.awayName}
             </span>
           )}
         </div>
@@ -200,19 +209,30 @@ function GroupFixtureCard({
 
 function KnockoutFixtureCard({
   fx,
+  teamBySlug,
+  fixtureRow,
   matchHref,
   matchesByRobloxId,
 }: {
   fx: S3WorldCupKnockoutFixture;
+  teamBySlug: Map<string, Team>;
+  fixtureRow?: FixtureRow;
   matchHref: string | null;
   matchesByRobloxId: Map<string, MatchRecord>;
 }) {
-  const kickoffIso = kickoffIsoForFixture(
-    fx.fixtureCode,
-    fx.scheduledAt,
+  const resolved = resolveWcFixtureDisplay({
+    fixtureCode: fx.fixtureCode,
+    staticHomeLabel: fx.homeLabel,
+    staticAwayLabel: fx.awayLabel,
+    staticHomeSlug: fx.homeSlug,
+    staticAwaySlug: fx.awaySlug,
+    staticScheduledAt: fx.scheduledAt,
+    fixtureRow,
     matchesByRobloxId,
-  );
-  const match = matchForFixture(fx.fixtureCode, matchesByRobloxId);
+  });
+  const home = resolved.homeSlug ? teamBySlug.get(resolved.homeSlug) : undefined;
+  const away = resolved.awaySlug ? teamBySlug.get(resolved.awaySlug) : undefined;
+  const match = resolved.match;
   const played = isPlayedFixture(match);
 
   return (
@@ -233,7 +253,7 @@ function KnockoutFixtureCard({
       <CardContent className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-3 sm:grid-cols-[minmax(148px,168px)_1fr_auto] sm:gap-4 sm:px-4 sm:py-3.5">
         <div className="flex flex-col gap-1">
           <span className="max-w-[168px] text-[10px] font-medium leading-snug tracking-[0.04em] text-white/50">
-            <FixtureKickoffTime iso={kickoffIso} />
+            <FixtureKickoffTime iso={resolved.kickoffIso} />
           </span>
           <span className="text-[10px] uppercase tracking-[0.18em] text-white/40">
             {fx.shortCode}
@@ -241,13 +261,21 @@ function KnockoutFixtureCard({
         </div>
 
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-4">
-          <span className="justify-self-end text-right text-sm font-semibold text-white/75">
-            {fx.homeLabel}
-          </span>
+          {home ? (
+            <TeamFixtureLine team={home} name={resolved.homeName} align="end" />
+          ) : (
+            <span className="justify-self-end text-right text-sm font-semibold text-white/75">
+              {resolved.homeName}
+            </span>
+          )}
           <FixtureCenter match={match} />
-          <span className="justify-self-start text-left text-sm font-semibold text-white/75">
-            {fx.awayLabel}
-          </span>
+          {away ? (
+            <TeamFixtureLine team={away} name={resolved.awayName} align="start" />
+          ) : (
+            <span className="justify-self-start text-left text-sm font-semibold text-white/75">
+              {resolved.awayName}
+            </span>
+          )}
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1">
@@ -336,9 +364,11 @@ const koByCode = new Map(
 export function WorldCupFixturesSection({
   teamBySlug,
   matchesByRobloxId,
+  fixtureByCode,
 }: {
   teamBySlug: Map<string, Team>;
   matchesByRobloxId: Map<string, MatchRecord>;
+  fixtureByCode: Map<string, FixtureRow>;
 }) {
   const hrefFor = (fixtureCode: string) =>
     fixtureCodeMatchHref(fixtureCode, matchesByRobloxId);
@@ -418,6 +448,7 @@ export function WorldCupFixturesSection({
                   key={fx.fixtureCode}
                   fx={fx}
                   teamBySlug={teamBySlug}
+                  fixtureRow={fixtureByCode.get(fx.fixtureCode)}
                   matchHref={hrefFor(fx.fixtureCode)}
                   matchesByRobloxId={matchesByRobloxId}
                 />
@@ -451,6 +482,8 @@ export function WorldCupFixturesSection({
                     <KnockoutFixtureCard
                       key={code}
                       fx={fx}
+                      teamBySlug={teamBySlug}
+                      fixtureRow={fixtureByCode.get(code)}
                       matchHref={hrefFor(code)}
                       matchesByRobloxId={matchesByRobloxId}
                     />

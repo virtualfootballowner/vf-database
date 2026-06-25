@@ -1,7 +1,10 @@
 /**
  * Season 3 World Cup knockout tree — slot labels from the official bracket sheet.
- * Group nations are filled after the draw; these labels stay fixed through the tournament.
+ * R16 ties show resolved nations once the knockout draw is set.
  */
+
+import { teams } from "@/app/teams/teams-data";
+import { S3_WORLD_CUP_R16_DRAW_BY_CODE } from "@/lib/s3-world-cup-r16-draw";
 
 export type WorldCupKnockoutMatchDef = {
   fixtureCode: string;
@@ -10,11 +13,27 @@ export type WorldCupKnockoutMatchDef = {
   stage: "Round of 16" | "Quarter-Final" | "Semi-Final" | "Final";
   homeLabel: string;
   awayLabel: string;
+  homeSlug?: string;
+  awaySlug?: string;
   feedsHomeOf?: string;
   feedsAwayOf?: string;
 };
 
-export const S3_WORLD_CUP_KNOCKOUT_MATCHES: WorldCupKnockoutMatchDef[] = [
+const teamNameBySlug = new Map(teams.map((t) => [t.slug, t.name]));
+
+function applyR16Draw(def: WorldCupKnockoutMatchDef): WorldCupKnockoutMatchDef {
+  const draw = S3_WORLD_CUP_R16_DRAW_BY_CODE.get(def.fixtureCode);
+  if (!draw) return def;
+  return {
+    ...def,
+    homeLabel: teamNameBySlug.get(draw.homeSlug) ?? draw.homeSlug,
+    awayLabel: teamNameBySlug.get(draw.awaySlug) ?? draw.awaySlug,
+    homeSlug: draw.homeSlug,
+    awaySlug: draw.awaySlug,
+  };
+}
+
+const S3_WORLD_CUP_KNOCKOUT_MATCHES_RAW: WorldCupKnockoutMatchDef[] = [
   {
     fixtureCode: "S3-WC-R16-01",
     shortCode: "KO1",
@@ -135,6 +154,9 @@ export const S3_WORLD_CUP_KNOCKOUT_MATCHES: WorldCupKnockoutMatchDef[] = [
     awayLabel: "SF2",
   },
 ];
+
+export const S3_WORLD_CUP_KNOCKOUT_MATCHES: WorldCupKnockoutMatchDef[] =
+  S3_WORLD_CUP_KNOCKOUT_MATCHES_RAW.map(applyR16Draw);
 
 const matchByCode = new Map(
   S3_WORLD_CUP_KNOCKOUT_MATCHES.map((m) => [m.fixtureCode, m]),

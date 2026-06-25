@@ -19,6 +19,7 @@ import {
 } from "../src/lib/s3-world-cup-fixtures";
 import { S3_WORLD_CUP_GROUP_FIXTURES } from "../src/lib/s3-world-cup-group-schedule";
 import { S3_WORLD_CUP_GROUPS } from "../src/lib/s3-world-cup-groups";
+import { syncWcKnockoutMatches } from "../src/lib/sync-wc-knockout-matches";
 import { teams as catalogTeams } from "../src/app/teams/teams-data";
 
 config({ path: path.resolve(process.cwd(), ".env.local"), override: true });
@@ -294,6 +295,21 @@ async function upsertS3ScheduledGroupMatches(): Promise<void> {
   console.log(`Scheduled matches: ${rows.length} S3 World Cup group fixtures.`);
 }
 
+async function upsertS3ScheduledKnockoutMatches(): Promise<void> {
+  const result = await syncWcKnockoutMatches(supabase);
+  if (result.matchUpserts === 0 && result.fixtureUpserts === 0) {
+    console.log("Scheduled matches: no resolved knockout draw to sync.");
+    return;
+  }
+  console.log(
+    `Scheduled matches: ${result.matchUpserts} knockout fixtures synced` +
+      (result.skippedCompleted > 0
+        ? ` (${result.skippedCompleted} completed unchanged)`
+        : "") +
+      ".",
+  );
+}
+
 async function linkFixtures(): Promise<void> {
   const { data, error } = await supabase.rpc("link_fixtures_to_matches");
   if (error) throw error;
@@ -305,6 +321,7 @@ async function main(): Promise<void> {
   await upsertFixtures();
   await patchTournamentStructures();
   await upsertS3ScheduledGroupMatches();
+  await upsertS3ScheduledKnockoutMatches();
   await linkFixtures();
   console.log("seed-fixtures-assets done.");
 }
