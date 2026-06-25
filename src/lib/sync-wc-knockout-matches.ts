@@ -73,7 +73,7 @@ export async function syncWcKnockoutMatches(
       scheduled_at: fx.scheduledAt,
       season: 3,
       competition: "World Cup",
-      game_week_label: fx.shortCode,
+      game_week_label: fx.stage,
       match_notes: `Stadium: ${fx.stadium}`,
     };
 

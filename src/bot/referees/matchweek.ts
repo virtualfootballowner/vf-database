@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  matchweekKey,
+  matchweekLabel,
+} from "@/lib/league/matchweek-bundle";
+
 export type RefMatchweekMatch = {
   id: string;
   roblox_match_id: string | null;
@@ -24,24 +29,6 @@ export type RefMatchweekBundle = {
   season: number;
   matches: RefMatchweekMatch[];
 };
-
-function matchweekKey(m: {
-  season: number | null;
-  competition: string | null;
-  game_week_label: string | null;
-  match_week: number | null;
-  scheduled_at: string;
-}): string {
-  const gw = m.game_week_label?.trim();
-  if (gw && gw !== "—") {
-    return `${m.season ?? 0}|${m.competition ?? ""}|${gw}`;
-  }
-  if (m.match_week != null) {
-    return `${m.season ?? 0}|${m.competition ?? ""}|mw:${m.match_week}`;
-  }
-  const day = m.scheduled_at?.slice(0, 10) ?? "unknown";
-  return `${m.season ?? 0}|${m.competition ?? ""}|d:${day}`;
-}
 
 export async function fetchNextMatchweekBundle(
   supabase: SupabaseClient,
@@ -100,12 +87,8 @@ export async function fetchNextMatchweekBundle(
 
   if (enriched.length === 0) return null;
 
-  const label =
-    first.game_week_label?.trim() ||
-    (first.match_week != null ? `Matchweek ${first.match_week}` : "Next matchday");
-
   return {
-    label,
+    label: matchweekLabel(first),
     competition: first.competition?.trim() || "—",
     season: first.season ?? 0,
     matches: enriched,

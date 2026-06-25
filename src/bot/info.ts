@@ -23,6 +23,10 @@ import {
   type TeamRow,
 } from "@/bot/stats-queries";
 import { discordTeamFlag, discordTeamLabel } from "@/bot/discord-team-flags";
+import {
+  matchweekKey,
+  matchweekLabel,
+} from "@/lib/league/matchweek-bundle";
 import { fetchTournamentLeaders } from "@/lib/tournament-leaderboards";
 
 /** Verified-only gate for read commands. Mirrors `requireVerifiedRole` in commands.ts. */
@@ -457,18 +461,6 @@ function trimEmbedField(text: string, max = 1024): string {
   return first ?? text.slice(0, max);
 }
 
-function matchweekKey(m: ScheduledMatchRow): string {
-  const gw = m.game_week_label?.trim();
-  if (gw && gw !== "—") {
-    return `${m.season ?? 0}|${m.competition ?? ""}|${gw}`;
-  }
-  if (m.match_week != null) {
-    return `${m.season ?? 0}|${m.competition ?? ""}|mw:${m.match_week}`;
-  }
-  const day = m.scheduled_at?.slice(0, 10) ?? "unknown";
-  return `${m.season ?? 0}|${m.competition ?? ""}|d:${day}`;
-}
-
 async function resolveTeamWithId(
   supabase: SupabaseClient,
   cachedRows: TeamRow[],
@@ -588,12 +580,14 @@ async function fetchPastMatchesForTeam(
 async function fetchScheduledMatches(
   supabase: SupabaseClient,
 ): Promise<ScheduledMatchRow[]> {
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("matches")
     .select(
       "id, roblox_match_id, season, competition, stage, match_week, game_week_label, scheduled_at, home_team_id, away_team_id, match_notes",
     )
     .eq("status", "scheduled")
+    .gt("scheduled_at", now)
     .order("scheduled_at", { ascending: true });
   if (error) throw error;
   return (data ?? []) as ScheduledMatchRow[];
@@ -654,12 +648,9 @@ async function fetchNextMatchweekBundle(
   const first = scheduled[0]!;
   const key = matchweekKey(first);
   const bucket = scheduled.filter((m) => matchweekKey(m) === key);
-  const label =
-    first.game_week_label?.trim() ||
-    (first.match_week != null ? `Matchweek ${first.match_week}` : "Next fixtures");
 
   return {
-    label,
+    label: matchweekLabel(first),
     competition: first.competition?.trim() || "—",
     season: first.season ?? 0,
     matches: bucket,
