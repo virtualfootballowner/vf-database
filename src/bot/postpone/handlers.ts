@@ -46,6 +46,7 @@ import {
   recordDenial,
   type PostponementRequestRow,
   updateMatchScheduledAt,
+  type MatchByCodeRow,
 } from "@/bot/postpone/queries";
 import { notifyRefereesOfMatchPostponement } from "@/bot/referees/postponement/notify";
 import {
@@ -319,6 +320,56 @@ async function dmUser(
   }
 }
 
+async function notifyManagersOfStaffReschedule(
+  client: Client,
+  supabase: SupabaseClient,
+  match: MatchByCodeRow,
+  previousIso: string | null,
+  newIso: string,
+): Promise<{ sent: number; skipped: string[] }> {
+  const fixture = `**${match.home_name}** vs **${match.away_name}** (\`${match.roblox_match_id}\`)`;
+  const lines = [
+    "📅 **Fixture rescheduled by staff**",
+    "",
+    fixture,
+  ];
+  if (previousIso) {
+    lines.push(`Was: ${discordKickoffTimestampRich(previousIso)}`);
+  }
+  lines.push(`Now: ${discordKickoffTimestampRich(newIso)}`);
+  lines.push(
+    "",
+    "Assigned referees have been DMed to confirm availability.",
+  );
+  const content = lines.join("\n");
+
+  const skipped: string[] = [];
+  let sent = 0;
+  const seen = new Set<string>();
+
+  for (const team of [
+    { slug: match.home_slug, name: match.home_name },
+    { slug: match.away_slug, name: match.away_name },
+  ]) {
+    const resolved = await resolveManagerDiscordId(
+      supabase,
+      team.slug,
+      match.season,
+    );
+    if (!resolved.ok) {
+      skipped.push(`${team.name} (${resolved.reason})`);
+      continue;
+    }
+    if (seen.has(resolved.discordId)) continue;
+    seen.add(resolved.discordId);
+
+    const msgId = await dmUser(client, resolved.discordId, { content });
+    if (msgId) sent += 1;
+  }
+
+  return { sent, skipped };
+}
+
 async function disableOpponentDmMessage(
   client: Client,
   opponentDiscordId: string | null | undefined,
@@ -421,6 +472,14 @@ async function handlePostponeForceCommand(
       parsed.iso,
     );
 
+    const managerNotify = await notifyManagersOfStaffReschedule(
+      interaction.client,
+      supabase,
+      match,
+      previous,
+      parsed.iso,
+    );
+
     const lines = [
       `✅ Force-rescheduled **${match.roblox_match_id}**`,
       `**${match.home_name}** vs **${match.away_name}**`,
@@ -429,6 +488,14 @@ async function handlePostponeForceCommand(
       lines.push(`Was: ${discordKickoffTimestampRich(previous)}`);
     }
     lines.push(`Now: ${discordKickoffTimestampRich(parsed.iso)}`);
+    if (managerNotify.sent > 0) {
+      lines.push(`Managers notified: **${managerNotify.sent}** DM(s) sent.`);
+    }
+    if (managerNotify.skipped.length > 0) {
+      lines.push(
+        `Could not DM: ${managerNotify.skipped.join("; ")} — check **/appoint**.`,
+      );
+    }
 
     await interaction.editReply({ content: lines.join("\n") });
   } catch (e) {

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { env } from "@/bot/config";
 import { buildAssignmentKickoffLabel } from "@/bot/referees/assignments";
 import {
   parseDenialLog,
@@ -452,6 +453,7 @@ export async function appendDenialReason(
 export type MatchByCodeRow = {
   id: string;
   roblox_match_id: string;
+  season: number;
   status: string;
   scheduled_at: string | null;
   home_slug: string;
@@ -469,7 +471,9 @@ export async function fetchMatchByRobloxCode(
 
   const { data: match, error } = await supabase
     .from("matches")
-    .select("id, roblox_match_id, status, scheduled_at, home_team_id, away_team_id")
+    .select(
+      "id, roblox_match_id, season, status, scheduled_at, home_team_id, away_team_id",
+    )
     .ilike("roblox_match_id", code)
     .maybeSingle();
   if (error) throw error;
@@ -478,6 +482,7 @@ export async function fetchMatchByRobloxCode(
   const row = match as {
     id: string;
     roblox_match_id: string;
+    season: number | null;
     status: string;
     scheduled_at: string | null;
     home_team_id: string;
@@ -500,6 +505,7 @@ export async function fetchMatchByRobloxCode(
   return {
     id: row.id,
     roblox_match_id: row.roblox_match_id,
+    season: row.season ?? env.VF_ACTIVE_ROSTER_SEASON,
     status: row.status,
     scheduled_at: row.scheduled_at,
     home_slug: home.slug,
