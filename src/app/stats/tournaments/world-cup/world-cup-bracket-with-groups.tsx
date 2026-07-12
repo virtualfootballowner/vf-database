@@ -1,5 +1,6 @@
 "use client";
 
+import type { MatchRecord } from "@/app/stats/matches-data";
 import { TeamCrest } from "@/app/teams/team-crest";
 import type { Team } from "@/app/teams/teams-data";
 import { WorldCupGroupDialog } from "@/app/stats/tournaments/world-cup/world-cup-group-dialog";
@@ -172,12 +173,24 @@ function GroupBracketColumn({
 function BracketMatchTile({
   fixtureCode,
   isFinal,
+  match,
 }: {
   fixtureCode: string;
   isFinal?: boolean;
+  match?: MatchRecord;
 }) {
   const m = worldCupKnockoutMatch(fixtureCode);
   if (!m) return null;
+
+  const played = Boolean(match && match.status !== "scheduled");
+  const homeLabel = match?.homeTeam?.trim() || formatKnockoutSlotLabel(m.homeLabel);
+  const awayLabel = match?.awayTeam?.trim() || formatKnockoutSlotLabel(m.awayLabel);
+  const pensNote =
+    match?.notes?.toLowerCase().includes("penalt") ||
+    match?.notes?.toLowerCase().includes("pens ")
+      ? "P"
+      : null;
+  const fftNote = match?.fft === "Yes" ? "FFT" : null;
 
   return (
     <div
@@ -187,32 +200,57 @@ function BracketMatchTile({
           : "w-full rounded-lg border border-white/12 bg-white/[0.04] px-2.5 py-2 backdrop-blur-sm transition hover:border-white/20 hover:bg-white/[0.06]"
       }
     >
-      <p
-        className={`mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] ${
-          isFinal ? "text-amber-200/70" : "text-white/40"
-        }`}
-      >
-        {m.shortCode}
-      </p>
-      <div className="border-b border-white/8 pb-1">
+      <div className="mb-1.5 flex items-center justify-between gap-1">
+        <p
+          className={`text-[9px] font-semibold uppercase tracking-[0.16em] ${
+            isFinal ? "text-amber-200/70" : "text-white/40"
+          }`}
+        >
+          {m.shortCode}
+        </p>
+        {fftNote || pensNote ? (
+          <span className="text-[8px] font-semibold uppercase tracking-wider text-white/45">
+            {[fftNote, pensNote].filter(Boolean).join(" · ")}
+          </span>
+        ) : null}
+      </div>
+      <div className="flex items-center justify-between gap-2 border-b border-white/8 pb-1">
         <span
-          className={`block truncate text-[11px] leading-snug sm:text-xs ${
+          className={`min-w-0 truncate text-[11px] leading-snug sm:text-xs ${
             isFinal ? "font-bold text-amber-50" : "font-medium text-white/90"
           }`}
         >
-          {formatKnockoutSlotLabel(m.homeLabel)}
+          {homeLabel}
         </span>
+        {played ? (
+          <span
+            className={`shrink-0 tabular-nums text-[11px] font-bold sm:text-xs ${
+              isFinal ? "text-amber-50" : "text-white"
+            }`}
+          >
+            {match!.homeScore}
+          </span>
+        ) : null}
       </div>
-      <div className="pt-1">
+      <div className="flex items-center justify-between gap-2 pt-1">
         <span
-          className={`block truncate text-[11px] leading-snug sm:text-xs ${
+          className={`min-w-0 truncate text-[11px] leading-snug sm:text-xs ${
             isFinal
               ? "font-bold text-amber-100/90"
               : "font-medium text-white/70"
           }`}
         >
-          {formatKnockoutSlotLabel(m.awayLabel)}
+          {awayLabel}
         </span>
+        {played ? (
+          <span
+            className={`shrink-0 tabular-nums text-[11px] font-bold sm:text-xs ${
+              isFinal ? "text-amber-100/90" : "text-white/80"
+            }`}
+          >
+            {match!.awayScore}
+          </span>
+        ) : null}
       </div>
       {isFinal ? (
         <p className="mt-2 border-t border-amber-300/25 pt-1.5 text-center text-[9px] font-bold uppercase tracking-[0.2em] text-amber-200">
@@ -229,12 +267,14 @@ function BracketColumn({
   layout,
   isFinal,
   showConnector,
+  matchesByCode,
 }: {
   stage: string;
   fixtureCodes: string[];
   layout: ColumnLayout;
   isFinal?: boolean;
   showConnector?: "left" | "right";
+  matchesByCode: Map<string, MatchRecord>;
 }) {
   return (
     <div className="relative flex min-w-0 flex-1 flex-col">
@@ -263,7 +303,12 @@ function BracketColumn({
         className={`flex min-h-[380px] flex-1 flex-col sm:min-h-[440px] ${LAYOUT_CLASS[layout]}`}
       >
         {fixtureCodes.map((code) => (
-          <BracketMatchTile key={code} fixtureCode={code} isFinal={isFinal} />
+          <BracketMatchTile
+            key={code}
+            fixtureCode={code}
+            isFinal={isFinal}
+            match={matchesByCode.get(code)}
+          />
         ))}
       </div>
     </div>
@@ -273,10 +318,18 @@ function BracketColumn({
 export function WorldCupBracketWithGroups({
   teamsBySlug,
   groupBundles,
+  allMatches = [],
 }: {
   teamsBySlug: Record<string, Team>;
   groupBundles: Record<S3WorldCupGroupLetter, WorldCupGroupBundle>;
+  allMatches?: MatchRecord[];
 }) {
+  const matchesByCode = new Map(
+    allMatches
+      .filter((m) => m.id.startsWith("S3-WC-"))
+      .map((m) => [m.id, m] as const),
+  );
+
   return (
     <div className="w-full">
       <p className="mb-3 text-center font-display text-sm font-semibold uppercase tracking-[0.12em] text-white/90 sm:text-base">
@@ -297,6 +350,7 @@ export function WorldCupBracketWithGroups({
               fixtureCodes={col.fixtureCodes}
               layout={col.layout}
               isFinal={col.isFinal}
+              matchesByCode={matchesByCode}
               showConnector={
                 idx === 2 ? "left" : idx === 4 ? "right" : undefined
               }

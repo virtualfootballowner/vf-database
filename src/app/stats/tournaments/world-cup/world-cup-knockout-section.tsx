@@ -25,6 +25,7 @@ export function WorldCupKnockoutSection({
           <WorldCupBracketWithGroups
             teamsBySlug={teamsBySlug}
             groupBundles={groupBundles}
+            allMatches={allMatches}
           />
         </CardContent>
       </Card>

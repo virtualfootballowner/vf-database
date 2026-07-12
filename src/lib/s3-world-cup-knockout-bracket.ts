@@ -4,7 +4,9 @@
  */
 
 import { teams } from "@/app/teams/teams-data";
+import { S3_WORLD_CUP_QF_DRAW_BY_CODE } from "@/lib/s3-world-cup-qf-draw";
 import { S3_WORLD_CUP_R16_DRAW_BY_CODE } from "@/lib/s3-world-cup-r16-draw";
+import { S3_WORLD_CUP_SF_DRAW_BY_CODE } from "@/lib/s3-world-cup-sf-draw";
 
 export type WorldCupKnockoutMatchDef = {
   fixtureCode: string;
@@ -21,16 +23,41 @@ export type WorldCupKnockoutMatchDef = {
 
 const teamNameBySlug = new Map(teams.map((t) => [t.slug, t.name]));
 
-function applyR16Draw(def: WorldCupKnockoutMatchDef): WorldCupKnockoutMatchDef {
-  const draw = S3_WORLD_CUP_R16_DRAW_BY_CODE.get(def.fixtureCode);
-  if (!draw) return def;
-  return {
-    ...def,
-    homeLabel: teamNameBySlug.get(draw.homeSlug) ?? draw.homeSlug,
-    awayLabel: teamNameBySlug.get(draw.awaySlug) ?? draw.awaySlug,
-    homeSlug: draw.homeSlug,
-    awaySlug: draw.awaySlug,
-  };
+function applyKnockoutDraw(def: WorldCupKnockoutMatchDef): WorldCupKnockoutMatchDef {
+  const r16 = S3_WORLD_CUP_R16_DRAW_BY_CODE.get(def.fixtureCode);
+  if (r16) {
+    return {
+      ...def,
+      homeLabel: teamNameBySlug.get(r16.homeSlug) ?? r16.homeSlug,
+      awayLabel: teamNameBySlug.get(r16.awaySlug) ?? r16.awaySlug,
+      homeSlug: r16.homeSlug,
+      awaySlug: r16.awaySlug,
+    };
+  }
+
+  const qf = S3_WORLD_CUP_QF_DRAW_BY_CODE.get(def.fixtureCode);
+  if (qf) {
+    return {
+      ...def,
+      homeLabel: teamNameBySlug.get(qf.homeSlug) ?? qf.homeSlug,
+      awayLabel: teamNameBySlug.get(qf.awaySlug) ?? qf.awaySlug,
+      homeSlug: qf.homeSlug,
+      awaySlug: qf.awaySlug,
+    };
+  }
+
+  const sf = S3_WORLD_CUP_SF_DRAW_BY_CODE.get(def.fixtureCode);
+  if (sf) {
+    return {
+      ...def,
+      homeLabel: teamNameBySlug.get(sf.homeSlug) ?? sf.homeSlug,
+      awayLabel: teamNameBySlug.get(sf.awaySlug) ?? sf.awaySlug,
+      homeSlug: sf.homeSlug,
+      awaySlug: sf.awaySlug,
+    };
+  }
+
+  return def;
 }
 
 const S3_WORLD_CUP_KNOCKOUT_MATCHES_RAW: WorldCupKnockoutMatchDef[] = [
@@ -156,7 +183,7 @@ const S3_WORLD_CUP_KNOCKOUT_MATCHES_RAW: WorldCupKnockoutMatchDef[] = [
 ];
 
 export const S3_WORLD_CUP_KNOCKOUT_MATCHES: WorldCupKnockoutMatchDef[] =
-  S3_WORLD_CUP_KNOCKOUT_MATCHES_RAW.map(applyR16Draw);
+  S3_WORLD_CUP_KNOCKOUT_MATCHES_RAW.map(applyKnockoutDraw);
 
 const matchByCode = new Map(
   S3_WORLD_CUP_KNOCKOUT_MATCHES.map((m) => [m.fixtureCode, m]),

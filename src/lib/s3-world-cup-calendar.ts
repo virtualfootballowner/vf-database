@@ -94,11 +94,8 @@ export const S3_WORLD_CUP_R16_CALENDAR: readonly WcKnockoutCalendarDay[] = [
   },
 ];
 
-/** QF the following Fri–Sat (~5 days after R16). */
-export const S3_WORLD_CUP_QF_CALENDAR: readonly WcKnockoutCalendarDay[] = [
-  { date: "2026-07-03", dayLabel: "QF · Friday", fixtureCodes: ["S3-WC-QF-01", "S3-WC-QF-02"] },
-  { date: "2026-07-04", dayLabel: "QF · Saturday", fixtureCodes: ["S3-WC-QF-03", "S3-WC-QF-04"] },
-];
+/** QF slots live in `s3-world-cup-qf-draw.ts` (custom dates per tie). */
+export const S3_WORLD_CUP_QF_CALENDAR: readonly WcKnockoutCalendarDay[] = [];
 
 export const S3_WORLD_CUP_SF_CALENDAR: readonly WcKnockoutCalendarDay[] = [
   { date: "2026-07-10", dayLabel: "Semi-final 1", fixtureCodes: ["S3-WC-SF-01"] },
